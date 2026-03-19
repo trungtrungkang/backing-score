@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,6 +14,7 @@ interface PlayerControlsProps {
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
+  onStop: () => void;
   onSeek: (ms: number) => void;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
@@ -48,6 +49,7 @@ export function PlayerControls({
   isPlaying,
   onPlay,
   onPause,
+  onStop,
   onSeek,
   playbackRate,
   onPlaybackRateChange,
@@ -242,13 +244,20 @@ export function PlayerControls({
             </div>
           </div>
 
-          {/* Center: Play/Pause */}
+          {/* Center: Play/Pause/Stop */}
           <div className="flex items-center justify-center gap-4 shrink-0 px-4">
             <button
               onClick={isPlaying ? onPause : onPlay}
               className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:scale-105 active:scale-95"
             >
-              {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-7 h-7 fill-current ml-1" />}
+              {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current translate-x-0.5" />}
+            </button>
+            <button
+              onClick={onStop}
+              className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              title="Stop and Return"
+            >
+              <Square className="w-4 h-4 fill-current" />
             </button>
           </div>
 

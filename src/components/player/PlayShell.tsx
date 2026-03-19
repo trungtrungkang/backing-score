@@ -440,6 +440,54 @@ export function PlayShell({
     setPositionMs(ms);
   }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, payload.metadata?.scoreSynthMuted]);
 
+  const handleStop = useCallback(() => {
+    handlePause();
+    // Return to beginning of measure or beginning of song
+    const bpm = payload.metadata?.tempo || 120;
+    const ts = payload.metadata?.timeSignature || "4/4";
+    const [numStr, denStr] = ts.split("/");
+    const beatsPerMeasure = parseInt(numStr, 10) || 4;
+    const noteValue = parseInt(denStr, 10) || 4;
+    const quarterNoteMs = (60 * 1000) / bpm;
+    const beatMs = quarterNoteMs * (4 / noteValue);
+    const measureMs = beatsPerMeasure * beatMs;
+    
+    // Calculate start of current measure
+    const currentMeasureIndex = Math.floor(positionMs / measureMs);
+    const startOfMeasureMs = currentMeasureIndex * measureMs;
+    
+    // Go to 0 if already at measure start
+    if (positionMs - startOfMeasureMs < 150) {
+      handleSeek(0);
+    } else {
+      handleSeek(startOfMeasureMs);
+    }
+  }, [handlePause, handleSeek, payload.metadata?.tempo, payload.metadata?.timeSignature, positionMs]);
+
+  // Spacebar hotkey for Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input or contenteditable
+      if (
+        document.activeElement?.tagName === "INPUT" || 
+        document.activeElement?.tagName === "TEXTAREA" || 
+        document.activeElement?.hasAttribute("contenteditable")
+      ) {
+        return;
+      }
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (isPlaying) {
+          handlePause();
+        } else {
+          handlePlay();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, handlePlay, handlePause]);
+
   const handlePlaybackRateChange = useCallback((rate: number) => {
     setPlaybackRate(rate);
     if (audioManagerRef.current) {
@@ -563,6 +611,7 @@ export function PlayShell({
         isPlaying={isPlaying}
         onPlay={handlePlay}
         onPause={handlePause}
+        onStop={handleStop}
         onSeek={handleSeek}
         playbackRate={playbackRate}
         onPlaybackRateChange={handlePlaybackRateChange}
