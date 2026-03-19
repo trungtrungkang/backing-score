@@ -44,7 +44,7 @@ export interface TransportBarProps {
   isElasticGrid?: boolean;
   onToggleElasticGrid?: () => void;
   /** Optional timemap array mapping measure numbers to absolute time (Ms) for accurate Elastic Grid readout */
-  timemap?: { measure: number; timeMs: number }[];
+  timemap?: { measure: number; timeMs: number; timeSignature?: string }[];
   isMapEditorOpen?: boolean;
   onToggleMapEditor?: () => void;
   /** Disable all transport controls (e.g. while loading audio) */
@@ -61,7 +61,7 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function formatMeasure(ms: number, bpm: number, timeSignature: string, timemap?: { measure: number; timeMs: number }[]): string {
+function formatMeasure(ms: number, bpm: number, timeSignature: string, timemap?: { measure: number; timeMs: number; timeSignature?: string }[]): string {
   if (!Number.isFinite(ms) || ms < 0 || bpm <= 0) return "001:1";
   
   if (timemap && timemap.length > 0) {
@@ -83,8 +83,15 @@ function formatMeasure(ms: number, bpm: number, timeSignature: string, timemap?:
           break; // Since timemap is sorted sequentially
        }
     }
+    let activeSignature = timeSignature;
+    for (let i = 0; i < timemap.length; i++) {
+        if (timemap[i].measure <= currentMeasure && timemap[i].timeSignature) {
+            activeSignature = timemap[i].timeSignature!;
+        }
+        if (timemap[i].measure > currentMeasure) break;
+    }
     
-    const [numStr, denStr] = timeSignature.split("/");
+    const [numStr, denStr] = activeSignature.split("/");
     const beatsPerMeasure = parseInt(numStr, 10) || 4;
     
     // If we're inside the measure bounds, calculate which sub-beat we are in proportionately

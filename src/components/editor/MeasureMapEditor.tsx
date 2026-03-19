@@ -45,12 +45,21 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
 
   const [newLatent, setNewLatent] = useState<string>("");
   const [newPhysical, setNewPhysical] = useState<string>("");
+  const [sigLatent, setSigLatent] = useState<string>("");
+  const [sigValue, setSigValue] = useState<string>("");
 
-  const handleMeasureClick = (latent: number, currentPhysical: number) => {
+  const sigEntriesList = timemap.filter(t => t.timeSignature).map(t => ({
+    latent: t.measure,
+    sig: t.timeSignature!
+  }));
+
+  const handleMeasureClick = (latent: number, currentPhysical: number, currentSig?: string) => {
     // If it's already an explicit anchor, we can prep to edit it/delete it, 
     // but the quickest UX is just pre-filling the inputs for them.
     setNewLatent(latent.toString());
     setNewPhysical(currentPhysical.toString());
+    setSigLatent(latent.toString());
+    if (currentSig) setSigValue(currentSig);
   };
 
   const handleAdd = () => {
@@ -89,6 +98,44 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
     });
   };
 
+  const handleAddSig = () => {
+    const lat = parseInt(sigLatent, 10);
+    const sig = sigValue.trim();
+    if (isNaN(lat) || lat <= 0 || !sig.includes("/")) return;
+    
+    const newTimemap = [...timemap];
+    const idx = newTimemap.findIndex(t => t.measure === lat);
+    if (idx > -1) {
+       newTimemap[idx] = { ...newTimemap[idx], timeSignature: sig };
+       updatePayloadTimemap(newTimemap);
+       setSigLatent("");
+       setSigValue("");
+    } else {
+       alert("Measure not recorded in timeline yet.");
+    }
+  };
+
+  const handleRemoveSig = (latent: number) => {
+    const newTimemap = [...timemap];
+    const idx = newTimemap.findIndex(t => t.measure === latent);
+    if (idx > -1) {
+       const { timeSignature, ...rest } = newTimemap[idx];
+       newTimemap[idx] = rest;
+       updatePayloadTimemap(newTimemap);
+    }
+  };
+
+  const updatePayloadTimemap = (newTimemap: any[]) => {
+    if (!payload.notationData) return;
+    onPayloadChange({
+      ...payload,
+      notationData: {
+        ...payload.notationData,
+        timemap: newTimemap
+      }
+    });
+  };
+
   return (
     <div className="fixed right-4 top-20 w-80 bg-background border border-border rounded-lg shadow-xl flex flex-col z-50 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
@@ -119,6 +166,22 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
           </div>
         )}
 
+        {sigEntriesList.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Meter Changes</h4>
+            {sigEntriesList.map(entry => (
+              <div key={`meter-${entry.latent}`} className="flex items-center gap-2 bg-purple-500/10 p-1.5 rounded border border-purple-500/20">
+                <div className="flex-1 text-center font-mono bg-background border border-border rounded py-1 text-purple-600">{entry.latent}</div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex-1 text-center font-mono font-bold bg-background border border-border rounded py-1 text-purple-600">{entry.sig}</div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleRemoveSig(entry.latent)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {timemap.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recorded Timeline</h4>
@@ -127,22 +190,25 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
                 const latent = t.measure;
                 const physical = getPhysicalMeasure(latent, currentMap);
                 const isAnchor = currentMap[latent] !== undefined;
+                const hasSig = t.timeSignature !== undefined;
                 const isActive = latent === activeLatent;
 
                 return (
                   <button
                     key={`timeline-${latent}`}
-                    onClick={() => handleMeasureClick(latent, physical)}
+                    onClick={() => handleMeasureClick(latent, physical, t.timeSignature)}
                     className={`
                       relative flex flex-col items-center justify-center p-1 rounded border text-xs cursor-pointer transition-colors
                       ${isActive ? 'bg-blue-100 border-blue-400 text-blue-900 shadow-sm' : 'bg-background border-border hover:bg-muted/50'}
                       ${isAnchor ? 'ring-1 ring-orange-400 border-orange-400' : ''}
+                      ${hasSig && !isAnchor ? 'ring-1 ring-purple-400 border-purple-400' : ''}
                     `}
-                    title={`Audio Measure ${latent} ➔ Sheet Measure ${physical}`}
+                    title={`Audio Measure ${latent} ➔ Sheet Measure ${physical} ${hasSig ? `(${t.timeSignature})` : ''}`}
                   >
                     <span className="font-mono font-bold">{latent}</span>
                     <span className="text-[10px] opacity-60">S:{physical}</span>
                     {isAnchor && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></div>}
+                    {hasSig && <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-purple-500 rounded-full"></div>}
                   </button>
                 );
               })}
@@ -151,29 +217,56 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
         )}
       </div>
 
-      <div className="p-3 bg-muted/30 border-t border-border mt-auto">
-        <label className="text-xs font-semibold text-muted-foreground mb-2 block">Set Anchor Point</label>
-        <div className="flex items-center gap-2">
-          <input 
-            type="number" 
-            placeholder="Audio #" 
-            className="flex-1 w-full bg-background border border-border rounded px-2 py-1.5 text-sm"
-            value={newLatent}
-            onChange={e => setNewLatent(e.target.value)}
-            min="1"
-          />
-          <div className="text-muted-foreground">→</div>
-          <input 
-            type="number" 
-            placeholder="Sheet #" 
-            className="flex-1 w-full bg-background border border-border rounded px-2 py-1.5 text-sm"
-            value={newPhysical}
-            onChange={e => setNewPhysical(e.target.value)}
-            min="1"
-          />
-          <Button size="icon" onClick={handleAdd} disabled={!newLatent || !newPhysical}>
-            <Plus className="w-4 h-4" />
-          </Button>
+      <div className="p-3 bg-muted/30 border-t border-border mt-auto flex flex-col gap-3">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-2 block">Set Anchor Point</label>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              placeholder="Audio #" 
+              className="w-16 bg-background border border-border rounded px-2 py-1.5 text-sm"
+              value={newLatent}
+              onChange={e => setNewLatent(e.target.value)}
+              min="1"
+            />
+            <div className="text-muted-foreground">→</div>
+            <input 
+              type="number" 
+              placeholder="Sheet #" 
+              className="flex-1 w-full bg-background border border-border rounded px-2 py-1.5 text-sm"
+              value={newPhysical}
+              onChange={e => setNewPhysical(e.target.value)}
+              min="1"
+            />
+            <Button size="icon" onClick={handleAdd} disabled={!newLatent || !newPhysical}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="pt-3 border-t border-border">
+          <label className="text-xs font-semibold text-muted-foreground mb-2 block text-purple-600">Set Time Signature</label>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              placeholder="Audio #" 
+              className="w-16 bg-background border border-purple-500/30 rounded px-2 py-1.5 text-sm"
+              value={sigLatent}
+              onChange={e => setSigLatent(e.target.value)}
+              min="1"
+            />
+            <div className="text-muted-foreground">→</div>
+            <input 
+              type="text" 
+              placeholder="e.g. 6/8" 
+              className="flex-1 w-full bg-background border border-purple-500/30 rounded px-2 py-1.5 text-sm"
+              value={sigValue}
+              onChange={e => setSigValue(e.target.value)}
+            />
+            <Button size="icon" variant="outline" className="border-purple-500/50 text-purple-600 hover:bg-purple-50" onClick={handleAddSig} disabled={!sigLatent || !sigValue}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

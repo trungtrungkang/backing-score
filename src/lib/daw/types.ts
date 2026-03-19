@@ -38,6 +38,7 @@ export interface FileMetadata {
 export interface TimemapEntry {
   timeMs: number;
   measure: number;
+  timeSignature?: string; // Optional dynamic meter override (e.g. "6/8")
 }
 
 export interface NotationData {

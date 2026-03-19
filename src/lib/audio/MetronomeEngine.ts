@@ -21,7 +21,7 @@ export class MetronomeEngine {
   private syncOffsetMsSong: number = 0; // The song time (in ms) when playback started
   private playbackRate: number = 1.0;
   
-  private nextBeatIndex: number = 0; // Which flat beat index are we scheduling next?
+  private nextTick = { measure: 1, beat: 0 }; // 1-indexed measure, 0-indexed beat
   
   // Lookahead settings
   private lookahead: number = 25.0; // How frequently to call scheduling function (in milliseconds)
@@ -75,8 +75,8 @@ export class MetronomeEngine {
     this.syncStartTimeContext = syncStartTimeContext;
     this.syncOffsetMsSong = offsetMs;
     
-    // Determine which beat we should start scheduling
-    this.nextBeatIndex = this.getBeatIndexAtTime(offsetMs);
+    // Determine which measure/beat coordinate we should start scheduling
+    this.initTickAtTime(offsetMs);
     
     this.scheduler();
     this.timerID = setInterval(() => this.scheduler(), this.lookahead);
@@ -129,13 +129,36 @@ export class MetronomeEngine {
     return (beats * msPerBeat) / 1000.0;
   }
 
-  /**
-   * Returns the flat global beat index corresponding to a given song timeMs.
-   */
-  private getBeatIndexAtTime(songTimeMs: number): number {
+  private getSignatureForMeasure(measureTarget: number): string {
+    let sig = this.tempoParams.timeSignature;
+    if (this.timemap && this.timemap.length > 0) {
+      for (let i = 0; i < this.timemap.length; i++) {
+        if (this.timemap[i].measure <= measureTarget && this.timemap[i].timeSignature) {
+          sig = this.timemap[i].timeSignature!;
+        }
+        if (this.timemap[i].measure > measureTarget) break;
+      }
+    }
+    return sig;
+  }
+
+  private getBeatsPerBarForMeasure(measureTarget: number): number {
+    const sig = this.getSignatureForMeasure(measureTarget);
+    const parsed = parseInt(sig.split("/")[0], 10);
+    return isNaN(parsed) ? 4 : parsed;
+  }
+
+  private getMsPerBeatForMeasure(measureTarget: number): number {
+    const msPerQuarter = 60000 / this.tempoParams.tempo;
+    const sig = this.getSignatureForMeasure(measureTarget);
+    const denomParts = sig.split("/");
+    const denominator = denomParts.length > 1 ? parseInt(denomParts[1], 10) : 4;
+    const validDenom = isNaN(denominator) || denominator <= 0 ? 4 : denominator;
+    return msPerQuarter * (4 / validDenom);
+  }
+
+  private initTickAtTime(songTimeMs: number) {
     if (this.syncToTimemap && this.timemap.length > 0) {
-      const beatsPerBar = this.getBeatsPerBar();
-      
       let activeEvent = this.timemap[0];
       let nextEvent = null;
       
@@ -148,8 +171,8 @@ export class MetronomeEngine {
         }
       }
       
-      const measureIndexOffset = activeEvent.measure - 1; 
-      let measureDurationMs = this.getMsPerBeat() * beatsPerBar; // fallback
+      const beatsInActive = this.getBeatsPerBarForMeasure(activeEvent.measure);
+      let measureDurationMs = this.getMsPerBeatForMeasure(activeEvent.measure) * beatsInActive;
       
       if (nextEvent) {
          measureDurationMs = nextEvent.timeMs - activeEvent.timeMs;
@@ -157,52 +180,64 @@ export class MetronomeEngine {
          const idx = this.timemap.indexOf(activeEvent);
          if (idx > 0) measureDurationMs = activeEvent.timeMs - this.timemap[idx-1].timeMs;
       }
-      
       if (measureDurationMs <= 0) measureDurationMs = 1;
-      const msPerSubBeat = measureDurationMs / beatsPerBar;
+
+      const msPerSubBeat = measureDurationMs / beatsInActive;
       
       if (songTimeMs < activeEvent.timeMs) {
+         // Pre-roll extrapolation
          const diff = activeEvent.timeMs - songTimeMs;
-         return (measureIndexOffset * beatsPerBar) - Math.ceil(diff / msPerSubBeat);
+         const beatsBeforeStart = Math.ceil(diff / msPerSubBeat);
+         let startMeasure = activeEvent.measure;
+         let startBeat = 0 - beatsBeforeStart;
+         while (startBeat < 0) {
+            startMeasure--;
+            startBeat += this.getBeatsPerBarForMeasure(startMeasure);
+         }
+         this.nextTick = { measure: startMeasure, beat: startBeat };
+         return;
       }
       
       const msSinceMeasureStart = songTimeMs - activeEvent.timeMs;
       const beatWithinMeasure = Math.floor(msSinceMeasureStart / msPerSubBeat);
-      return (measureIndexOffset * beatsPerBar) + beatWithinMeasure;
+      this.nextTick = { measure: activeEvent.measure, beat: beatWithinMeasure };
+      return;
     }
 
-    const msPerBeat = this.getMsPerBeat();
-    return Math.ceil(songTimeMs / msPerBeat);
+    // Pure math logical scan
+    let currentMs = 0;
+    let measure = 1;
+    while (true) {
+        const beats = this.getBeatsPerBarForMeasure(measure);
+        const msPerBeat = this.getMsPerBeatForMeasure(measure);
+        const measureDur = beats * msPerBeat;
+        if (currentMs + measureDur > songTimeMs) {
+            const msSinceStart = songTimeMs - currentMs;
+            const beat = Math.floor(msSinceStart / msPerBeat);
+            this.nextTick = { measure, beat };
+            return;
+        }
+        currentMs += measureDur;
+        measure++;
+    }
   }
 
-  /**
-   * Returns the exact song timeMs of a given flat global beat index.
-   */
-  private getTimeOfBeatIndex(beatIndex: number): number {
+  private getTimeOfTick(measureTarget: number, beatTarget: number): number {
     if (this.syncToTimemap && this.timemap.length > 0) {
-      const beatsPerBar = this.getBeatsPerBar();
-      const measureIndex = Math.floor(beatIndex / beatsPerBar);
-      let beatWithinMeasure = beatIndex % beatsPerBar;
-      
-      // Fix negative modulo logic for Pre-Roll interpolation
-      if (beatWithinMeasure < 0) {
-          beatWithinMeasure += beatsPerBar;
-      }
-      
-      const measureTarget = measureIndex + 1; // 1-indexed
       let mapEvent = this.timemap.find(t => t.measure === measureTarget);
       
-      // If we seek slightly before measure 1 (e.g. pre-roll), extrapolate backwards from measure 1
       if (!mapEvent && measureTarget < 1) {
           mapEvent = this.timemap[0];
       }
       
       if (mapEvent) {
-        let measureDurationMs = this.getMsPerBeat() * beatsPerBar; // fallback
+        const beatsPerBar = this.getBeatsPerBarForMeasure(measureTarget);
+        let measureDurationMs = this.getMsPerBeatForMeasure(measureTarget) * beatsPerBar;
+        
         const nextMapEvent = this.timemap.find(t => t.measure === measureTarget + 1);
         if (nextMapEvent) {
            measureDurationMs = nextMapEvent.timeMs - mapEvent.timeMs;
-        } else if (measureIndex > 0) {
+        } else {
            const prevMapEvent = this.timemap.find(t => t.measure === measureTarget - 1);
            if (prevMapEvent) measureDurationMs = mapEvent.timeMs - prevMapEvent.timeMs;
         }
@@ -210,17 +245,30 @@ export class MetronomeEngine {
         const msPerSubBeat = measureDurationMs / beatsPerBar;
         
         if (measureTarget < 1) {
-            // Negative beat index (Pre-roll)
-            const beatsBeforeStart = (1 - measureTarget) * beatsPerBar - beatWithinMeasure;
-            return mapEvent.timeMs - (beatsBeforeStart * msPerSubBeat);
+            const diffMeasures = 1 - measureTarget;
+            const beatsBack = (diffMeasures * beatsPerBar) - beatTarget;
+            return mapEvent.timeMs - (beatsBack * msPerSubBeat);
         }
         
-        return mapEvent.timeMs + (beatWithinMeasure * msPerSubBeat);
+        return mapEvent.timeMs + (beatTarget * msPerSubBeat);
       }
     }
 
-    const msPerBeat = this.getMsPerBeat();
-    return beatIndex * msPerBeat;
+    let ms = 0;
+    for (let m = 1; m < measureTarget; m++) {
+        ms += this.getBeatsPerBarForMeasure(m) * this.getMsPerBeatForMeasure(m);
+    }
+    ms += beatTarget * this.getMsPerBeatForMeasure(measureTarget);
+    return ms;
+  }
+
+  private advanceTick() {
+      this.nextTick.beat++;
+      const beatsInMeasure = this.getBeatsPerBarForMeasure(this.nextTick.measure);
+      if (this.nextTick.beat >= beatsInMeasure) {
+          this.nextTick.beat = 0;
+          this.nextTick.measure++;
+      }
   }
 
   private scheduler() {
@@ -230,11 +278,11 @@ export class MetronomeEngine {
     const lookaheadUntilContextTime = this.context.currentTime + this.scheduleAheadTime;
     
     while (true) {
-        const beatSongMs = this.getTimeOfBeatIndex(this.nextBeatIndex);
+        const beatSongMs = this.getTimeOfTick(this.nextTick.measure, this.nextTick.beat);
         
         // If the beat is before the playhead, skip it
         if (beatSongMs < this.syncOffsetMsSong) {
-            this.nextBeatIndex++;
+            this.advanceTick();
             continue;
         }
 
@@ -247,12 +295,11 @@ export class MetronomeEngine {
             break;
         }
 
-        let beatsPerBar = this.getBeatsPerBar();
-        const isStrongBeat = (this.nextBeatIndex % beatsPerBar) === 0;
+        const isStrongBeat = this.nextTick.beat === 0;
 
         // Schedule it
         this.scheduleNote(isStrongBeat, beatContextTime);
-        this.nextBeatIndex++;
+        this.advanceTick();
     }
   }
 
