@@ -977,6 +977,7 @@ export function EditorShell({
               onToggleSyncMode={() => setIsSyncMode(!isSyncMode)}
               isElasticGrid={!!payload.metadata?.syncToTimemap}
               onToggleElasticGrid={handleToggleElasticGrid}
+              timemap={payload.notationData?.timemap}
               isMapEditorOpen={showMapEditor}
               onToggleMapEditor={() => setShowMapEditor(!showMapEditor)}
               disabled={loadingAudio}

@@ -43,6 +43,8 @@ export interface TransportBarProps {
   isSyncMode?: boolean;
   isElasticGrid?: boolean;
   onToggleElasticGrid?: () => void;
+  /** Optional timemap array mapping measure numbers to absolute time (Ms) for accurate Elastic Grid readout */
+  timemap?: { measure: number; timeMs: number }[];
   isMapEditorOpen?: boolean;
   onToggleMapEditor?: () => void;
   /** Disable all transport controls (e.g. while loading audio) */
@@ -59,8 +61,52 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function formatMeasure(ms: number, bpm: number, timeSignature: string): string {
+function formatMeasure(ms: number, bpm: number, timeSignature: string, timemap?: { measure: number; timeMs: number }[]): string {
   if (!Number.isFinite(ms) || ms < 0 || bpm <= 0) return "001:1";
+  
+  if (timemap && timemap.length > 0) {
+    // Elastic Grid Mode: Search Timemap
+    let currentMeasure = 1;
+    let nextMapTime = Infinity;
+    let measureStartMs = 0;
+    
+    for (let i = 0; i < timemap.length; i++) {
+       if (ms >= timemap[i].timeMs) {
+          currentMeasure = timemap[i].measure;
+          measureStartMs = timemap[i].timeMs;
+          if (i + 1 < timemap.length) {
+             nextMapTime = timemap[i+1].timeMs;
+          } else {
+             nextMapTime = Infinity;
+          }
+       } else {
+          break; // Since timemap is sorted sequentially
+       }
+    }
+    
+    const [numStr, denStr] = timeSignature.split("/");
+    const beatsPerMeasure = parseInt(numStr, 10) || 4;
+    
+    // If we're inside the measure bounds, calculate which sub-beat we are in proportionately
+    let beatInMeasure = 1;
+    if (nextMapTime !== Infinity) {
+        const exactMeasureDurationMs = nextMapTime - measureStartMs;
+        const beatMs = exactMeasureDurationMs / beatsPerMeasure;
+        const timeIntoMeasure = ms - measureStartMs;
+        beatInMeasure = Math.floor(timeIntoMeasure / beatMs) + 1;
+    } else {
+        // Fallback beat calc past the end of the map
+        const noteValue = parseInt(denStr, 10) || 4;
+        const quarterNoteMs = (60 * 1000) / bpm;
+        const beatMs = quarterNoteMs * (4 / noteValue);
+        const timeIntoMeasure = ms - measureStartMs;
+        beatInMeasure = Math.floor(timeIntoMeasure / beatMs) + 1;
+    }
+    
+    if (beatInMeasure > beatsPerMeasure) beatInMeasure = beatsPerMeasure;
+    return `${currentMeasure.toString().padStart(3, "0")}:${beatInMeasure}`;
+  }
+
   
   // Parse time signature (e.g. "4/4" -> beatsPerMeasure = 4)
   const [numStr, denStr] = timeSignature.split("/");
@@ -113,6 +159,7 @@ export function TransportBar({
   onToggleSyncMode,
   isElasticGrid = false,
   onToggleElasticGrid,
+  timemap,
   isMapEditorOpen = false,
   onToggleMapEditor,
   disabled = false,
@@ -224,7 +271,7 @@ export function TransportBar({
         <div className="flex flex-col items-center justify-center min-w-[70px]">
           <span className="text-[9px] uppercase tracking-widest text-zinc-500 dark:text-[#5e5e6e] font-bold mb-0.5">Measure</span>
           <div className="text-xl font-mono tracking-wider text-blue-400 dark:text-[#00f0ff] font-bold dark:[text-shadow:0_0_8px_rgba(0,240,255,0.6)] leading-none mt-0.5">
-            {formatMeasure(positionMs, bpm, timeSignature)}
+            {formatMeasure(positionMs, bpm, timeSignature, isElasticGrid ? timemap : undefined)}
           </div>
         </div>
 
