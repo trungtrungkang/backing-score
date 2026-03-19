@@ -379,45 +379,7 @@ export function EditorShell({
   const recordedTimemapRef = useRef(recordedTimemap);
   useEffect(() => { recordedTimemapRef.current = recordedTimemap; }, [recordedTimemap]);
 
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Ignore key auto-repeat to prevent React update loops
-      if (e.repeat) return;
-
-      if (isSyncMode && e.code === "Space") {
-        e.preventDefault();
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-
-        if (!isPlayingRef.current) {
-          // ── First Space: start audio from t=0 and mark Measure 1 ──────────
-          // This avoids the "one measure ahead" problem when the track has no
-          // pickup measure: the user presses Space exactly when they wants
-          // Measure 1 to begin, so it is recorded at timeMs=0.
-          if (recordedTimemapRef.current.length === 0 && audioManagerRef.current) {
-            if (audioManagerRef.current.getCurrentPositionMs() !== 0) {
-              audioManagerRef.current.seek(0);
-            }
-            await audioManagerRef.current.play();
-            setIsPlaying(true);
-            setRecordedTimemap([{ measure: 1, timeMs: 0 }]);
-          }
-        } else {
-          // ── Subsequent Spaces: record current audio position ──────────────
-          const preciseTime = audioManagerRef.current?.getCurrentPositionMs() ?? 0;
-          setRecordedTimemap(prev => {
-            const lastTap = prev[prev.length - 1];
-            if (lastTap && (preciseTime - lastTap.timeMs < 200)) return prev;
-            return [...prev, { measure: prev.length + 1, timeMs: Math.round(preciseTime) }];
-          });
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSyncMode]); // intentionally omit isPlaying — read via isPlayingRef
+  // (Moved keyboard listener down below handlePause to access it safely)
 
   const handleToggleSyncMode = () => {
     setIsSyncMode(prev => {
@@ -594,6 +556,57 @@ export function EditorShell({
       setPositionMs(Math.max(0, midiPlayerRef.current.currentTime * 1000 - midiStartOffsetMs));
     }
   }, [payload.audioTracks.length, midiStartOffsetMs]);
+
+  // Spacebar Play/Pause & Sync Mode Listener
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
+      if (
+        document.activeElement?.tagName === "INPUT" || 
+        document.activeElement?.tagName === "TEXTAREA" || 
+        document.activeElement?.hasAttribute("contenteditable")
+      ) {
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (isSyncMode) {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+
+          if (!isPlayingRef.current) {
+            if (recordedTimemapRef.current.length === 0 && audioManagerRef.current) {
+              if (audioManagerRef.current.getCurrentPositionMs() !== 0) {
+                audioManagerRef.current.seek(0);
+              }
+              await audioManagerRef.current.play();
+              setIsPlaying(true);
+              setRecordedTimemap([{ measure: 1, timeMs: 0 }]);
+            }
+          } else {
+            const preciseTime = audioManagerRef.current?.getCurrentPositionMs() ?? 0;
+            setRecordedTimemap(prev => {
+              const lastTap = prev[prev.length - 1];
+              if (lastTap && (preciseTime - lastTap.timeMs < 200)) return prev;
+              return [...prev, { measure: prev.length + 1, timeMs: Math.round(preciseTime) }];
+            });
+          }
+        } else {
+          if (isPlayingRef.current) {
+            handlePause();
+          } else {
+            handlePlay();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSyncMode, handlePlay, handlePause]);
 
   // Handle iOS/Mobile backgrounding & lock screen
   useEffect(() => {
