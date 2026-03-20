@@ -190,10 +190,9 @@ export function PlayerControls({
             )}
           </div>
 
-          {/* Bottom Row: Secondary Features */}
-          <div className="flex flex-col sm:flex-row items-center justify-between w-full pt-3 gap-4 border-t border-zinc-200 dark:border-zinc-800/50">
+          <div className="flex flex-row items-center justify-between w-full pt-3 gap-2 sm:gap-4 border-t border-zinc-200 dark:border-zinc-800/50">
             {/* Left */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
             
             {playlistId && (
               <button 
@@ -309,7 +308,7 @@ export function PlayerControls({
             </div> {/* Close Left Block */}
 
             {/* Right */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Metronome */}
               <button 
               onClick={() => onMetronomeToggle(!isMetronomeEnabled)}
