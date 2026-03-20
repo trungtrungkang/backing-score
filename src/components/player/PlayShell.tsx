@@ -440,16 +440,7 @@ export function PlayShell({
     }
   }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
 
-  // Handle iOS/Mobile backgrounding & lock screen
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isPlayingRef.current) {
-        handlePause();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [handlePause]);
+
 
   const handleSeek = useCallback((ms: number) => {
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
