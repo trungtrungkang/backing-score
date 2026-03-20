@@ -9,6 +9,7 @@ import type { DAWPayload, AudioTrack } from "@/lib/daw/types";
 import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
 import { Midi } from "@tonejs/midi";
 import { cn } from "@/lib/utils";
+import { useMidiInput } from "@/hooks/useMidiInput";
 import { PlayerControls } from "./PlayerControls";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
@@ -54,6 +55,24 @@ export function PlayShell({
   const midiPlayStartTimeRef = useRef<number>(0);
   const midiPlayStartPosRef = useRef<number>(0);
 
+  // --- Wait Mode Hardware Integration ---
+  const { activeNotes, hasMidiDevice } = useMidiInput();
+  const [isWaitMode, setIsWaitMode] = useState(false);
+  const [practiceTrackId, setPracticeTrackId] = useState(-1);
+  const [parsedMidi, setParsedMidi] = useState<any>(null);
+
+  const activeNotesRef = useRef<Set<number>>(new Set());
+  const isWaitModeRef = useRef(false);
+  const practiceTrackIdRef = useRef(-1);
+  const practiceChordsRef = useRef<{ timeMs: number, notes: Set<number> }[]>([]);
+  const targetChordIndexRef = useRef(0);
+  const isWaitingRef = useRef(false);
+  const releasedPitchesRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => { activeNotesRef.current = activeNotes; }, [activeNotes]);
+  useEffect(() => { isWaitModeRef.current = isWaitMode; }, [isWaitMode]);
+  useEffect(() => { practiceTrackIdRef.current = practiceTrackId; }, [practiceTrackId]);
+
   const handleMidiExtracted = useCallback((base64: string) => {
     setMidiBase64(base64);
     try {
@@ -70,6 +89,7 @@ export function PlayShell({
       }));
       setMidiStartOffsetMs(minMs === Infinity ? 0 : minMs);
       setMidiDurationMs(maxMs);
+      setParsedMidi(midi);
     } catch (err) {
       console.error("Failed to parse initial MIDI offset", err);
       setMidiStartOffsetMs(0);
@@ -106,6 +126,51 @@ export function PlayShell({
       }
     } catch {}
   }, []);
+
+  // --- WAIT MODE V2 Core Progression Logic ---
+  useEffect(() => {
+    if (!parsedMidi) {
+      practiceChordsRef.current = [];
+      return;
+    }
+
+    let tracksToParse: any[] = [];
+    if (practiceTrackId < 0) {
+      tracksToParse = parsedMidi.tracks.filter((t: any) => t.notes.length > 0).slice(0, 2);
+    } else if (parsedMidi.tracks[practiceTrackId]) {
+      tracksToParse.push(parsedMidi.tracks[practiceTrackId]);
+    }
+
+    const chords: { timeMs: number, notes: Set<number> }[] = [];
+    
+    tracksToParse.forEach(track => {
+      track.notes.forEach((n: any) => {
+        const timeMs = n.time * 1000;
+        const existing = chords.find(c => Math.abs(c.timeMs - timeMs) < 20);
+        if (existing) {
+          existing.notes.add(n.midi);
+        } else {
+          chords.push({ timeMs, notes: new Set([n.midi]) });
+        }
+      });
+    });
+    chords.sort((a,b) => a.timeMs - b.timeMs);
+    practiceChordsRef.current = chords;
+    
+    const idx = chords.findIndex(c => c.timeMs >= positionMs);
+    targetChordIndexRef.current = idx !== -1 ? idx : -1;
+  }, [parsedMidi, practiceTrackId]); 
+
+  // Synchronize global mute to prevent backing track or synth leaking during MIDI Wait Mode brakes
+  useEffect(() => {
+    if (audioManagerRef.current) {
+      audioManagerRef.current.setGlobalMute(isWaitMode);
+    }
+    const globalTone = (window as any).Tone;
+    if (globalTone && globalTone.Destination) {
+      globalTone.Destination.mute = payload.metadata?.scoreSynthMuted || isWaitMode;
+    }
+  }, [isWaitMode, payload.metadata?.scoreSynthMuted]);
 
   const handleCollapseToggle = (collapsed: boolean) => {
     setIsControlsCollapsed(collapsed);
@@ -355,12 +420,102 @@ export function PlayShell({
     if (!isPlayingRef.current) return;
     
     let currentPos = 0;
-    if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
-      // Use smooth internal performance clock since <midi-player> native currentTime updates discretely only on note events
-      const elapsedMs = performance.now() - midiPlayStartTimeRef.current;
-      currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
-    } else if (audioManagerRef.current) {
-      currentPos = audioManagerRef.current.getCurrentPositionMs();
+    
+    // === STATIC WAIT MODE V2 CLOCK SHIELD ===
+    // Rigidly lock the Math Engine natively to the target timestamp to defeat all auto-scrubbing.
+    if (isWaitModeRef.current) {
+        if (practiceChordsRef.current.length > 0 && targetChordIndexRef.current >= 0 && targetChordIndexRef.current < practiceChordsRef.current.length) {
+            const targetChord = practiceChordsRef.current[targetChordIndexRef.current];
+            currentPos = targetChord.timeMs; // STATIC LOCK! NO AUTO-RUN!
+            
+            const pressed = activeNotesRef.current;
+            let allMatched = pressed.size > 0 && targetChord.notes.size > 0;
+            for (const n of targetChord.notes) {
+                if (!pressed.has(n)) {
+                    allMatched = false; break;
+                }
+            }
+            
+            let identicalToPrevious = false;
+            if (targetChordIndexRef.current > 0) {
+                const prevChord = practiceChordsRef.current[targetChordIndexRef.current - 1];
+                if (prevChord.notes.size === targetChord.notes.size) {
+                    identicalToPrevious = Array.from(targetChord.notes).every(n => prevChord.notes.has(n));
+                }
+                if (identicalToPrevious) {
+                    prevChord.notes.forEach((n: number) => {
+                        if (!pressed.has(n)) releasedPitchesRef.current.add(n);
+                    });
+                }
+            }
+            
+            let isAllowedEarly = true;
+            if (identicalToPrevious) {
+                const requiredNotes = practiceChordsRef.current[targetChordIndexRef.current - 1].notes;
+                const allReleased = Array.from(requiredNotes).every((n: any) => releasedPitchesRef.current.has(n));
+                isAllowedEarly = allReleased || (Array.from(pressed).length === 0);
+            }
+
+            if (allMatched && isAllowedEarly) {
+                targetChordIndexRef.current++;
+                releasedPitchesRef.current.clear();
+                
+                if (targetChordIndexRef.current < practiceChordsRef.current.length) {
+                    currentPos = practiceChordsRef.current[targetChordIndexRef.current].timeMs;
+                }
+                
+                midiPlayStartTimeRef.current = performance.now();
+                midiPlayStartPosRef.current = currentPos;
+                
+                if (isWaitingRef.current) {
+                    isWaitingRef.current = false;
+                    if (midiPlayerRef.current && !payload.metadata?.scoreSynthMuted) {
+                       Promise.resolve(midiPlayerRef.current.start()).catch((e) => console.log(e));
+                    }
+                    if (audioManagerRef.current && payload.audioTracks.length > 0) {
+                       Promise.resolve(audioManagerRef.current.play()).catch(e => console.log(e));
+                    }
+                }
+            } else {
+                if (!isWaitingRef.current) {
+                    isWaitingRef.current = true;
+                    midiPlayStartTimeRef.current = performance.now();
+                    midiPlayStartPosRef.current = targetChord.timeMs;
+                    
+                    if (audioManagerRef.current) audioManagerRef.current.pause();
+                }
+            }
+        } else {
+            // End of Wait Mode targeting arrays!
+            // If trailing notes natively exist (i.e. Left Hand sequence ended but Right Hand notes trail forward), release the static lock and re-engage continuous scrubbing.
+            if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
+                const elapsedMs = performance.now() - midiPlayStartTimeRef.current;
+                currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
+                
+                if (isWaitingRef.current) {
+                    isWaitingRef.current = false;
+                    if (!payload.metadata?.scoreSynthMuted) {
+                        Promise.resolve(midiPlayerRef.current.start()).catch((e) => console.log(e));
+                    }
+                }
+            } else if (audioManagerRef.current) {
+                currentPos = audioManagerRef.current.getCurrentPositionMs();
+                if (isWaitingRef.current) {
+                    isWaitingRef.current = false;
+                    Promise.resolve(audioManagerRef.current.play()).catch(e => console.log(e));
+                }
+            } else {
+                currentPos = positionMs;
+            }
+        }
+    } else {
+        // Standard Playback Smooth Math Engine
+        if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
+            const elapsedMs = performance.now() - midiPlayStartTimeRef.current;
+            currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
+        } else if (audioManagerRef.current) {
+            currentPos = audioManagerRef.current.getCurrentPositionMs();
+        }
     }
 
     // Auto-Stop Tripwire
@@ -474,10 +629,15 @@ export function PlayShell({
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       setPositionMs(audioManagerRef.current.getCurrentPositionMs()); // force update
     } else if (midiPlayerRef.current) {
-      const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
-      setPositionMs(Math.max(0, (midiPlayerRef.current.currentTime * 1000) - midiStartOffsetMs + offsetMs));
+      if (isWaitModeRef.current) {
+         // V2: DO NOT SYNC FROM NATIVE PLAYER DURING WAIT MODE
+         setPositionMs(positionMs);
+      } else {
+         const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
+         setPositionMs(Math.max(0, (midiPlayerRef.current.currentTime * 1000) - midiStartOffsetMs + offsetMs));
+      }
     }
-  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
+  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, positionMs]);
   // Handle iOS/Mobile backgrounding & lock screen exclusively (leave desktop background tabs playing)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -523,6 +683,12 @@ export function PlayShell({
 
   const handleStop = useCallback(() => {
     handlePause();
+    
+    // WAIT MODE AGGRESSIVE RESET
+    isWaitingRef.current = false;
+    activeNotesRef.current.clear();
+    releasedPitchesRef.current.clear();
+
     // Return to beginning of measure or beginning of song
     const bpm = payload.metadata?.tempo || 120;
     const ts = payload.metadata?.timeSignature || "4/4";
@@ -537,8 +703,9 @@ export function PlayShell({
     const currentMeasureIndex = Math.floor(positionMs / measureMs);
     const startOfMeasureMs = currentMeasureIndex * measureMs;
     
-    // Go to 0 if already at measure start
-    if (positionMs - startOfMeasureMs < 150) {
+    // Complete hard-reset if stopping at the absolute extreme bounds of the track
+    if (positionMs - startOfMeasureMs < 150 || positionMs >= totalSongDurationMs - 100) {
+      targetChordIndexRef.current = 0; // Aggressive React-independent lock
       handleSeek(0);
     } else {
       handleSeek(startOfMeasureMs);
@@ -677,6 +844,9 @@ export function PlayShell({
             onSeek={(ms) => handleSeek(ms)}
             onMidiExtracted={handleMidiExtracted}
             isDarkMode={isDarkMode}
+            isWaitMode={isWaitMode}
+            isWaiting={isWaitingRef.current}
+            practiceTrackId={practiceTrackId}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
@@ -720,6 +890,13 @@ export function PlayShell({
         onPrev={onPrev}
         isAutoplayEnabled={isAutoplayEnabled}
         onAutoplayToggle={setIsAutoplayEnabled}
+        isWaitMode={isWaitMode}
+        onWaitModeToggle={setIsWaitMode}
+        isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
+        onSynthMuteToggle={() => {}}
+        midiTracks={parsedMidi ? parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: t.name || `Instrument ${i+1}` })) : []}
+        practiceTrackId={practiceTrackId}
+        onPracticeTrackChange={setPracticeTrackId}
       />
     </div>
   );

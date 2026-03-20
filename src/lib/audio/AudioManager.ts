@@ -49,6 +49,7 @@ export class AudioManager {
 
   // Click Track
   private metronome: MetronomeEngine | null = null;
+  private globalMuted: boolean = false;
 
   constructor() { }
 
@@ -184,6 +185,7 @@ export class AudioManager {
   }
 
   public async play() {
+    if (this.globalMuted) return;
     this.initContext();
     console.log(`[AudioManager] play() called. tracks=${this.tracks.size}, context=${this.context?.state}, isPlaying=${this.isPlaying}`);
     if (!this.context || this.isPlaying) return;
@@ -557,6 +559,13 @@ export class AudioManager {
           try { this.initContext(); } catch(e) {}
       }
       return this.metronome;
+  }
+  
+  public setGlobalMute(muted: boolean) {
+    this.globalMuted = muted;
+    if (muted) {
+       this.pause();
+    }
   }
 
   public setMetronomeEnabled(enabled: boolean) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { cn, fetchWithRetry } from "@/lib/utils";
 import { VerovioWorkerProxy, type IVerovioWorkerProxy } from "@/lib/verovio/worker-proxy";
 import { getFileViewUrl } from "@/lib/appwrite";
@@ -15,6 +15,9 @@ export interface MusicXMLVisualizerProps {
   onSeek?: (positionMs: number) => void;
   onMidiExtracted?: (midiBase64: string) => void;
   isDarkMode?: boolean;
+  isWaitMode?: boolean;
+  isWaiting?: boolean;
+  practiceTrackId?: number;
   className?: string;
 }
 
@@ -37,7 +40,10 @@ function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>)
   return measureMap[bestLatentAnchor] + offset;
 }
 
-export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false, className }: MusicXMLVisualizerProps) {
+export function MusicXMLVisualizer({
+  scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
+  isWaitMode = false, isWaiting = false, practiceTrackId = 0, className
+}: MusicXMLVisualizerProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [renderVersion, setRenderVersion] = useState(0); // increments when SVG is updated
@@ -145,37 +151,37 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
         // Fix Sibelius 2/4 Whole Rest export bug for Verovio MIDI builder
         // Stripping <type>whole</type> from rest blocks forces the MIDI sequence to use the exact raw <duration> mapping
         const patchedText = text.replace(/<note[^>]*>([\s\S]*?)<\/note>/g, (match, inner) => {
-            if (inner.includes('<rest />') || inner.includes('<rest>')) {
-                return match.replace(/<type>whole<\/type>/g, '');
-            }
-            return match;
+          if (inner.includes('<rest />') || inner.includes('<rest>')) {
+            return match.replace(/<type>whole<\/type>/g, '');
+          }
+          return match;
         });
-        
+
         // Fix Verovio multi-staff Key Signature Modulation bug.
         // Verovio's MIDI builder drops structural flats/sharps during a key change on multi-staff instruments.
         // Furthermore, it permanently gets stuck on the INITIAL key signature, severely mangling natural diatonic notes.
         // We forcefully convert Sibelius's reliable absolute <alter> logic into explicit XML <accidental> nodes solely for the MIDI extraction phase, completely neutralizing Verovio's internal Key Signature dependence.
         const midiText = patchedText.replace(/<pitch>([\s\S]*?)<\/pitch>/g, (match, inner) => {
-            let accidental = '';
-            
-            if (inner.includes('<alter>-1</alter>')) accidental = 'flat';
-            else if (inner.includes('<alter>1</alter>')) accidental = 'sharp';
-            else if (inner.includes('<alter>-2</alter>')) accidental = 'flat-flat';
-            else if (inner.includes('<alter>2</alter>')) accidental = 'double-sharp';
-            else accidental = 'natural'; // If <alter> is missing, Sibelius designates a strictly Natural white-key pitch!
-            
-            return match + `\n<accidental>${accidental}</accidental>`;
+          let accidental = '';
+
+          if (inner.includes('<alter>-1</alter>')) accidental = 'flat';
+          else if (inner.includes('<alter>1</alter>')) accidental = 'sharp';
+          else if (inner.includes('<alter>-2</alter>')) accidental = 'flat-flat';
+          else if (inner.includes('<alter>2</alter>')) accidental = 'double-sharp';
+          else accidental = 'natural'; // If <alter> is missing, Sibelius designates a strictly Natural white-key pitch!
+
+          return match + `\n<accidental>${accidental}</accidental>`;
         });
 
         await midiProxy.loadData(midiText);
         let midiStr = '';
         if (!canceled) {
-            midiStr = await midiProxy.renderToMIDI();
+          midiStr = await midiProxy.renderToMIDI();
         }
         midiWorker.terminate(); // Destroy the disposable worker immediately!
-        
+
         if (canceled) return;
-        
+
         if (onMidiExtracted && midiStr) {
           onMidiExtracted('data:audio/midi;base64,' + midiStr);
         }
@@ -235,7 +241,9 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
     container.querySelectorAll(".active-measure").forEach(el => el.classList.remove("active-measure"));
 
     if (measureEl) {
-      measureEl.classList.add("active-measure");
+      if (!isWaitMode) {
+        measureEl.classList.add("active-measure");
+      }
       if (shouldScroll) {
         const systemEl = measureEl.closest('.system');
         const targetEl = systemEl || measureEl;
@@ -375,9 +383,13 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
         const playheadX = startX + (trueWidth * progress);
         const playheadY = absoluteY;
 
-        playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
-        playhead.style.height = `${screenHeight}px`;
-        playhead.style.opacity = '1';
+        if (isWaitMode) {
+          playhead.style.opacity = '0';
+        } else {
+          playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
+          playhead.style.height = `${screenHeight}px`;
+          playhead.style.opacity = '1';
+        }
       } else {
         playhead.style.opacity = '0';
       }
@@ -391,6 +403,7 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
 
   // Handle clicking on measures to seek
   const handleSvgClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isWaitMode) return; // Mute seeking controls while playing Flashcards
     if (!onSeek || !timemap || timemap.length === 0) return;
 
     // Find closest .measure group
@@ -398,7 +411,6 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
     const measureEl = target.closest('.measure');
     if (!measureEl) return;
 
-    // Find the 1-based index of the clicked measure among all measures
     const container = svgContainerRef.current;
     if (!container) return;
     const allMeasures = Array.from(container.querySelectorAll('.definition-scale .measure'));
@@ -406,9 +418,6 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
     if (index === -1) return;
 
     const clickedPhysicalMeasure = index + 1;
-
-    // Find all latent measures that map to this physical measure
-    // We scan all measures in the timemap to resolve their physical mapping
     const candidateLatents: number[] = [];
     for (const entry of timemap) {
       if (getPhysicalMeasure(entry.measure, measureMap) === clickedPhysicalMeasure) {
@@ -418,10 +427,8 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
 
     if (candidateLatents.length === 0) return;
 
-    // If multiple candidates exist (e.g. repeated measure), find the nearest one to the current position
     let bestLatent = candidateLatents[0];
     let bestDistance = Infinity;
-
     for (const lat of candidateLatents) {
       const mapEntry = timemap.find(t => t.measure === lat);
       if (mapEntry) {
@@ -433,16 +440,181 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
       }
     }
 
-    // Find timeMs from timemap for the chosen latent measure
     const finalMapEntry = timemap.find(t => t.measure === bestLatent);
     if (finalMapEntry) {
       if (onSeek) onSeek(finalMapEntry.timeMs);
-
-      // Instant UI feedback before audio state catches up
       highlightMeasure(measureEl, false);
       activeMeasureRef.current = bestLatent;
     }
   };
+
+  // --- WAIT MODE V2 Core Progression Logic ---
+
+  // Dynamic Viewport Forward Tracker (Resolves implicit missing Measure Strings natively)
+  const executeDOMForwardEdgeScroll = useCallback((container: Element) => {
+    const activeNodes = container.querySelectorAll(".wait-mode-missed, .note-playing-correct");
+    if (activeNodes.length === 0) return;
+
+    const forwardMostNode = activeNodes[activeNodes.length - 1];
+    const maxMeasureNode = forwardMostNode.closest('.measure');
+
+    if (maxMeasureNode) {
+      const measureEl = maxMeasureNode as Element;
+      container.querySelectorAll(".active-measure").forEach(el => el.classList.remove("active-measure"));
+      
+      // CRITICAL FIX: Bypass stale useCallback closure scoping natively evaluating "isWaitMode" prop as 'false'
+      const isActuallyWaitMode = document.getElementById("musicxml-container")?.classList.contains("wait-mode-active");
+      if (!isActuallyWaitMode) {
+        measureEl.classList.add("active-measure");
+      }
+
+      const sys = measureEl.closest('.system');
+      const finalTarget = sys || measureEl;
+
+      if (finalTarget !== scrollTargetRef.current) {
+        scrollTargetRef.current = finalTarget;
+        const scrollBox = containerRef.current;
+
+        if (scrollBox && measureEl instanceof SVGGraphicsElement) {
+          try {
+            const svgEl = measureEl as SVGGraphicsElement;
+            const bbox = svgEl.getBBox();
+            const ctm = svgEl.getScreenCTM();
+            if (ctm) {
+              const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+              const scrollContainerRect = scrollBox.getBoundingClientRect();
+              const scrollTop = scrollBox.scrollTop || 0;
+              const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+
+              const targetScrollTop = absoluteY - (scrollBox.clientHeight / 2) + (bbox.height * ctm.d / 2);
+              scrollBox.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+            }
+          } catch (e) { }
+        }
+      }
+    }
+  }, []);
+
+  const lastActiveQueryMsRef = useRef<number>(0);
+  const isQueryingActiveNotesRef = useRef(false);
+
+  // Active Playback Highlighting (Blue) + Inverse Sieve Extraction
+  useEffect(() => {
+    if (isPlaying || (isWaitMode && !isWaiting)) {
+      if (Math.abs(positionMs - lastActiveQueryMsRef.current) > 50 && !isQueryingActiveNotesRef.current && workerProxyRef.current) {
+        lastActiveQueryMsRef.current = positionMs;
+        isQueryingActiveNotesRef.current = true;
+
+        const qPos = Math.round(positionMs);
+        workerProxyRef.current.getElementsAtTime(qPos).then((data: any) => {
+          isQueryingActiveNotesRef.current = false;
+          const container = svgContainerRef.current;
+          if (!container) return;
+
+          container.querySelectorAll(".note-playing-correct").forEach(el => el.classList.remove("note-playing-correct"));
+          const notes = data?.notes || [];
+
+          if (Array.isArray(notes) && notes.length > 0) {
+            let targetX = -1;
+            // Iterate BACKWARDS to cleanly slice the front-most chronological chord while completely ignoring all historical pedal notes natively!
+            for (let i = notes.length - 1; i >= 0; i--) {
+              const el = container.querySelector("#" + notes[i]) as SVGGraphicsElement | null;
+              if (!el || el.classList.contains("wait-mode-missed")) continue;
+
+              try {
+                const bbox = el.getBBox();
+                if (targetX === -1) {
+                  targetX = bbox.x;
+                } else if (targetX - bbox.x > 35) {
+                  break; // INSTANT ABORT. We are officially evaluating the previous discrete hit. 0 layout thrashing!
+                }
+              } catch (e) { }
+
+              el.classList.add("note-playing-correct");
+            }
+            executeDOMForwardEdgeScroll(container);
+          }
+        }).catch(() => { isQueryingActiveNotesRef.current = false; });
+      }
+    } else if (!isPlaying && !isWaitMode && svgContainerRef.current) {
+      svgContainerRef.current.querySelectorAll(".note-playing-correct").forEach(el => el.classList.remove("note-playing-correct"));
+    }
+  }, [positionMs, isPlaying, isWaitMode, isWaiting]);
+
+  // Wait Mode Precedential Targeting Highlighting (Red) + Inverse Sieve Extraction
+  useEffect(() => {
+    if (isWaitMode && isWaiting && workerProxyRef.current && svgContainerRef.current) {
+      const container = svgContainerRef.current;
+      const qPos = Math.round(positionMs);
+
+      workerProxyRef.current.getElementsAtTime(qPos + 5).then((data: any) => {
+        const notes = data?.notes || [];
+        container.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
+
+        let minLeft = Infinity;
+        const scrollBox = containerRef.current;
+        if (!scrollBox) return;
+
+        const cRect = scrollBox.getBoundingClientRect();
+        const sLeft = scrollBox.scrollLeft || 0;
+
+        if (Array.isArray(notes) && notes.length > 0) {
+          let targetX = -1;
+          for (let i = notes.length - 1; i >= 0; i--) {
+            const el = container.querySelector("#" + notes[i]) as SVGGraphicsElement | null;
+            if (!el) continue;
+
+            const staffNode = el.closest('.staff');
+            if (staffNode && typeof practiceTrackId === 'number') {
+              const staffN = parseInt(staffNode.getAttribute('n') || "1", 10);
+              if (practiceTrackId === 0 && staffN !== 1) continue;
+              if (practiceTrackId === 1 && staffN < 2) continue;
+            }
+
+            try {
+              const bbox = el.getBBox();
+              if (targetX === -1) {
+                targetX = bbox.x;
+              } else if (targetX - bbox.x > 35) {
+                break; // Halt execution. Only target the exact unified visual chord sequence.
+              }
+
+              el.classList.add("wait-mode-missed");
+
+              const ctm = el.getScreenCTM();
+              if (ctm && el.classList.contains('note')) {
+                const sX = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+                const absX = (sX - cRect.left) + sLeft;
+                if (absX < minLeft) minLeft = absX;
+              }
+            } catch (e) { }
+          }
+
+          if (minLeft !== Infinity && playheadRef.current) {
+            const currentT = playheadRef.current.style.transform;
+            const yMatch = currentT ? currentT.match(/translate\([^,]+px,\s*([^)]+)px\)/) : null;
+            const curY = yMatch ? parseFloat(yMatch[1]) : 0;
+            playheadRef.current.style.transform = `translate(${minLeft - 4}px, ${curY}px)`;
+          }
+          executeDOMForwardEdgeScroll(container);
+        }
+
+        if (!document.getElementById('wait-mode-styles')) {
+          const style = document.createElement('style');
+          style.id = 'wait-mode-styles';
+          style.innerHTML = `
+             .wait-mode-missed, .wait-mode-missed path { fill: #ef4444 !important; stroke: #ef4444 !important; transition: fill 0.2s, stroke 0.2s; }
+             .note-playing-correct, .note-playing-correct path { fill: #3b82f6 !important; stroke: #3b82f6 !important; transition: fill 0.1s, stroke 0.1s; }
+             .wait-mode-active .measure { cursor: default !important; }
+             .wait-mode-active .measure:hover { fill: transparent !important; background: transparent !important; outline: none !important; box-shadow: none !important; pointer-events: none !important; }
+           `;
+          document.head.appendChild(style);
+        }
+      }).catch(console.error);
+    } else if (svgContainerRef.current) {
+      svgContainerRef.current.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
+    }
+  }, [isWaitMode, isWaiting, positionMs, renderVersion, practiceTrackId]);
 
   const hasSvg = svgContentRef.current !== null;
 
@@ -525,7 +697,7 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
       {/* Container for SVG — rendered imperatively via ref to avoid React wiping DOM mutations */}
       <div
         ref={containerRef}
-        className={cn("flex-1 overflow-auto w-full relative transition-colors scroll-smooth pb-32", isDarkMode ? "bg-[#181a1f]" : "bg-[#f0f2f5]")}
+        className={cn("flex-1 overflow-auto w-full relative transition-colors scroll-smooth pb-32", isDarkMode ? "bg-[#181a1f]" : "bg-[#f0f2f5]", isWaitMode && "wait-mode-active")}
         id="musicxml-container"
       >
         {/* Absolute Floating Playhead Overlay */}

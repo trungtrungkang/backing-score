@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-
 interface PlayerControlsProps {
   bpm: number;
   positionMs: number;
@@ -40,6 +39,13 @@ interface PlayerControlsProps {
   onPrev?: () => void;
   isAutoplayEnabled?: boolean;
   onAutoplayToggle?: (enabled: boolean) => void;
+  isWaitMode?: boolean;
+  onWaitModeToggle?: (enabled: boolean) => void;
+  isSynthMuted?: boolean;
+  onSynthMuteToggle?: (muted: boolean) => void;
+  midiTracks?: { id: number, name: string }[];
+  practiceTrackId?: number;
+  onPracticeTrackChange?: (id: number) => void;
 }
 
 function formatTime(ms: number) {
@@ -81,7 +87,14 @@ export function PlayerControls({
   onNext,
   onPrev,
   isAutoplayEnabled = true,
-  onAutoplayToggle
+  onAutoplayToggle,
+  isWaitMode,
+  onWaitModeToggle,
+  isSynthMuted,
+  onSynthMuteToggle,
+  midiTracks,
+  practiceTrackId,
+  onPracticeTrackChange
 }: PlayerControlsProps) {
   
   const [localPos, setLocalPos] = useState(positionMs);
@@ -203,6 +216,54 @@ export function PlayerControls({
                 <PlaySquare className="w-4 h-4" /> 
                 <span className="hidden sm:inline">Auto-Next</span>
               </button>
+            )}
+
+            {/* Wait Mode Popover */}
+            {onWaitModeToggle && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button 
+                    className={cn("h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+                    title="Wait Mode Settings"
+                  >
+                    <Keyboard className="w-4 h-4" /> Wait Mode
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="z-[200] w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-4 shadow-xl" sideOffset={8}>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Wait Mode</span>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox"
+                          id="wait-mode-toggle-popup"
+                          checked={isWaitMode} 
+                          onChange={(e) => onWaitModeToggle(e.target.checked)} 
+                          className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
+                        />
+                        <label htmlFor="wait-mode-toggle-popup" className="text-xs font-medium cursor-pointer">Enable</label>
+                      </div>
+                    </div>
+                    
+                    {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && (
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="practice-track-popup" className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Practice Part</label>
+                        <select 
+                          id="practice-track-popup"
+                          className="bg-zinc-100 dark:bg-black/40 text-sm px-2 py-1.5 rounded border border-zinc-300 dark:border-white/10 w-full outline-none focus:border-blue-500"
+                          value={practiceTrackId}
+                          onChange={(e) => onPracticeTrackChange(Number(e.target.value))}
+                        >
+                          <option value={-1}>All Tracks (Chords)</option>
+                          {midiTracks.map((t, i) => (
+                            <option key={t.id} value={i}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
 
             <Popover>
