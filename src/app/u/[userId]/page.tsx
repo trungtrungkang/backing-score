@@ -14,6 +14,7 @@ import {
   ProjectDocument,
   PlaylistDocument
 } from "@/lib/appwrite";
+import { getPublicProfile } from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,7 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<ProjectDocument[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
+  const [publicProfile, setPublicProfile] = useState<{name: string; prefs: any} | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
@@ -125,14 +127,16 @@ export default function UserProfilePage() {
     async function loadProfile() {
       setLoading(true);
       try {
-        const [projRes, plRes] = await Promise.all([
+        const [projRes, plRes, profileRes] = await Promise.all([
            listPublished(undefined, userId),
-           listPublishedPlaylists(userId)
+           listPublishedPlaylists(userId),
+           getPublicProfile(userId)
         ]);
         
         if (!cancelled) {
           setProjects(projRes);
           setPlaylists(plRes);
+          if (profileRes) setPublicProfile(profileRes);
         }
 
         // Only check follow logic if authenticated as a different user
@@ -174,14 +178,15 @@ export default function UserProfilePage() {
   };
 
   const isSelf = user && user.$id === userId;
+  const displayUser = isSelf ? user : publicProfile;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white flex flex-col">
       
       {/* Profile Header Banner */}
       <div className="h-48 w-full bg-gradient-to-r from-[#1A1A1E] to-[#2a2a32] relative group overflow-hidden">
-         {(isSelf && (user?.prefs as any)?.coverUrl) ? (
-            <img src={(user.prefs as any).coverUrl} className="w-full h-full object-cover" alt="Cover" />
+         {(displayUser?.prefs as any)?.coverUrl ? (
+            <img src={(displayUser?.prefs as any).coverUrl} className="w-full h-full object-cover" alt="Cover" />
          ) : null}
          <div className="absolute top-6 left-6 z-10">
             <Link href="/feed" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 transition-colors text-sm font-semibold">
@@ -216,10 +221,10 @@ export default function UserProfilePage() {
            <div className="flex gap-6 items-end">
               <div className="w-32 h-32 rounded-2xl bg-[#fdfdfc] dark:bg-[#0E0E11] p-1.5 shadow-xl -mt-16 relative z-20 group">
                  <div className="w-full h-full rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl font-black text-white shadow-inner relative overflow-hidden">
-                    {(user?.prefs as any)?.avatarUrl && isSelf ? (
-                       <img src={(user.prefs as any).avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
+                    {(displayUser?.prefs as any)?.avatarUrl ? (
+                       <img src={(displayUser?.prefs as any).avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
                     ) : (
-                       isSelf && user?.name ? user.name.substring(0,2).toUpperCase() : "U"
+                       displayUser?.name ? displayUser.name.substring(0,2).toUpperCase() : "U"
                     )}
                     
                     {isSelf && (
@@ -244,13 +249,13 @@ export default function UserProfilePage() {
               </div>
               <div className="pb-2">
                  <h1 className="text-3xl font-black tracking-tight mb-1">
-                    {isSelf && user?.name ? user.name : `User ${userId.substring(0,8)}`}
+                    {displayUser?.name || `User ${userId.substring(0,8)}`}
                  </h1>
                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">@{userId}</p>
                  
-                 {isSelf && (user?.prefs as any)?.bio && (
+                 {(displayUser?.prefs as any)?.bio && (
                     <p className="text-sm text-zinc-600 dark:text-zinc-300 max-w-lg mb-2 leading-relaxed">
-                       {(user.prefs as any).bio}
+                       {(displayUser?.prefs as any).bio}
                     </p>
                  )}
                  
