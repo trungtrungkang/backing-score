@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getPlaylist } from '@/lib/appwrite/playlists';
+import { getPlaylist, getFileViewUrl } from '@/lib/appwrite';
 
 export async function generateMetadata({ params }: { params: Promise<{ playlistId: string }> }): Promise<Metadata> {
   try {
@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: { params: Promise<{ playlistI
 
     // Fallback default image or use the Playlist cover Image ID if present
     const ogImage = pl.coverImageId 
-        ? `https://cloud.appwrite.io/v1/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET_ID}/files/${pl.coverImageId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`
+        ? getFileViewUrl(pl.coverImageId).toString()
         : 'https://backingscore.com/apple-icon.png'; // Fallback stock icon
 
     return {
