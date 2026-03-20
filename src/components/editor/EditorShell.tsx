@@ -113,6 +113,8 @@ export function EditorShell({
   const [midiDurationMs, setMidiDurationMs] = useState(0);
   const midiPlayerRef = useRef<any>(null);
   const midiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const midiPlayStartTimeRef = useRef<number>(0);
+  const midiPlayStartPosRef = useRef<number>(0);
 
   const handleMidiExtracted = useCallback((base64: string) => {
     setMidiBase64(base64);
@@ -365,7 +367,9 @@ export function EditorShell({
     let currentPos = 0;
     // MIDI Fallback Routing
     if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
-      currentPos = midiPlayerRef.current.currentTime * 1000;
+      // Use smooth internal performance clock since <midi-player> native currentTime updates discretely only on note events
+      const elapsedMs = performance.now() - midiPlayStartTimeRef.current;
+      currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
     } else if (audioManagerRef.current) {
       // Standard Audio Routing
       currentPos = audioManagerRef.current.getCurrentPositionMs();
@@ -566,8 +570,16 @@ export function EditorShell({
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.error(e)));
     }
+    
+    // Capture accurate Start Times for Smooth MIDI Telemetry Interpolation Tracker
+    if (payload.audioTracks.length === 0) {
+      midiPlayStartTimeRef.current = performance.now();
+      midiPlayStartPosRef.current = positionMs;
+    }
+
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
+    isPlayingRef.current = true;
   }, [payload.audioTracks.length, stretchedMidiBase64, payload.metadata?.scoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handlePause = useCallback(() => {
@@ -579,6 +591,7 @@ export function EditorShell({
       audioManagerRef.current.pause();
     }
     setIsPlaying(false);
+    isPlayingRef.current = false;
 
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       setPositionMs(audioManagerRef.current.getCurrentPositionMs()); // force update
@@ -691,6 +704,12 @@ export function EditorShell({
       audioManagerRef.current.seek(ms);
     }
     setPositionMs(ms);
+    
+    // Sync continuous MIDI telemetry stopwatch
+    if (payload.audioTracks.length === 0) {
+      midiPlayStartTimeRef.current = performance.now();
+      midiPlayStartPosRef.current = ms;
+    }
   }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, payload.metadata?.scoreSynthMuted]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";

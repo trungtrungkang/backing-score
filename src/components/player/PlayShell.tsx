@@ -51,6 +51,8 @@ export function PlayShell({
   const [midiDurationMs, setMidiDurationMs] = useState(0);
   const midiPlayerRef = useRef<any>(null);
   const midiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const midiPlayStartTimeRef = useRef<number>(0);
+  const midiPlayStartPosRef = useRef<number>(0);
 
   const handleMidiExtracted = useCallback((base64: string) => {
     setMidiBase64(base64);
@@ -354,7 +356,9 @@ export function PlayShell({
     
     let currentPos = 0;
     if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
-      currentPos = Math.max(0, midiPlayerRef.current.currentTime * 1000 - midiStartOffsetMs);
+      // Use smooth internal performance clock since <midi-player> native currentTime updates discretely only on note events
+      const elapsedMs = performance.now() - midiPlayStartTimeRef.current;
+      currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
     } else if (audioManagerRef.current) {
       currentPos = audioManagerRef.current.getCurrentPositionMs();
     }
@@ -444,8 +448,16 @@ export function PlayShell({
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.error(e)));
     }
+    
+    // Capture accurate Start Times for Smooth MIDI Telemetry Interpolation Tracker
+    if (payload.audioTracks.length === 0) {
+      midiPlayStartTimeRef.current = performance.now();
+      midiPlayStartPosRef.current = positionMs;
+    }
+
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
+    isPlayingRef.current = true;
   }, [payload.audioTracks.length, stretchedMidiBase64, payload.metadata?.scoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handlePause = useCallback(() => {
@@ -457,6 +469,7 @@ export function PlayShell({
       audioManagerRef.current.pause();
     }
     setIsPlaying(false);
+    isPlayingRef.current = false;
 
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       setPositionMs(audioManagerRef.current.getCurrentPositionMs()); // force update
