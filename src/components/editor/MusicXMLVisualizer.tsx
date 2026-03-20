@@ -139,6 +139,8 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
           verovioUrl: "https://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js"
         });
         const midiProxy = new VerovioWorkerProxy(midiWorker) as unknown as IVerovioWorkerProxy;
+        await midiProxy.onRuntimeInitialized();
+        if (canceled) return;
 
         // Fix Sibelius 2/4 Whole Rest export bug for Verovio MIDI builder
         // Stripping <type>whole</type> from rest blocks forces the MIDI sequence to use the exact raw <duration> mapping
