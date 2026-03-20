@@ -15,8 +15,10 @@ import {
   PlaylistDocument
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Music4, ListMusic, Globe, LayoutGrid, Check, Plus, ArrowLeft } from "lucide-react";
+import { Music4, ListMusic, Globe, LayoutGrid, Check, Plus, ArrowLeft, Edit2, Loader2, X, Image as ImageIcon } from "lucide-react";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -28,6 +30,90 @@ export default function UserProfilePage() {
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
+
+  // Profile Edit Modal State
+  const { updateProfile } = useAuth();
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const handleOpenEditProfile = () => {
+     setEditName(user?.name || "");
+     setEditBio((user?.prefs as any)?.bio || "");
+     setShowEditProfileModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+     if (!user || isSavingProfile) return;
+     setIsSavingProfile(true);
+     try {
+        await updateProfile(editName.trim(), { ...user.prefs, bio: editBio.trim() });
+        setShowEditProfileModal(false);
+     } catch (e: any) {
+        alert(e.message || "Failed to update profile");
+     } finally {
+        setIsSavingProfile(false);
+     }
+  };
+
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file || !user) return;
+     setIsUploadingCover(true);
+     try {
+        const { uploadProjectFile, getFileViewUrl } = await import("@/lib/appwrite/upload");
+        const fileItem = await uploadProjectFile(user.$id, file);
+        const coverUrl = getFileViewUrl(fileItem.fileId);
+        await updateProfile(user.name, { ...user.prefs, coverUrl });
+     } catch {
+        alert("Failed to upload cover image");
+     } finally {
+        setIsUploadingCover(false);
+     }
+  };
+
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+     const file = e.target.files?.[0];
+     if (!file || !user) return;
+     setIsUploadingAvatar(true);
+     try {
+        const { uploadProjectFile, getFileViewUrl } = await import("@/lib/appwrite/upload");
+        const fileItem = await uploadProjectFile(user.$id, file);
+        const avatarUrl = getFileViewUrl(fileItem.fileId);
+        await updateProfile(user.name, { ...user.prefs, avatarUrl });
+     } catch {
+        alert("Failed to upload avatar image");
+     } finally {
+        setIsUploadingAvatar(false);
+     }
+  };
+
+  const handleRemoveAvatar = async () => {
+     if (!user) return;
+     setIsUploadingAvatar(true);
+     try {
+        await updateProfile(user.name, { ...user.prefs, avatarUrl: "" });
+     } catch {
+        alert("Failed to remove avatar");
+     } finally {
+        setIsUploadingAvatar(false);
+     }
+  };
+
+  const handleRemoveCover = async () => {
+     if (!user) return;
+     setIsUploadingCover(true);
+     try {
+        await updateProfile(user.name, { ...user.prefs, coverUrl: "" });
+     } catch {
+        alert("Failed to remove cover");
+     } finally {
+        setIsUploadingCover(false);
+     }
+  };
 
   // Example stats. Real apps would query the Follows & Reactions collection for accurate counts.
   const followerCount = 0; 
@@ -93,27 +179,81 @@ export default function UserProfilePage() {
     <div className="min-h-[calc(100vh-4rem)] bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white flex flex-col">
       
       {/* Profile Header Banner */}
-      <div className="h-48 w-full bg-gradient-to-r from-[#1A1A1E] to-[#2a2a32] relative">
+      <div className="h-48 w-full bg-gradient-to-r from-[#1A1A1E] to-[#2a2a32] relative group overflow-hidden">
+         {(isSelf && (user?.prefs as any)?.coverUrl) ? (
+            <img src={(user.prefs as any).coverUrl} className="w-full h-full object-cover" alt="Cover" />
+         ) : null}
          <div className="absolute top-6 left-6 z-10">
             <Link href="/feed" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/90 transition-colors text-sm font-semibold">
                <ArrowLeft className="w-4 h-4" /> Feed
             </Link>
          </div>
+         {isSelf && (
+            <div className="absolute bottom-4 right-4 flex items-center gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+               {(user?.prefs as any)?.coverUrl && (
+                  <button 
+                     onClick={handleRemoveCover} 
+                     disabled={isUploadingCover}
+                     className="bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-lg backdrop-blur transition-colors"
+                     title="Remove Cover"
+                  >
+                     <X className="w-4 h-4" />
+                  </button>
+               )}
+               <label className="bg-black/50 hover:bg-black/70 text-white px-3 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-colors backdrop-blur flex items-center gap-2">
+                  {isUploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
+                  Change Cover
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} disabled={isUploadingCover} />
+               </label>
+            </div>
+         )}
       </div>
 
-      <div className="w-full max-w-5xl mx-auto px-6 -mt-16 relative z-10 pb-20">
+      <div className="w-full max-w-5xl mx-auto px-6 relative z-10 pb-20">
         
         {/* Avatar & Actions */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
            <div className="flex gap-6 items-end">
-              <div className="w-32 h-32 rounded-2xl bg-[#fdfdfc] dark:bg-[#0E0E11] p-1.5 shadow-xl">
-                 <div className="w-full h-full rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl font-black text-white shadow-inner">
-                    {userId.substring(0,2).toUpperCase()}
+              <div className="w-32 h-32 rounded-2xl bg-[#fdfdfc] dark:bg-[#0E0E11] p-1.5 shadow-xl -mt-16 relative z-20 group">
+                 <div className="w-full h-full rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-4xl font-black text-white shadow-inner relative overflow-hidden">
+                    {(user?.prefs as any)?.avatarUrl && isSelf ? (
+                       <img src={(user.prefs as any).avatarUrl} className="w-full h-full object-cover" alt="Avatar" />
+                    ) : (
+                       isSelf && user?.name ? user.name.substring(0,2).toUpperCase() : "U"
+                    )}
+                    
+                    {isSelf && (
+                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white gap-5">
+                          <label className="cursor-pointer flex flex-col items-center hover:text-[#C8A856] transition-colors" title="Change Avatar">
+                             {isUploadingAvatar ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                             <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={isUploadingAvatar} />
+                          </label>
+                          {(user?.prefs as any)?.avatarUrl && (
+                             <button 
+                               onClick={handleRemoveAvatar} 
+                               disabled={isUploadingAvatar}
+                               className="text-red-400 hover:text-red-500 transition-colors flex flex-col items-center"
+                               title="Remove Custom Avatar"
+                             >
+                                <X className="w-5 h-5" />
+                             </button>
+                          )}
+                       </div>
+                    )}
                  </div>
               </div>
               <div className="pb-2">
-                 <h1 className="text-3xl font-black tracking-tight mb-1">User {userId.substring(0,8)}</h1>
-                 <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">@{userId}</p>
+                 <h1 className="text-3xl font-black tracking-tight mb-1">
+                    {isSelf && user?.name ? user.name : `User ${userId.substring(0,8)}`}
+                 </h1>
+                 <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">@{userId}</p>
+                 
+                 {isSelf && (user?.prefs as any)?.bio && (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300 max-w-lg mb-2 leading-relaxed">
+                       {(user.prefs as any).bio}
+                    </p>
+                 )}
+                 
                  <div className="flex items-center gap-4 mt-3 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
                     <div><strong className="text-zinc-900 dark:text-white">{followerCount}</strong> Followers</div>
                     <div><strong className="text-zinc-900 dark:text-white">{projects.length}</strong> Works</div>
@@ -123,8 +263,11 @@ export default function UserProfilePage() {
            
            <div className="pb-2 flex gap-3">
               {isSelf ? (
-                 <Button variant="outline" className="rounded-full font-bold px-6 bg-transparent border-zinc-200 dark:border-zinc-800" disabled>
-                   This is you
+                 <Button 
+                    onClick={handleOpenEditProfile}
+                    className="rounded-full font-bold px-6 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors" 
+                 >
+                   <Edit2 className="w-4 h-4 mr-2" /> Edit Profile
                  </Button>
               ) : (
                  <Button 
@@ -245,6 +388,52 @@ export default function UserProfilePage() {
            </Tabs>
         )}
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="bg-white dark:bg-[#151518] border border-zinc-200 dark:border-white/10 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between">
+                 <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Edit Profile</h3>
+                 <Button variant="ghost" size="icon" onClick={() => setShowEditProfileModal(false)} className="w-8 h-8 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white">
+                    <X className="w-4 h-4" />
+                 </Button>
+              </div>
+              <div className="p-5 flex flex-col gap-4">
+                 <div>
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Display Name</label>
+                    <Input 
+                       value={editName} 
+                       onChange={(e) => setEditName(e.target.value)} 
+                       placeholder="e.g. Wolfgang Mozart" 
+                       className="bg-zinc-100 dark:bg-zinc-900/50 border-transparent focus-visible:ring-[#C8A856]"
+                    />
+                 </div>
+                 <div>
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Bio</label>
+                    <Textarea 
+                       value={editBio} 
+                       onChange={(e) => setEditBio(e.target.value)} 
+                       placeholder="Tell the community about your musical journey..." 
+                       className="resize-none h-24 bg-zinc-100 dark:bg-zinc-900/50 border-transparent focus-visible:ring-[#C8A856]"
+                    />
+                 </div>
+              </div>
+              <div className="p-4 border-t border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/50 flex justify-end gap-3">
+                 <Button variant="ghost" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white" onClick={() => setShowEditProfileModal(false)}>Cancel</Button>
+                 <Button 
+                   onClick={handleSaveProfile} 
+                   disabled={isSavingProfile}
+                   className="bg-[#C8A856] text-black hover:bg-[#d4b566] font-bold"
+                 >
+                   {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                   Save Changes
+                 </Button>
+              </div>
+           </div>
+        </div>
+      )}
+
     </div>
   );
 }

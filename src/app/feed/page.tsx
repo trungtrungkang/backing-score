@@ -13,6 +13,7 @@ import {
   getReactionsCount,
   addComment,
   getComments,
+  listMyProjects,
   PostDocument,
   ProjectDocument,
   PlaylistDocument,
@@ -23,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { 
   Heart, MessageSquare, Share2, Music, ListMusic, 
-  Globe, Clock, PenTool, Image as ImageIcon, Send
+  Globe, Clock, PenTool, Image as ImageIcon, Send, X, Loader2
 } from "lucide-react";
 import { Music4 } from "lucide-react";
 
@@ -58,6 +59,12 @@ export default function FeedPage() {
   // Composer State
   const [composeText, setComposeText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState<{ type: "project" | "playlist", id: string, name: string } | null>(null);
+
+  // Attachment Modal State
+  const [showAttachModal, setShowAttachModal] = useState(false);
+  const [myProjects, setMyProjects] = useState<ProjectDocument[]>([]);
+  const [loadingAttach, setLoadingAttach] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -113,21 +120,27 @@ export default function FeedPage() {
   }, [user, authLoading, router]);
 
   const handlePostSubmit = async () => {
-    if (!user || isPosting || !composeText.trim()) return;
+    if (!user || isPosting || (!composeText.trim() && !selectedAttachment)) return;
     setIsPosting(true);
     try {
       const newPost = await createPost({
         content: composeText.trim(),
-        attachmentType: "none",
-        attachmentId: ""
+        attachmentType: selectedAttachment ? selectedAttachment.type : "none",
+        attachmentId: selectedAttachment ? selectedAttachment.id : ""
       });
       // Pushing optimistic feed
+      let projObj: ProjectDocument | undefined = undefined;
+      if (selectedAttachment?.type === "project") {
+         projObj = myProjects.find(p => p.$id === selectedAttachment.id);
+      }
       setPosts(prev => [{
         ...newPost,
         likesCount: 0,
-        isLiked: false
+        isLiked: false,
+        project: projObj,
       }, ...prev]);
       setComposeText("");
+      setSelectedAttachment(null);
     } catch {
       setError("Failed to broadcast post.");
     } finally {
@@ -242,12 +255,28 @@ export default function FeedPage() {
                     <div className="text-red-500 text-xs font-medium py-1">{error}</div>
                  )}
 
+                 {selectedAttachment && (
+                    <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg text-sm text-blue-700 dark:text-blue-300 font-medium mb-3 relative group w-max max-w-full">
+                       <Music className="w-4 h-4 shrink-0" />
+                       <span className="truncate">{selectedAttachment.name}</span>
+                       <button onClick={() => setSelectedAttachment(null)} className="ml-2 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-700">
+                         <X className="w-3 h-3" />
+                       </button>
+                    </div>
+                 )}
+
                  <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-white/5">
                     <div className="flex gap-1">
-                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10">
-                          <ImageIcon className="w-4 h-4" />
-                       </Button>
-                       <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10">
+                       <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {
+                             setShowAttachModal(true);
+                             setLoadingAttach(true);
+                             listMyProjects().then(setMyProjects).finally(() => setLoadingAttach(false));
+                          }}
+                          className="w-8 h-8 rounded-full text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10"
+                       >
                           <Music className="w-4 h-4" />
                        </Button>
                     </div>
@@ -462,6 +491,62 @@ export default function FeedPage() {
             </div>
          </div>
       </aside>
+
+      {/* Attachment Modal */}
+      {showAttachModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+           <div className="bg-white dark:bg-[#151518] border border-zinc-200 dark:border-white/10 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="p-4 border-b border-zinc-200 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50">
+                 <h3 className="font-bold text-lg flex items-center gap-2 text-zinc-900 dark:text-white">
+                    <Music className="w-4 h-4 text-blue-500" />
+                    Attach Score
+                 </h3>
+                 <Button variant="ghost" size="icon" onClick={() => setShowAttachModal(false)} className="w-8 h-8 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white">
+                    <X className="w-4 h-4" />
+                 </Button>
+              </div>
+              
+              <div className="p-4 overflow-y-auto flex-1">
+                 {loadingAttach ? (
+                    <div className="py-12 flex justify-center">
+                       <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+                    </div>
+                 ) : myProjects.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center text-center">
+                       <Music4 className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mb-3" />
+                       <p className="text-zinc-500 font-medium">You haven't uploaded any scores yet.</p>
+                       <Button variant="link" onClick={() => router.push("/dashboard")} className="text-blue-500">Go to Dashboard</Button>
+                    </div>
+                 ) : (
+                    <div className="flex flex-col gap-2">
+                       {myProjects.map(p => (
+                          <div 
+                             key={p.$id} 
+                             onClick={() => {
+                                setSelectedAttachment({ type: "project", id: p.$id, name: p.name });
+                                setShowAttachModal(false);
+                             }}
+                             className="flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10 group"
+                          >
+                             <div className="w-12 h-12 bg-zinc-200 dark:bg-black/50 rounded flex items-center justify-center shrink-0 overflow-hidden">
+                                {p.coverUrl ? (
+                                  <img src={p.coverUrl} className="w-full h-full object-cover" alt="cover" />
+                                ) : (
+                                  <Music4 className="w-6 h-6 text-zinc-400" />
+                                )}
+                             </div>
+                             <div className="flex-1 min-w-0">
+                                <div className="font-bold text-sm text-zinc-900 dark:text-white truncate group-hover:text-blue-500 transition-colors">{p.name}</div>
+                                <div className="text-xs text-zinc-500 truncate mt-0.5">{p.instruments?.[0] || 'Piano'} • {p.mode}</div>
+                             </div>
+                          </div>
+                       ))}
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
 
     </div>
   );

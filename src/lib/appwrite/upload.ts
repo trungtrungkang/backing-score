@@ -22,6 +22,10 @@ const ALLOWED_EXTENSIONS = [
   "webm",
   "aac",
   "m4a",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp"
 ];
 
 function getExtension(filename: string): string {

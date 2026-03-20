@@ -23,6 +23,7 @@ interface AuthContextValue extends AuthState {
   signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithOAuth: (provider: "google") => void;
   sendVerification: () => Promise<void>;
+  updateProfile: (name: string, prefs?: Record<string, any>) => Promise<void>;
   getJWT: () => Promise<string>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -139,6 +140,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateProfile = useCallback(async (name: string, prefs?: Record<string, any>) => {
+    try {
+      if (name) {
+         await account.updateName(name);
+      }
+      if (prefs) {
+         await account.updatePrefs(prefs);
+      }
+      await loadSession();
+    } catch (e: any) {
+      throw new Error(e?.message || "Failed to update profile");
+    }
+  }, [loadSession]);
+
   const clearError = useCallback(() => setError(null), []);
 
   const value: AuthContextValue = {
@@ -149,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup,
     loginWithOAuth,
     sendVerification,
+    updateProfile,
     getJWT,
     logout,
     clearError,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert } from "lucide-react";
+import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -51,6 +51,12 @@ export function Header() {
               <Compass className="w-[18px] h-[18px]" />
               Explore
             </Link>
+            {user && (
+              <Link href="/feed" className={`h-full flex px-2 items-center gap-2 text-sm font-semibold transition-colors border-b-2 ${pathname.startsWith('/feed') ? 'text-[#C8A856] border-[#C8A856]' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200'}`}>
+                <Users className="w-[18px] h-[18px]" />
+                Community
+              </Link>
+            )}
             {user?.labels?.includes("admin") && (
               <Link href="/admin" className={`h-full flex px-2 items-center gap-2 text-sm font-extrabold transition-colors border-b-2 ${pathname.startsWith('/admin') ? 'text-red-500 border-red-500' : 'text-red-400/50 dark:text-red-900/50 border-transparent hover:text-red-500 dark:hover:text-red-500'}`}>
                 <ShieldAlert className="w-[18px] h-[18px]" />
@@ -65,11 +71,13 @@ export function Header() {
           
           {user ? (
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="flex flex-col items-end pr-3 border-r border-zinc-200 dark:border-zinc-800 hidden sm:flex">
-                <span className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-                  Hi, <strong className="text-zinc-900 dark:text-white">{user.name || "User"}</strong>
-                </span>
-              </div>
+              <Link href={`/u/${user.$id}`} className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs shadow-sm hover:scale-105 transition-transform overflow-hidden" title="My Profile">
+                {(user.prefs as any)?.avatarUrl ? (
+                   <img src={(user.prefs as any).avatarUrl} className="w-full h-full object-cover" alt="User" />
+                ) : (
+                   (user.name ? user.name.substring(0, 2) : "U").toUpperCase()
+                )}
+              </Link>
               <button 
                 onClick={() => logout()}
                 className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 flex items-center justify-center text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
