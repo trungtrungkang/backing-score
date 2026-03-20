@@ -191,32 +191,21 @@ export function PlayShell({
       
       const midi = new Midi(bytes.buffer);
       
-      midi.tracks.forEach(track => {
-        track.notes.forEach(note => {
-          note.time = note.time / playbackRate;
-          note.duration = note.duration / playbackRate;
-          
-          // Pitch Shift
-          const newMidi = note.midi + pitchShift;
-          if (newMidi >= 0 && newMidi <= 127) {
-            note.midi = newMidi;
-          }
+      const tempoTarget = payload.metadata?.tempo || 120;
+      
+      // Override internal verovio default MIDI tempos for perfect Sync
+      midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      
+      if (pitchShift !== 0) {
+        midi.tracks.forEach(track => {
+          track.notes.forEach(note => {
+            const newMidi = note.midi + pitchShift;
+            if (newMidi >= 0 && newMidi <= 127) {
+              note.midi = newMidi;
+            }
+          });
         });
-
-        if (track.controlChanges) {
-          Object.keys(track.controlChanges).forEach(cc => {
-            track.controlChanges[cc as any].forEach((event: any) => {
-              event.time = event.time / playbackRate;
-            });
-          });
-        }
-
-        if (track.pitchBends) {
-          track.pitchBends.forEach((event: any) => {
-            event.time = event.time / playbackRate;
-          });
-        }
-      });
+      }
 
       const newBytes = midi.toArray();
       let newBinaryString = "";
@@ -234,7 +223,7 @@ export function PlayShell({
       console.error("[PlayShell] Failed to transform MIDI for pitch/time shift", e);
       setStretchedMidiBase64(midiBase64); // fallback
     }
-  }, [midiBase64, playbackRate, pitchShift]);
+  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo]);
 
   // Sync the timemap down to the audio engine metronome
   useEffect(() => {
