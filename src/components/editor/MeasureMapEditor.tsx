@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Wand2 } from "lucide-react";
+import Draggable from "react-draggable";
 import type { DAWPayload } from "@/lib/daw/types";
 
 interface MeasureMapEditorProps {
@@ -47,6 +48,39 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
   const [newPhysical, setNewPhysical] = useState<string>("");
   const [sigLatent, setSigLatent] = useState<string>("");
   const [sigValue, setSigValue] = useState<string>("");
+  const nodeRef = useRef(null);
+
+  const handleAutoGenerate = () => {
+    if (timemap.length > 0) {
+      if (!confirm("Your existing timeline records will be overwritten. Continue?")) return;
+    }
+    
+    const countStr = prompt("How many transparent measures should be generated?", "100");
+    if (!countStr) return;
+    const count = parseInt(countStr, 10);
+    if (isNaN(count) || count <= 0) return;
+
+    const bpm = payload.metadata?.tempo || 120;
+    const ts = payload.metadata?.timeSignature || "4/4";
+    const [num, den] = ts.split("/");
+    const beatsPerMeasure = parseInt(num) || 4;
+    const noteValue = parseInt(den) || 4;
+    
+    const msPerQuarterNote = 60000 / bpm;
+    const msPerBeat = msPerQuarterNote * (4 / noteValue);
+    const measureMs = msPerBeat * beatsPerMeasure;
+
+    const newTimemap: any[] = [];
+    for (let i = 1; i <= count; i++) {
+      newTimemap.push({
+        measure: i,
+        timeMs: (i - 1) * measureMs
+      });
+    }
+    
+    newTimemap[0].timeSignature = ts;
+    updatePayloadTimemap(newTimemap);
+  };
 
   const sigEntriesList = timemap.filter(t => t.timeSignature).map(t => ({
     latent: t.measure,
@@ -137,13 +171,19 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
   };
 
   return (
-    <div className="fixed right-4 top-20 w-80 bg-background border border-border rounded-lg shadow-xl flex flex-col z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
-        <h3 className="font-semibold text-sm">Measure Map (Repeats/Codas)</h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+    <Draggable nodeRef={nodeRef} handle=".drag-handle" bounds="body">
+      <div ref={nodeRef} className="fixed right-4 top-20 w-80 bg-background border border-border rounded-lg shadow-xl flex flex-col z-50 overflow-hidden cursor-default">
+        <div className="drag-handle cursor-move flex items-center justify-between px-3 py-2 bg-muted/80 hover:bg-muted border-b border-border transition-colors">
+          <h3 className="font-semibold text-sm pointer-events-none">Measure Map</h3>
+          <div className="flex items-center gap-1 cursor-default">
+            <button onClick={handleAutoGenerate} className="p-1.5 text-blue-500 hover:text-white hover:bg-blue-500 rounded transition-colors" title="Auto-Generate Timemap Grid">
+              <Wand2 className="w-4 h-4" />
+            </button>
+            <button onClick={onClose} className="p-1.5 text-muted-foreground hover:text-white hover:bg-red-500 rounded transition-colors" title="Close Panel">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
       <div className="p-3 text-sm text-muted-foreground">
         <p>Define anchors where the audio latency measure jumps back/forward to a different printed sheet measure.</p>
@@ -269,6 +309,7 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Draggable>
   );
 }
