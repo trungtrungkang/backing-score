@@ -130,8 +130,23 @@ export function MusicXMLVisualizer({ scoreFileId, positionMs = 0, isPlaying = fa
         const svg = await proxy.renderToSVG(1);
         if (canceled) return;
 
+        // Fix Sibelius 2/4 Whole Rest export bug for Verovio MIDI builder
+        // Stripping <type>whole</type> from rest blocks forces the MIDI sequence to use the exact raw <duration> mapping
+        const patchedText = text.replace(/<note[^>]*>([\s\S]*?)<\/note>/g, (match, inner) => {
+            if (inner.includes('<rest />') || inner.includes('<rest>')) {
+                return match.replace(/<type>whole<\/type>/g, '');
+            }
+            return match;
+        });
+        await proxy.loadData(patchedText);
+        if (canceled) return;
+
         // Render to MIDI
         const midiStr = await proxy.renderToMIDI();
+        
+        // Restore SVG-friendly visual XML state (safeguard)
+        await proxy.loadData(text);
+        
         if (onMidiExtracted && midiStr) {
           onMidiExtracted('data:audio/midi;base64,' + midiStr);
         }

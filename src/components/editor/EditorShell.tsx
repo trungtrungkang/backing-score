@@ -167,13 +167,6 @@ export function EditorShell({
       return;
     }
 
-    const currentOffsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
-
-    if (playbackRate === 1.0 && pitchShift === 0 && currentOffsetMs === 0) {
-      setStretchedMidiBase64(midiBase64);
-      return;
-    }
-
     try {
       const binaryString = window.atob(midiBase64.split(",")[1] || midiBase64);
       const len = binaryString.length;
@@ -183,34 +176,21 @@ export function EditorShell({
       }
       
       const midi = new Midi(bytes.buffer);
+      const tempoTarget = payload.metadata?.tempo || 120;
       
-      midi.tracks.forEach(track => {
-        track.notes.forEach(note => {
-          note.time = note.time / playbackRate;
-          note.duration = note.duration / playbackRate;
-          
-          // Pitch Shift
-          const newMidi = note.midi + pitchShift;
-          if (newMidi >= 0 && newMidi <= 127) {
-            note.midi = newMidi;
-          }
+      // Override internal verovio default MIDI tempos for perfect Sync
+      midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      
+      if (pitchShift !== 0) {
+        midi.tracks.forEach(track => {
+          track.notes.forEach(note => {
+            const newMidi = note.midi + pitchShift;
+            if (newMidi >= 0 && newMidi <= 127) {
+              note.midi = newMidi;
+            }
+          });
         });
-
-        // Also shift Sustain Pedals
-        if (track.controlChanges) {
-          Object.keys(track.controlChanges).forEach(cc => {
-            track.controlChanges[cc as any].forEach((event: any) => {
-              event.time = event.time / playbackRate;
-            });
-          });
-        }
-
-        if (track.pitchBends) {
-          track.pitchBends.forEach((event: any) => {
-            event.time = event.time / playbackRate;
-          });
-        }
-      });
+      }
 
       const newBytes = midi.toArray();
       let newBinaryString = "";
@@ -219,7 +199,7 @@ export function EditorShell({
       }
       const newBase64 = "data:audio/midi;base64," + window.btoa(newBinaryString);
       setStretchedMidiBase64(newBase64);
-      console.log(`[EditorShell] Generated stretched MIDI base64 (rate=${playbackRate}, pitch=${pitchShift})`);
+      console.log(`[EditorShell] Generated synced MIDI base64 (tempo=${tempoTarget}, rate=${playbackRate}, pitch=${pitchShift})`);
 
       // We must reload the player if it's currently loaded
       if (midiPlayerRef.current && midiPlayerRef.current.currentTime > 0) {
@@ -231,7 +211,7 @@ export function EditorShell({
       console.error("[EditorShell] Failed to transform MIDI for pitch/time shift", e);
       setStretchedMidiBase64(midiBase64); // fallback
     }
-  }, [midiBase64, playbackRate, pitchShift]);
+  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo]);
 
   useEffect(() => {
     // Initialize standard Web Audio Manager
