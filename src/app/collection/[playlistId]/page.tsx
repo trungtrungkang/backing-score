@@ -178,7 +178,7 @@ export default function CollectionPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white flex flex-col md:flex-row">
       
       {/* Left Sidebar Details */}
-      <aside className="w-full md:w-[400px] shrink-0 bg-zinc-50 dark:bg-zinc-900/30 border-r border-zinc-200 dark:border-white/5 p-6 sm:p-10 flex flex-col gap-8 min-h-[50vh] md:min-h-[calc(100vh-4rem)] sticky top-16 relative">
+      <aside className="w-full md:w-[400px] shrink-0 bg-zinc-50 dark:bg-zinc-900/30 border-r border-zinc-200 dark:border-white/5 p-6 sm:p-10 flex flex-col gap-8 min-h-[50vh] md:min-h-[calc(100vh-4rem)] md:sticky md:top-16 relative">
          {/* Background blur decorative element */}
          <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-br from-[#C8A856]/20 to-transparent blur-[100px] -z-10 pointer-events-none opacity-50"></div>
 
