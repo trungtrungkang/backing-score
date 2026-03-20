@@ -550,6 +550,9 @@ export function MusicXMLVisualizer({
       workerProxyRef.current.getElementsAtTime(qPos + 5).then((data: any) => {
         const notes = data?.notes || [];
         container.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
+        
+        // CRITICAL FIX: Purge stale transit-window Blue classes! Overrides Red targets natively through CSS specificity cascades.
+        container.querySelectorAll(".note-playing-correct").forEach(el => el.classList.remove("note-playing-correct"));
 
         let minLeft = Infinity;
         const scrollBox = containerRef.current;
