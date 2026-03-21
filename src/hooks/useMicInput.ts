@@ -37,7 +37,16 @@ export function useMicInput() {
     if (isMicInitialized) return true;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // CRITCAL AUDIO FIX: Browsers aggressively apply Speech-oriented Noise Suppression and Echo Cancellation by default.
+      // This mathematically destroys Musical Instrument harmonics (treating Piano as "background noise").
+      // We must explicitly disable these native WebRTC constraints to capture High-Fidelity Acoustic waves!
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,
+          autoGainControl: false,
+          noiseSuppression: false,
+        }
+      });
       streamRef.current = stream;
 
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -47,8 +56,14 @@ export function useMicInput() {
       analyser.fftSize = 2048; // Excellent tradeoff between resolution and latency
       analyserRef.current = analyser;
 
+      // Inject a Gain Node artificially amplifying the raw signal strength (2.5x boost)
+      // This guarantees even soft, distant piano strokes cross the Float32 trigger threshold natively.
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.value = 2.5;
+
       const source = audioCtx.createMediaStreamSource(stream);
-      source.connect(analyser);
+      source.connect(gainNode);
+      gainNode.connect(analyser);
 
       detectPitchRef.current = Pitchfinder.YIN({ sampleRate: audioCtx.sampleRate });
       setIsMicInitialized(true);
