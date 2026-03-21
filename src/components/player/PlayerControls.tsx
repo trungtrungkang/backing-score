@@ -63,6 +63,10 @@ interface PlayerControlsProps {
   onWaitModeMonitorToggle?: (show: boolean) => void;
   isMidiInitialized?: boolean;
   onInitializeMidi?: () => Promise<boolean>;
+  onDisconnectMidi?: () => void;
+  isMicInitialized?: boolean;
+  onInitializeMic?: () => Promise<boolean>;
+  onDisconnectMic?: () => void;
 }
 
 export function formatTime(ms: number) {
@@ -117,7 +121,11 @@ export function PlayerControls({
   showWaitModeMonitor = false,
   onWaitModeMonitorToggle,
   isMidiInitialized = false,
-  onInitializeMidi
+  onInitializeMidi,
+  onDisconnectMidi,
+  isMicInitialized = false,
+  onInitializeMic,
+  onDisconnectMic
 }: PlayerControlsProps) {
   
   const [localPos, setLocalPos] = useState(positionMs);
@@ -265,7 +273,7 @@ export function PlayerControls({
                           id="wait-mode-toggle-popup"
                           checked={isWaitMode} 
                           onChange={(e) => {
-                            if (e.target.checked && !isMidiInitialized && onInitializeMidi) {
+                            if (e.target.checked && !isMidiInitialized && !isMicInitialized && (onInitializeMidi || onInitializeMic)) {
                               setShowMidiDialog(true);
                             } else {
                               onWaitModeToggle(e.target.checked);
@@ -303,6 +311,31 @@ export function PlayerControls({
                         />
                         <label htmlFor="monitor-toggle-popup" className="text-xs font-medium cursor-pointer">Show OSD</label>
                       </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-purple-500/80 dark:text-purple-400/80">Hardware Input</span>
+                      
+                      {!isMidiInitialized && !isMicInitialized && (
+                        <div className="flex items-center justify-between">
+                           <span className="text-xs text-zinc-500 dark:text-zinc-400">None</span>
+                           <button onClick={() => setShowMidiDialog(true)} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white">Connect</button>
+                        </div>
+                      )}
+                      
+                      {isMidiInitialized && (
+                        <div className="flex items-center justify-between">
+                           <span className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5"><Keyboard className="w-3 h-3"/> MIDI</span>
+                           <button onClick={onDisconnectMidi} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                        </div>
+                      )}
+
+                      {isMicInitialized && (
+                        <div className="flex items-center justify-between">
+                           <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">🎙️ Mic</span>
+                           <button onClick={onDisconnectMic} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                        </div>
+                      )}
                     </div>
                     
                     {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && practiceTrackIds && (
@@ -532,35 +565,60 @@ export function PlayerControls({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
               <Keyboard className="w-5 h-5 text-blue-500" />
-              Connect MIDI Keyboard
+              Connect Instrument
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400">
-              Wait Mode formally requires a live MIDI connection to synchronize with your physical playing. After clicking Connect, your browser will natively request permission to access your MIDI devices.
+            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 font-medium">
+              Wait Mode formally synchronizes the sheet music with your physical playing. 
+              Do you want to connect a Digital Piano via MIDI, or use your Microphone for acoustic instruments?
+              <br /><br />
+              <span className="text-amber-500 dark:text-amber-400 italic">Note: Microphone Mode automatically forces "Lenient Mode" (1-note matching) to gracefully support complex Piano/Guitar chords natively.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-between w-full">
             <AlertDialogCancel disabled={isInitializingMidi} className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
-              disabled={isInitializingMidi}
-              onClick={async (e) => {
-                e.preventDefault(); 
-                if (!onInitializeMidi) return;
-                setIsInitializingMidi(true);
-                const success = await onInitializeMidi();
-                setIsInitializingMidi(false);
-                if (success) {
-                  setShowMidiDialog(false);
-                  onWaitModeToggle?.(true);
-                } else {
-                  setShowMidiDialog(false);
-                }
-              }}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
-            >
-              {isInitializingMidi ? "Connecting..." : "Connect Device"}
-            </AlertDialogAction>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <AlertDialogAction 
+                disabled={isInitializingMidi}
+                onClick={async (e) => {
+                  e.preventDefault(); 
+                  if (!onInitializeMic) return;
+                  setIsInitializingMidi(true);
+                  const success = await onInitializeMic();
+                  setIsInitializingMidi(false);
+                  if (success) {
+                    setShowMidiDialog(false);
+                    onWaitModeLenientToggle?.(true); // Force Lenient for acoustic pitches
+                    onWaitModeToggle?.(true);
+                  } else {
+                    setShowMidiDialog(false);
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-500 text-white"
+              >
+                {isInitializingMidi ? "Connecting..." : "Use Microphone"}
+              </AlertDialogAction>
+              <AlertDialogAction 
+                disabled={isInitializingMidi}
+                onClick={async (e) => {
+                  e.preventDefault(); 
+                  if (!onInitializeMidi) return;
+                  setIsInitializingMidi(true);
+                  const success = await onInitializeMidi();
+                  setIsInitializingMidi(false);
+                  if (success) {
+                    setShowMidiDialog(false);
+                    onWaitModeToggle?.(true);
+                  } else {
+                    setShowMidiDialog(false);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                {isInitializingMidi ? "Connecting..." : "Connect MIDI"}
+              </AlertDialogAction>
+            </div>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

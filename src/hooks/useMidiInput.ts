@@ -57,5 +57,11 @@ export function useMidiInput() {
     }
   }, [isMidiInitialized]);
 
-  return { activeNotes, hasMidiDevice, initializeMidi, isMidiInitialized };
+  const disconnectMidi = useCallback(() => {
+    activePitchesRef.current.clear();
+    setActiveNotes(new Set());
+    setIsMidiInitialized(false);
+  }, []);
+
+  return { activeNotes, hasMidiDevice, initializeMidi, isMidiInitialized, disconnectMidi };
 }

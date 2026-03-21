@@ -10,6 +10,7 @@ import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
 import { Midi } from "@tonejs/midi";
 import { cn } from "@/lib/utils";
 import { useMidiInput } from "@/hooks/useMidiInput";
+import { useMicInput } from "@/hooks/useMicInput";
 import { PlayerControls } from "./PlayerControls";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
@@ -59,7 +60,14 @@ export function PlayShell({
   const midiPlayStartPosRef = useRef<number>(0);
 
   // --- Wait Mode Hardware Integration ---
-  const { activeNotes, hasMidiDevice, initializeMidi, isMidiInitialized } = useMidiInput();
+  const { activeNotes: midiNotes, hasMidiDevice, initializeMidi, isMidiInitialized, disconnectMidi } = useMidiInput();
+  const { activeNotes: micNotes, initializeMic, isMicInitialized: isMicInitializedState, disconnectMic } = useMicInput();
+
+  const activeNotes = useMemo(() => {
+    const combined = new Set(midiNotes);
+    micNotes.forEach((n: number) => combined.add(n));
+    return combined;
+  }, [midiNotes, micNotes]);
   const [isWaitMode, setIsWaitMode] = useState(false);
   const [practiceTrackIds, setPracticeTrackIds] = useState<number[]>([-1]);
   const [parsedMidi, setParsedMidi] = useState<any>(null);
@@ -174,21 +182,29 @@ export function PlayShell({
       });
     }
 
-    const chords: { timeMs: number, notes: Set<number>, measure: number }[] = [];
+    const chords: { timeMs: number, notes: Set<number>, measure: number, trackIndex?: number }[] = [];
     
     const measureMap = payload.notationData?.measureMap;
 
-    tracksToParse.forEach(track => {
+    tracksToParse.forEach((track, trackIndex) => {
       track.notes.forEach((n: any) => {
         const timeMs = n.time * 1000;
         const latentMeasure = getMeasureForTime(timeMs);
         const physicalMeasure = getPhysicalMeasure(latentMeasure, measureMap);
         
-        const existing = chords.find(c => Math.abs(c.timeMs - timeMs) < 20);
+        // CRITICAL BOUNDARY: Merge multi-track chords globally ONLY if the Acoustic Microphone is enabled.
+        // This allows Lenient Mode to catch any loud overtone across staves rescuing Monophonic physical limits!
+        // If MIDI is enabled, enforce discrete track isolation (Wait Mode correctly enforces Track 1 then Track 2).
+        const existing = chords.find(c => {
+          const isSameTime = Math.abs(c.timeMs - timeMs) < 20;
+          if (isMicInitializedState) return isSameTime;
+          return isSameTime && c.trackIndex === trackIndex;
+        });
+
         if (existing) {
           existing.notes.add(n.midi);
         } else {
-          chords.push({ timeMs, notes: new Set([n.midi]), measure: physicalMeasure });
+          chords.push({ timeMs, notes: new Set([n.midi]), measure: physicalMeasure, trackIndex });
         }
       });
     });
@@ -197,7 +213,7 @@ export function PlayShell({
     
     // Update target index based on position later; initialize cleanly to prevent referencing before declaration:
     targetChordIndexRef.current = 0;
-  }, [parsedMidi, practiceTrackIds, getMeasureForTime]); 
+  }, [parsedMidi, practiceTrackIds, getMeasureForTime, isMicInitializedState]); 
 
   // Synchronize global mute to prevent backing track or synth leaking during MIDI Wait Mode brakes
   useEffect(() => {
@@ -965,6 +981,10 @@ export function PlayShell({
         onWaitModeMonitorToggle={setShowWaitModeMonitor}
         isMidiInitialized={isMidiInitialized}
         onInitializeMidi={initializeMidi}
+        onDisconnectMidi={disconnectMidi}
+        isMicInitialized={isMicInitializedState}
+        onInitializeMic={initializeMic}
+        onDisconnectMic={disconnectMic}
       />
     </div>
   );
