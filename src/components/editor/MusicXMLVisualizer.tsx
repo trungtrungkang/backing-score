@@ -148,43 +148,84 @@ export function MusicXMLVisualizer({
         await midiProxy.onRuntimeInitialized();
         if (canceled) return;
 
-        // Fix Sibelius 2/4 Whole Rest export bug for Verovio MIDI builder
-        // Stripping <type>whole</type> from rest blocks forces the MIDI sequence to use the exact raw <duration> mapping
-        const patchedText = text.replace(/<note[^>]*>([\s\S]*?)<\/note>/g, (match, inner) => {
-          if (inner.includes('<rest />') || inner.includes('<rest>')) {
-            return match.replace(/<type>whole<\/type>/g, '');
+        // Fix Sibelius 2/4 Whole Rest export bug AND Verovio Key Signature Modulation bug via Strict DOM Traversal
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, 'text/xml');
+
+        const notes = xmlDoc.getElementsByTagName('note');
+        for (let i = 0; i < notes.length; i++) {
+          const noteNode = notes[i];
+          
+          // 1. Whole Rest Fix
+          const hasRest = noteNode.getElementsByTagName('rest').length > 0;
+          if (hasRest) {
+            const types = noteNode.getElementsByTagName('type');
+            if (types.length > 0 && types[0].textContent === 'whole') {
+              noteNode.removeChild(types[0]);
+            }
           }
-          return match;
-        });
 
-        // Fix Verovio multi-staff Key Signature Modulation bug.
-        // Verovio's MIDI builder drops structural flats/sharps during a key change on multi-staff instruments.
-        // Furthermore, it permanently gets stuck on the INITIAL key signature, severely mangling natural diatonic notes.
-        // We forcefully convert Sibelius's reliable absolute <alter> logic into explicit XML <accidental> nodes solely for the MIDI extraction phase, completely neutralizing Verovio's internal Key Signature dependence.
-        const midiText = patchedText.replace(/<pitch>([\s\S]*?)<\/pitch>/g, (match, inner) => {
-          let accidental = '';
+          // 2. Accidental Modulation Fix (Strictly ordered insertion)
+          const pitch = noteNode.getElementsByTagName('pitch')[0];
+          const ExistingAccidental = noteNode.getElementsByTagName('accidental');
+          if (pitch && ExistingAccidental.length === 0) {
+            const alter = pitch.getElementsByTagName('alter')[0];
+            let accType = 'natural';
+            if (alter) {
+               const val = alter.textContent;
+               if (val === '-1') accType = 'flat';
+               else if (val === '1') accType = 'sharp';
+               else if (val === '-2') accType = 'flat-flat';
+               else if (val === '2') accType = 'double-sharp';
+            }
+            const accNode = xmlDoc.createElement('accidental');
+            accNode.textContent = accType;
 
-          if (inner.includes('<alter>-1</alter>')) accidental = 'flat';
-          else if (inner.includes('<alter>1</alter>')) accidental = 'sharp';
-          else if (inner.includes('<alter>-2</alter>')) accidental = 'flat-flat';
-          else if (inner.includes('<alter>2</alter>')) accidental = 'double-sharp';
-          else accidental = 'natural'; // If <alter> is missing, Sibelius designates a strictly Natural white-key pitch!
+            const timeMod = noteNode.getElementsByTagName('time-modification')[0];
+            const stem = noteNode.getElementsByTagName('stem')[0];
+            const notehead = noteNode.getElementsByTagName('notehead')[0];
+            const noteheadText = noteNode.getElementsByTagName('notehead-text')[0];
+            const staves = noteNode.getElementsByTagName('staff')[0];
+            const beam = noteNode.getElementsByTagName('beam')[0];
+            const notations = noteNode.getElementsByTagName('notations')[0];
+            const lyric = noteNode.getElementsByTagName('lyric')[0];
+            const play = noteNode.getElementsByTagName('play')[0];
 
-          return match + `\n<accidental>${accidental}</accidental>`;
-        });
+            const anchor = timeMod || stem || notehead || noteheadText || staves || beam || notations || lyric || play || null;
+            noteNode.insertBefore(accNode, anchor);
+          }
+        }
 
-        await midiProxy.loadData(midiText);
+        // 3. Prevent Verovio VLV Timestamp Cascades by Stripping Corrupt Sibelius <pedal> Tags.
+        const directions = xmlDoc.getElementsByTagName('direction');
+        for (let i = directions.length - 1; i >= 0; i--) {
+          const dir = directions[i];
+          if (dir.getElementsByTagName('pedal').length > 0) {
+             dir.parentNode?.removeChild(dir);
+          }
+        }
+        
+        const serializer = new XMLSerializer();
+        const safeMidiText = serializer.serializeToString(xmlDoc);
+
+        await midiProxy.loadData(safeMidiText);
         let midiStr = '';
         if (!canceled) {
           midiStr = await midiProxy.renderToMIDI();
+          if (!midiStr || midiStr.trim() === '') {
+             console.error("[MusicXML] FATAL: DOMParser compilation generated an illegal XSD layout! Verovio renderToMIDI() aborted to '' string, muting output!");
+             // Fallback bypass: Feed the unaltered original string text so users don't lose physical Audio tracks globally!
+             await midiProxy.loadData(text);
+             midiStr = await midiProxy.renderToMIDI();
+          }
+          
+          if (midiStr) {
+             onMidiExtracted?.('data:audio/midi;base64,' + midiStr);
+          }
         }
         midiWorker.terminate(); // Destroy the disposable worker immediately!
 
         if (canceled) return;
-
-        if (onMidiExtracted && midiStr) {
-          onMidiExtracted('data:audio/midi;base64,' + midiStr);
-        }
         if (canceled) return;
 
         svgContentRef.current = svg;

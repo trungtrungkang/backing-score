@@ -61,6 +61,7 @@ export function PlayShell({
   const [isWaitMode, setIsWaitMode] = useState(false);
   const [practiceTrackId, setPracticeTrackId] = useState(-1);
   const [parsedMidi, setParsedMidi] = useState<any>(null);
+  const [showWaitModeMonitor, setShowWaitModeMonitor] = useState(false);
 
   const activeNotesRef = useRef<Set<number>>(new Set());
   const isWaitModeRef = useRef(false);
@@ -71,6 +72,7 @@ export function PlayShell({
   const targetChordIndexRef = useRef(0);
   const isWaitingRef = useRef(false);
   const releasedPitchesRef = useRef<Set<number>>(new Set());
+  const waitModeMonitorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { activeNotesRef.current = activeNotes; }, [activeNotes]);
   useEffect(() => { isWaitModeRef.current = isWaitMode; }, [isWaitMode]);
@@ -426,14 +428,40 @@ export function PlayShell({
     let currentPos = 0;
     
     // === STATIC WAIT MODE V2 CLOCK SHIELD ===
-    // Rigidly lock the Math Engine natively to the target timestamp to defeat all auto-scrubbing.
+    // Rigidly lock the Math Engine natively to the target timestamp    // === DYNAMIC WAIT MODE CLOCK EVALUATOR ===
     if (isWaitModeRef.current) {
-        if (practiceChordsRef.current.length > 0 && targetChordIndexRef.current >= 0 && targetChordIndexRef.current < practiceChordsRef.current.length) {
-            const targetChord = practiceChordsRef.current[targetChordIndexRef.current];
-            currentPos = targetChord.timeMs; // STATIC LOCK! NO AUTO-RUN!
+      if (practiceChordsRef.current.length > 0 && targetChordIndexRef.current >= 0 && targetChordIndexRef.current < practiceChordsRef.current.length) {
+        const targetChord = practiceChordsRef.current[targetChordIndexRef.current];
+        currentPos = targetChord.timeMs; // STATIC LOCK! NO AUTO-RUN!
             
-            const pressed = activeNotesRef.current;
-            let allMatched = pressed.size > 0 && targetChord.notes.size > 0;
+        const pressed = activeNotesRef.current;
+        
+        // Wait Mode Diagnostic Monitor DOM Injection (60fps lock)
+        if (showWaitModeMonitor && waitModeMonitorRef.current) {
+          const MIDI_NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];
+          const toPitch = (midi: number) => `${MIDI_NOTES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+          
+          const targets = Array.from(targetChord.notes).map(toPitch).join(", ");
+          const actives = Array.from(pressed).map(toPitch).join(", ");
+          
+          waitModeMonitorRef.current.innerHTML = `
+            <div style="font-weight:bold; margin-bottom: 4px; color: #60a5fa;">DIAGNOSTIC MONITOR</div>
+            <div style="display:flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 4px; margin-bottom: 4px;">
+              <span>Target Index:</span> <span style="font-family:monospace">${targetChordIndexRef.current} / ${practiceChordsRef.current.length}</span>
+            </div>
+            <div style="display:flex; justify-content: space-between;">
+              <span style="color:#ef4444;">Required:</span> <span style="font-family:monospace; font-weight:bold;">[${targets || 'None'}]</span>
+            </div>
+            <div style="display:flex; justify-content: space-between;">
+              <span style="color:#10b981;">Pressed:</span> <span style="font-family:monospace; font-weight:bold;">[${actives || 'None'}]</span>
+            </div>
+            <div style="display:flex; justify-content: space-between; margin-top: 4px; color: #a1a1aa; font-size: 10px;">
+              <span>Target Time:</span> <span style="font-family:monospace">${Math.round(targetChord.timeMs)}ms</span>
+            </div>
+          `;
+        }
+
+        let allMatched = pressed.size > 0 && targetChord.notes.size > 0;
             
             if (isWaitModeLenientRef.current) {
                 allMatched = false;
@@ -571,7 +599,7 @@ export function PlayShell({
     });
 
     requestRef.current = requestAnimationFrame(updatePosition);
-  }, [payload.audioTracks.length, midiStartOffsetMs, totalSongDurationMs]);
+  }, [payload.audioTracks.length, midiStartOffsetMs, totalSongDurationMs, showWaitModeMonitor]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -722,28 +750,9 @@ export function PlayShell({
     activeNotesRef.current.clear();
     releasedPitchesRef.current.clear();
 
-    // Return to beginning of measure or beginning of song
-    const bpm = payload.metadata?.tempo || 120;
-    const ts = payload.metadata?.timeSignature || "4/4";
-    const [numStr, denStr] = ts.split("/");
-    const beatsPerMeasure = parseInt(numStr, 10) || 4;
-    const noteValue = parseInt(denStr, 10) || 4;
-    const quarterNoteMs = (60 * 1000) / bpm;
-    const beatMs = quarterNoteMs * (4 / noteValue);
-    const measureMs = beatsPerMeasure * beatMs;
-    
-    // Calculate start of current measure
-    const currentMeasureIndex = Math.floor(positionMs / measureMs);
-    const startOfMeasureMs = currentMeasureIndex * measureMs;
-    
-    // Complete hard-reset if stopping at the absolute extreme bounds of the track
-    if (isEndOfTrack === true || positionMs - startOfMeasureMs < 150 || positionMs >= totalSongDurationMs - 1500) {
-      targetChordIndexRef.current = 0; // Aggressive React-independent lock
-      handleSeek(0);
-    } else {
-      handleSeek(startOfMeasureMs);
-    }
-  }, [handlePause, handleSeek, payload.metadata?.tempo, payload.metadata?.timeSignature, positionMs, totalSongDurationMs]);
+    targetChordIndexRef.current = 0; // Aggressive React-independent lock
+    handleSeek(0);
+  }, [handlePause, handleSeek]);
 
   // Spacebar hotkey for Play/Pause
   useEffect(() => {
@@ -889,6 +898,16 @@ export function PlayShell({
         )}
       </div>
 
+      {/* 4. Telemetry Monitor Overlay */}
+      {showWaitModeMonitor && (
+        <div 
+          ref={waitModeMonitorRef}
+          className="absolute top-20 left-4 z-[150] w-64 bg-[#18181b]/95 backdrop-blur-xl border border-blue-500/30 rounded-xl p-3 text-xs tracking-wider text-zinc-300 shadow-[0_0_20px_rgba(59,130,246,0.15)] select-none pointer-events-none"
+        >
+          <div className="animate-pulse flex gap-2 items-center text-blue-400">Loading Telemetry...</div>
+        </div>
+      )}
+
       {/* 3. Floating Control Bar (Dock) */}
       <PlayerControls
         bpm={payload.metadata?.tempo || 120}
@@ -932,6 +951,8 @@ export function PlayShell({
         midiTracks={parsedMidi ? parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: t.name || `Instrument ${i+1}` })) : []}
         practiceTrackId={practiceTrackId}
         onPracticeTrackChange={setPracticeTrackId}
+        showWaitModeMonitor={showWaitModeMonitor}
+        onWaitModeMonitorToggle={setShowWaitModeMonitor}
       />
     </div>
   );

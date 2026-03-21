@@ -48,6 +48,8 @@ interface PlayerControlsProps {
   midiTracks?: { id: number, name: string }[];
   practiceTrackId?: number;
   onPracticeTrackChange?: (id: number) => void;
+  showWaitModeMonitor?: boolean;
+  onWaitModeMonitorToggle?: (show: boolean) => void;
 }
 
 function formatTime(ms: number) {
@@ -98,7 +100,9 @@ export function PlayerControls({
   onSynthMuteToggle,
   midiTracks,
   practiceTrackId,
-  onPracticeTrackChange
+  onPracticeTrackChange,
+  showWaitModeMonitor = false,
+  onWaitModeMonitorToggle
 }: PlayerControlsProps) {
   
   const [localPos, setLocalPos] = useState(positionMs);
@@ -260,6 +264,20 @@ export function PlayerControls({
                           className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
                         />
                         <label htmlFor="lenient-mode-toggle-popup" className="text-xs font-medium cursor-pointer">Enable</label>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500/80 dark:text-blue-400/80">Diagnostic Monitor</span>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox"
+                          id="monitor-toggle-popup"
+                          checked={showWaitModeMonitor} 
+                          onChange={(e) => onWaitModeMonitorToggle?.(e.target.checked)} 
+                          className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
+                        />
+                        <label htmlFor="monitor-toggle-popup" className="text-xs font-medium cursor-pointer">Show OSD</label>
                       </div>
                     </div>
                     
