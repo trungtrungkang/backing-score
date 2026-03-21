@@ -11,5 +11,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    env: {
+      NEXT_PUBLIC_APPWRITE_ENDPOINT: 'https://test.endpoint',
+      NEXT_PUBLIC_APPWRITE_PROJECT: 'test-project'
+    }
   },
 })

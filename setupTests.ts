@@ -8,6 +8,14 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 }
 
+global.Worker = class Worker {
+  constructor() {}
+  postMessage() {}
+  addEventListener() {}
+  removeEventListener() {}
+  terminate() {}
+} as any
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
