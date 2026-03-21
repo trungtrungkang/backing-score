@@ -6,6 +6,17 @@ import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 interface PlayerControlsProps {
   bpm: number;
   positionMs: number;
@@ -50,6 +61,8 @@ interface PlayerControlsProps {
   onPracticeTrackChange?: (ids: number[]) => void;
   showWaitModeMonitor?: boolean;
   onWaitModeMonitorToggle?: (show: boolean) => void;
+  isMidiInitialized?: boolean;
+  onInitializeMidi?: () => Promise<boolean>;
 }
 
 export function formatTime(ms: number) {
@@ -102,11 +115,15 @@ export function PlayerControls({
   practiceTrackIds,
   onPracticeTrackChange,
   showWaitModeMonitor = false,
-  onWaitModeMonitorToggle
+  onWaitModeMonitorToggle,
+  isMidiInitialized = false,
+  onInitializeMidi
 }: PlayerControlsProps) {
   
   const [localPos, setLocalPos] = useState(positionMs);
   const [isDragging, setIsDragging] = useState(false);
+  const [showMidiDialog, setShowMidiDialog] = useState(false);
+  const [isInitializingMidi, setIsInitializingMidi] = useState(false);
 
   // Sync local position unless user is actively dragging
   useEffect(() => {
@@ -247,7 +264,13 @@ export function PlayerControls({
                           type="checkbox"
                           id="wait-mode-toggle-popup"
                           checked={isWaitMode} 
-                          onChange={(e) => onWaitModeToggle(e.target.checked)} 
+                          onChange={(e) => {
+                            if (e.target.checked && !isMidiInitialized && onInitializeMidi) {
+                              setShowMidiDialog(true);
+                            } else {
+                              onWaitModeToggle(e.target.checked);
+                            }
+                          }}
                           className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
                         />
                         <label htmlFor="wait-mode-toggle-popup" className="text-xs font-medium cursor-pointer">Enable</label>
@@ -503,6 +526,45 @@ export function PlayerControls({
           
         </div>
       </div>
+
+      <AlertDialog open={showMidiDialog} onOpenChange={setShowMidiDialog}>
+        <AlertDialogContent className="z-[300] bg-white dark:bg-[#18181b] border-zinc-200 dark:border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
+              <Keyboard className="w-5 h-5 text-blue-500" />
+              Connect MIDI Keyboard
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400">
+              Wait Mode formally requires a live MIDI connection to synchronize with your physical playing. After clicking Connect, your browser will natively request permission to access your MIDI devices.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isInitializingMidi} className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              disabled={isInitializingMidi}
+              onClick={async (e) => {
+                e.preventDefault(); 
+                if (!onInitializeMidi) return;
+                setIsInitializingMidi(true);
+                const success = await onInitializeMidi();
+                setIsInitializingMidi(false);
+                if (success) {
+                  setShowMidiDialog(false);
+                  onWaitModeToggle?.(true);
+                } else {
+                  setShowMidiDialog(false);
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white"
+            >
+              {isInitializingMidi ? "Connecting..." : "Connect Device"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

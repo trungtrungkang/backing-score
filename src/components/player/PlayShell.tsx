@@ -59,7 +59,7 @@ export function PlayShell({
   const midiPlayStartPosRef = useRef<number>(0);
 
   // --- Wait Mode Hardware Integration ---
-  const { activeNotes, hasMidiDevice } = useMidiInput();
+  const { activeNotes, hasMidiDevice, initializeMidi, isMidiInitialized } = useMidiInput();
   const [isWaitMode, setIsWaitMode] = useState(false);
   const [practiceTrackIds, setPracticeTrackIds] = useState<number[]>([-1]);
   const [parsedMidi, setParsedMidi] = useState<any>(null);
@@ -963,6 +963,8 @@ export function PlayShell({
         onPracticeTrackChange={setPracticeTrackIds}
         showWaitModeMonitor={showWaitModeMonitor}
         onWaitModeMonitorToggle={setShowWaitModeMonitor}
+        isMidiInitialized={isMidiInitialized}
+        onInitializeMidi={initializeMidi}
       />
     </div>
   );
