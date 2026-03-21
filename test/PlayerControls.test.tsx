@@ -35,7 +35,7 @@ describe('PlayerControls', () => {
       { id: 1, name: 'P2' },
       { id: 2, name: 'P2' },
     ],
-    practiceTrackId: -1,
+    practiceTrackIds: [-1],
     onPracticeTrackChange: vi.fn(),
   }
 
@@ -73,10 +73,15 @@ describe('PlayerControls', () => {
     fireEvent.click(waitModeBtn)
     
     // Now it should be inside the DOM
-    const dropdown = screen.getByLabelText(/Practice Part/i)
-    expect(dropdown).toBeInTheDocument()
+    expect(screen.getByText('Practice Parts')).toBeInTheDocument()
     
-    fireEvent.change(dropdown, { target: { value: '1' } })
-    expect(defaultProps.onPracticeTrackChange).toHaveBeenCalledWith(1)
+    // The Wait Mode Popup maps ALL tracks plus the default "All Tracks"
+    const allTracksCheckbox = screen.getByLabelText('All Tracks (Chords)')
+    expect(allTracksCheckbox).toBeChecked() // Default "All Tracks"
+    
+    // Click explicitly on the first explicit Track P1
+    const p1Checkbox = screen.getAllByLabelText('P1')[0]
+    fireEvent.click(p1Checkbox)
+    expect(defaultProps.onPracticeTrackChange).toHaveBeenCalledWith([0])
   })
 })

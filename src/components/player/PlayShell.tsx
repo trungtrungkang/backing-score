@@ -75,7 +75,7 @@ export function PlayShell({
   // --- Wait Mode Hardware Integration ---
   const { activeNotes, hasMidiDevice } = useMidiInput();
   const [isWaitMode, setIsWaitMode] = useState(false);
-  const [practiceTrackId, setPracticeTrackId] = useState(-1);
+  const [practiceTrackIds, setPracticeTrackIds] = useState<number[]>([-1]);
   const [parsedMidi, setParsedMidi] = useState<any>(null);
   const [showWaitModeMonitor, setShowWaitModeMonitor] = useState(false);
 
@@ -83,7 +83,7 @@ export function PlayShell({
   const isWaitModeRef = useRef(false);
   const [isWaitModeLenient, setIsWaitModeLenient] = useState(false);
   const isWaitModeLenientRef = useRef(false);
-  const practiceTrackIdRef = useRef(-1);
+  const practiceTrackIdsRef = useRef<number[]>([-1]);
   const practiceChordsRef = useRef<{ timeMs: number, notes: Set<number>, measure?: number }[]>([]);
   const targetChordIndexRef = useRef(0);
   const isWaitingRef = useRef(false);
@@ -94,7 +94,7 @@ export function PlayShell({
   useEffect(() => { activeNotesRef.current = activeNotes; }, [activeNotes]);
   useEffect(() => { isWaitModeRef.current = isWaitMode; }, [isWaitMode]);
   useEffect(() => { isWaitModeLenientRef.current = isWaitModeLenient; }, [isWaitModeLenient]);
-  useEffect(() => { practiceTrackIdRef.current = practiceTrackId; }, [practiceTrackId]);
+  useEffect(() => { practiceTrackIdsRef.current = practiceTrackIds; }, [practiceTrackIds]);
 
   // 1. Establish a Timeline Resolver computing Measure boundaries based on physical MIDI extraction
   const timemap = payload.notationData?.timemap || [];
@@ -138,7 +138,7 @@ export function PlayShell({
       setParsedMidi(null);
       practiceChordsRef.current = [];
     }
-  }, [getMeasureForTime, practiceTrackId]);
+  }, [getMeasureForTime]);
 
   // Playback State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -171,17 +171,21 @@ export function PlayShell({
   }, []);
 
   // --- WAIT MODE V2 Core Progression Logic ---
-  // Rebuild the target evaluation tracker reactively every time practiceTrackId explicitly alters natively!
+  // Rebuild the target evaluation tracker reactively every time practiceTrackIds explicitly alters natively!
   useEffect(() => {
     if (!parsedMidi) { 
       return;
     }
 
     let tracksToParse: any[] = [];
-    if (typeof practiceTrackId !== "number" || practiceTrackId < 0) {
+    if (!practiceTrackIds || practiceTrackIds.includes(-1) || practiceTrackIds.length === 0) {
       tracksToParse = parsedMidi.tracks.filter((t: any) => t.notes.length > 0);
-    } else if (parsedMidi.tracks[practiceTrackId]) {
-      tracksToParse.push(parsedMidi.tracks[practiceTrackId]);
+    } else {
+      practiceTrackIds.forEach(id => {
+        if (parsedMidi.tracks[id]) {
+          tracksToParse.push(parsedMidi.tracks[id]);
+        }
+      });
     }
 
     const chords: { timeMs: number, notes: Set<number>, measure: number }[] = [];
@@ -207,7 +211,7 @@ export function PlayShell({
     
     // Update target index based on position later; initialize cleanly to prevent referencing before declaration:
     targetChordIndexRef.current = 0;
-  }, [parsedMidi, practiceTrackId, getMeasureForTime]); 
+  }, [parsedMidi, practiceTrackIds, getMeasureForTime]); 
 
   // Synchronize global mute to prevent backing track or synth leaking during MIDI Wait Mode brakes
   useEffect(() => {
@@ -938,7 +942,7 @@ export function PlayShell({
             isDarkMode={isDarkMode}
             isWaitMode={isWaitMode}
             isWaiting={isWaitingRef.current}
-            practiceTrackId={practiceTrackId}
+            practiceTrackIds={practiceTrackIds}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
@@ -999,8 +1003,8 @@ export function PlayShell({
         isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
         onSynthMuteToggle={() => {}}
         midiTracks={parsedMidi ? parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: t.name || `Instrument ${i+1}` })) : []}
-        practiceTrackId={practiceTrackId}
-        onPracticeTrackChange={setPracticeTrackId}
+        practiceTrackIds={practiceTrackIds}
+        onPracticeTrackChange={setPracticeTrackIds}
         showWaitModeMonitor={showWaitModeMonitor}
         onWaitModeMonitorToggle={setShowWaitModeMonitor}
       />

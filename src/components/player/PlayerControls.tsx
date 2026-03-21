@@ -46,8 +46,8 @@ interface PlayerControlsProps {
   isSynthMuted?: boolean;
   onSynthMuteToggle?: (muted: boolean) => void;
   midiTracks?: { id: number, name: string }[];
-  practiceTrackId?: number;
-  onPracticeTrackChange?: (id: number) => void;
+  practiceTrackIds?: number[];
+  onPracticeTrackChange?: (ids: number[]) => void;
   showWaitModeMonitor?: boolean;
   onWaitModeMonitorToggle?: (show: boolean) => void;
 }
@@ -99,7 +99,7 @@ export function PlayerControls({
   isSynthMuted,
   onSynthMuteToggle,
   midiTracks,
-  practiceTrackId,
+  practiceTrackIds,
   onPracticeTrackChange,
   showWaitModeMonitor = false,
   onWaitModeMonitorToggle
@@ -282,20 +282,44 @@ export function PlayerControls({
                       </div>
                     </div>
                     
-                    {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && (
-                      <div className="flex flex-col gap-2">
-                        <label htmlFor="practice-track-popup" className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Practice Part</label>
-                        <select 
-                          id="practice-track-popup"
-                          className="bg-zinc-100 dark:bg-black/40 text-sm px-2 py-1.5 rounded border border-zinc-300 dark:border-white/10 w-full outline-none focus:border-blue-500"
-                          value={practiceTrackId}
-                          onChange={(e) => onPracticeTrackChange(Number(e.target.value))}
-                        >
-                          <option value={-1}>All Tracks (Chords)</option>
+                    {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && practiceTrackIds && (
+                      <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                        <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Practice Parts</label>
+                        <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+                          
+                          {/* Global Reset Option */}
+                          <label className="flex items-center gap-2 cursor-pointer">
+                           <input 
+                              type="checkbox"
+                              checked={practiceTrackIds.includes(-1)}
+                              onChange={(e) => {
+                                if (e.target.checked) onPracticeTrackChange([-1]);
+                              }}
+                              className="cursor-pointer w-3.5 h-3.5 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10"
+                            />
+                            <span className="text-xs">All Tracks (Chords)</span>
+                          </label>
+
                           {midiTracks.map((t, i) => (
-                            <option key={t.id} value={i}>{t.name}</option>
+                            <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                checked={practiceTrackIds.includes(i)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    onPracticeTrackChange([...practiceTrackIds.filter(id => id !== -1), i]);
+                                  } else {
+                                    const next = practiceTrackIds.filter(id => id !== i);
+                                    if (next.length === 0) onPracticeTrackChange([-1]); // auto fallback
+                                    else onPracticeTrackChange(next);
+                                  }
+                                }}
+                                className="cursor-pointer w-3.5 h-3.5 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10"
+                              />
+                              <span className="text-xs">{t.name}</span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
                       </div>
                     )}
                   </div>

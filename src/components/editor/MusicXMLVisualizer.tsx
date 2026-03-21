@@ -17,7 +17,7 @@ export interface MusicXMLVisualizerProps {
   isDarkMode?: boolean;
   isWaitMode?: boolean;
   isWaiting?: boolean;
-  practiceTrackId?: number;
+  practiceTrackIds?: number[];
   className?: string;
 }
 
@@ -42,7 +42,7 @@ function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>)
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
-  isWaitMode = false, isWaiting = false, practiceTrackId = 0, className
+  isWaitMode = false, isWaiting = false, practiceTrackIds, className
 }: MusicXMLVisualizerProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -606,7 +606,7 @@ export function MusicXMLVisualizer({
               if (!el || el.classList.contains("wait-mode-missed")) continue;
 
               const staffNode = el.closest('.staff');
-              if (staffNode && typeof practiceTrackId === 'number' && practiceTrackId >= 0) {
+              if (staffNode && practiceTrackIds && practiceTrackIds.length > 0 && !practiceTrackIds.includes(-1)) {
                 let staffN = 1;
                 const measureNode = staffNode.closest('.measure');
                 if (measureNode) {
@@ -616,7 +616,7 @@ export function MusicXMLVisualizer({
                   staffN = parseInt(staffNode.getAttribute('n') || "1", 10);
                 }
 
-                if (staffN !== practiceTrackId + 1) continue;
+                if (!practiceTrackIds.includes(staffN - 1)) continue;
               }
 
               try {
@@ -666,7 +666,7 @@ export function MusicXMLVisualizer({
             if (!el) continue;
 
             const staffNode = el.closest('.staff');
-            if (staffNode && typeof practiceTrackId === 'number' && practiceTrackId >= 0) {
+            if (staffNode && practiceTrackIds && practiceTrackIds.length > 0 && !practiceTrackIds.includes(-1)) {
               let staffN = 1;
               const measureNode = staffNode.closest('.measure');
               if (measureNode) {
@@ -676,7 +676,7 @@ export function MusicXMLVisualizer({
                 staffN = parseInt(staffNode.getAttribute('n') || "1", 10);
               }
 
-              if (staffN !== practiceTrackId + 1) continue;
+              if (!practiceTrackIds.includes(staffN - 1)) continue;
             }
 
             try {
@@ -722,7 +722,7 @@ export function MusicXMLVisualizer({
     } else if (svgContainerRef.current) {
       svgContainerRef.current.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
     }
-  }, [isWaitMode, isWaiting, positionMs, renderVersion, practiceTrackId]);
+  }, [isWaitMode, isWaiting, positionMs, renderVersion, practiceTrackIds]);
 
   const hasSvg = svgContentRef.current !== null;
 
