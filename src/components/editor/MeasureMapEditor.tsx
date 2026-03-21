@@ -13,21 +13,7 @@ interface MeasureMapEditorProps {
   onClose: () => void;
 }
 
-// Utility to resolve a latent playback measure to a physical printed measure.
-// (Copied from MusicXMLVisualizer for standalone use in the editor grid)
-function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>): number {
-  if (!measureMap) return latent;
-  let bestLatentAnchor = -1;
-  for (const k of Object.keys(measureMap)) {
-    const keyNum = Number(k);
-    if (!isNaN(keyNum) && keyNum <= latent && keyNum > bestLatentAnchor) {
-      bestLatentAnchor = keyNum;
-    }
-  }
-  if (bestLatentAnchor === -1) return latent;
-  const offset = latent - bestLatentAnchor;
-  return measureMap[bestLatentAnchor] + offset;
-}
+import { getPhysicalMeasure } from "@/lib/score/math";
 
 export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose }: MeasureMapEditorProps) {
   const { confirm, prompt } = useDialogs();

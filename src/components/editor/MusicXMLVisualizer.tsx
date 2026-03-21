@@ -21,24 +21,7 @@ export interface MusicXMLVisualizerProps {
   className?: string;
 }
 
-// Utility to resolve a latent playback measure to a physical printed measure.
-// measureMap acts as anchor points. Offsets are interpolated until the next anchor.
-function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>): number {
-  if (!measureMap) return latent;
-
-  let bestLatentAnchor = -1;
-  for (const k of Object.keys(measureMap)) {
-    const keyNum = Number(k);
-    if (!isNaN(keyNum) && keyNum <= latent && keyNum > bestLatentAnchor) {
-      bestLatentAnchor = keyNum;
-    }
-  }
-
-  if (bestLatentAnchor === -1) return latent;
-
-  const offset = latent - bestLatentAnchor;
-  return measureMap[bestLatentAnchor] + offset;
-}
+import { getPhysicalMeasure } from "@/lib/score/math";
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,

@@ -15,21 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 
-// Physical measureMap acts as anchor points. Offsets are interpolated until the next anchor.
-function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>): number {
-  if (!measureMap) return latent;
-  
-  let bestLatentAnchor = 1;
-  for (const k of Object.keys(measureMap)) {
-    const lat = parseInt(k, 10);
-    if (lat <= latent && lat >= bestLatentAnchor) {
-      bestLatentAnchor = lat;
-    }
-  }
-  
-  const offset = latent - bestLatentAnchor;
-  return measureMap[bestLatentAnchor] + offset;
-}
+import { getPhysicalMeasure, evaluateWaitModeMatch } from "@/lib/score/math";
 
 export interface PlayShellProps {
   projectId: string;
@@ -565,43 +551,13 @@ export function PlayShell({
           `;
         }
 
-        let allMatched = pressed.size > 0 && targetChord.notes.size > 0;
-            
-            if (isWaitModeLenientRef.current) {
-                allMatched = false;
-                for (const n of targetChord.notes) {
-                    if (pressed.has(n)) {
-                        allMatched = true;
-                        break;
-                    }
-                }
-            } else {
-                for (const n of targetChord.notes) {
-                    if (!pressed.has(n)) {
-                        allMatched = false; break;
-                    }
-                }
-            }
-            
-            let identicalToPrevious = false;
-            if (targetChordIndexRef.current > 0) {
-                const prevChord = practiceChordsRef.current[targetChordIndexRef.current - 1];
-                if (prevChord.notes.size === targetChord.notes.size) {
-                    identicalToPrevious = Array.from(targetChord.notes).every(n => prevChord.notes.has(n));
-                }
-                if (identicalToPrevious) {
-                    prevChord.notes.forEach((n: number) => {
-                        if (!pressed.has(n)) releasedPitchesRef.current.add(n);
-                    });
-                }
-            }
-            
-            let isAllowedEarly = true;
-            if (identicalToPrevious) {
-                const requiredNotes = practiceChordsRef.current[targetChordIndexRef.current - 1].notes;
-                const allReleased = Array.from(requiredNotes).every((n: any) => releasedPitchesRef.current.has(n));
-                isAllowedEarly = allReleased || (Array.from(pressed).length === 0);
-            }
+            const { allMatched, isAllowedEarly } = evaluateWaitModeMatch(
+              pressed,
+              targetChord.notes,
+              isWaitModeLenientRef.current,
+              targetChordIndexRef.current > 0 ? practiceChordsRef.current[targetChordIndexRef.current - 1].notes : undefined,
+              releasedPitchesRef.current
+            );
 
             if (allMatched && isAllowedEarly) {
                 targetChordIndexRef.current++;
