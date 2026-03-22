@@ -1,7 +1,11 @@
-import { getCourseById, getPublishedCourses } from "@/lib/appwrite/courses";
+import { getCourseById } from "@/lib/appwrite/courses";
 import { getLessonsByCourse } from "@/lib/appwrite/lessons";
 import { redirect } from "next/navigation";
 import { CourseGatewayClient } from "./CourseGatewayClient";
+
+// This page requires authentication — always render dynamically on the server
+// so that cookies/headers (used by Appwrite auth) are available at request time.
+export const dynamic = "force-dynamic";
 
 export default async function CourseGatewayPage({
   params,
@@ -9,24 +13,16 @@ export default async function CourseGatewayPage({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = await params;
-  
+
   const course = await getCourseById(courseId);
   if (!course) redirect("/404");
 
   const lessons = await getLessonsByCourse(courseId);
 
   return (
-     <CourseGatewayClient 
-        course={JSON.parse(JSON.stringify(course))} 
-        lessons={JSON.parse(JSON.stringify(lessons))} 
-     />
+    <CourseGatewayClient
+      course={JSON.parse(JSON.stringify(course))}
+      lessons={JSON.parse(JSON.stringify(lessons))}
+    />
   );
-}
-
-// Ensure statically rendering parameters via ISR compilation
-export async function generateStaticParams() {
-   const courses = await getPublishedCourses();
-   return courses.map((course) => ({
-      courseId: course.$id,
-   }));
 }
