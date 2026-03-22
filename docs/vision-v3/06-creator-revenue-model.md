@@ -1,6 +1,6 @@
 # Mô Hình Kinh Doanh & Phân Quyền Nền Tảng (Creator Revenue & Rights)
 
-Tài liệu này định nghĩa Thỏa thuận Cộng tác (Collaborator Agreement) giữa Hệ thống (Nền tảng Lotusa) và các Giáo viên/Nhạc sĩ (Creators).
+Tài liệu này định nghĩa Thỏa thuận Cộng tác (Collaborator Agreement) giữa Hệ thống (Nền tảng Backing & Score) và các Giáo viên/Nhạc sĩ (Creators).
 
 ---
 

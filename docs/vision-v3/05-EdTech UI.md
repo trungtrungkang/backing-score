@@ -6,7 +6,7 @@ Dưới đây là sơ đồ (Site Map) và Bản vẽ ASCII (Wireframe) mô tả
 Bạn sẽ bổ sung một chuyên mục hoàn toàn mới nằm cạnh hệ sinh thái Mạng Xã Hội, giả sử ta gọi nó là **"Học Viện" (Academy/Courses)**.
 
 ```text
-[ Logo Lotusa ] 
+[ Logo Backing & Score ] 
   ├── Khám Phá (Community/Home) -> Trang cũ
   ├── Bảng Tin (Feed) -> Trang cũ
   ├── Bộ Sưu Tập (Collection) -> Trang cũ

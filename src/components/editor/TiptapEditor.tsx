@@ -32,11 +32,11 @@ export function TiptapEditor({ onSave, initialContent, saveButtonLabel = "Publis
 
   if (!editor) return null;
 
-  const handleProjectSelect = (projectId: string) => {
+  const handleProjectSelect = (projectId: string, practiceRequired: boolean) => {
      // Secure injection of explicit Appwrite Project Document IDs directly into the Node attributes!
      editor.chain().focus().insertContent({
        type: 'musicSnippet',
-       attrs: { projectId, payloadRaw: null }
+       attrs: { projectId, practiceRequired, payloadRaw: null }
      }).run();
   };
 

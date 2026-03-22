@@ -23,16 +23,16 @@ export default async function AcademyStorefrontPage() {
             Welcome to the <br className="hidden sm:block" /> Backing Score Academy
           </h1>
           <p className="text-lg sm:text-xl text-zinc-500 max-w-2xl mx-auto">
-            Interactive masterclasses combining rigorous music theory with live web-audio validation. Pluck a note. Crush the Wait Mode. Level up your skills.
+            Interactive courses combining rigorous music theory with live web-audio validation. Pluck a note. Crush the Wait Mode. Level up your skills.
           </p>
         </div>
       </section>
 
       {/* 2. Course Library Grid */}
       <section className="max-w-7xl mx-auto px-6 lg:px-12 pt-16">
-        <div className="flex items-center justify-between mb-10">
-           <h2 className="text-2xl font-bold tracking-tight">Featured Masterclasses</h2>
-           <span className="text-sm font-semibold text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-3 py-1 rounded-full">
+        <div className="flex flex-col gap-3 mb-10 items-start">
+           <h2 className="text-2xl font-bold tracking-tight">Featured Courses</h2>
+           <span className="text-sm font-semibold text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-3 py-1 rounded-full w-fit">
              {publishedCourses.length} Courses Available
            </span>
         </div>
@@ -48,15 +48,15 @@ export default async function AcademyStorefrontPage() {
             {publishedCourses.map((course) => (
               <div 
                 key={course.$id} 
-                className="group relative bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl shadow-zinc-200/50 dark:hover:shadow-blue-500/10"
+                className="group relative bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl shadow-zinc-200/50 dark:hover:shadow-blue-500/10 flex flex-col h-full"
               >
                 {/* Thumbnail Layer */}
-                <div className="aspect-video w-full bg-zinc-100 dark:bg-zinc-900 relative overflow-hidden flex items-center justify-center">
+                <div className="aspect-video w-full bg-zinc-100 dark:bg-zinc-900 relative overflow-hidden flex items-center justify-center shrink-0">
                   <PlayCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700 group-hover:scale-110 group-hover:text-blue-500 transition-all duration-500" />
                 </div>
                 
                 {/* Content Layer */}
-                <div className="p-6">
+                <div className="p-5 sm:p-6 flex flex-col flex-1">
                   {/* Tags */}
                   <div className="flex items-center gap-2 mb-3">
                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded">Music Theory</span>
@@ -69,9 +69,10 @@ export default async function AcademyStorefrontPage() {
                   <p className="text-sm text-zinc-500 line-clamp-2 mb-6 h-10">
                     {course.description || "Master the foundations of musical physics entirely in your browser."}
                   </p>
+                  <div className="flex-1"></div>
                   
                   {/* Pricing & Call to Action */}
-                  <div className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-4">
+                  <div className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-4 mt-2">
                     <div className="flex flex-col">
                       <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Tuition</span>
                       <span className="text-lg font-black text-zinc-900 dark:text-white">

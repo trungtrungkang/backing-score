@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import type { DAWPayload, TrackBase } from "@/lib/daw/types";
-import { Play, Pause, Mic, Piano, Maximize, Minimize, Settings2, Terminal, Music, Maximize2, Minimize2, Keyboard, SlidersHorizontal } from "lucide-react";
+import { Play, Pause, Square, Mic, Piano, Maximize, Minimize, Settings2, Terminal, Music, Maximize2, Minimize2, Keyboard, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useGamification } from "@/components/editor/GamificationProvider";
@@ -29,9 +29,10 @@ export interface SnippetPlayerProps {
   payload: DAWPayload;
   zoom?: number;
   snippetId?: string;
+  practiceRequired?: boolean;
 }
 
-export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerProps) {
+export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired = true }: SnippetPlayerProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
 
@@ -121,7 +122,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerPr
       );
       if (justUnlocked) {
         if (gami.isLastLesson) {
-          toast.success("Mastery Achieved! 🏆 You have completed the entire Masterclass.");
+          toast.success("Course Completed! 🏆 You have finished the entire curriculum.");
         } else {
           toast.success("Node Unlocked: You can now access the next lesson!");
         }
@@ -164,6 +165,16 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerPr
       className={`w-full flex flex-col bg-[#fdfdfc] dark:bg-[#1A1A1E] relative ${isFullscreen ? "w-screen h-screen overflow-hidden border-none rounded-none m-0" : "border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden my-4 shadow-sm"}`}
     >
       <div className={`relative z-0 overflow-hidden bg-white dark:bg-[#121214] transition-all duration-300 ease-in-out ${isFullscreen ? "flex-1 min-h-0" : isExpanded ? "h-[500px] border-b border-blue-500/20" : "h-[250px]"}`}>
+        {/* Modality Badge */}
+        {!isFullscreen && (
+          <div className={`absolute top-4 left-4 z-[10] flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-sm border backdrop-blur-md ${practiceRequired ? 'bg-blue-50/90 dark:bg-blue-900/40 border-blue-200 dark:border-blue-800' : 'bg-green-50/90 dark:bg-green-900/40 border-green-200 dark:border-green-800'}`}>
+            {practiceRequired ? (
+               <><span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-[pulse_2s_ease-in-out_infinite]"></span><span className="text-blue-600 dark:text-blue-400">PRACTICE REQUIRED</span></>
+            ) : (
+               <><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span><span className="text-green-600 dark:text-green-400">LISTEN ONLY</span></>
+            )}
+          </div>
+        )}
 
         {/* Headless MIDI Player Fallback */}
         {state.stretchedMidiBase64 && (
@@ -215,6 +226,23 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerPr
             {state.isPlaying ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-1" fill="currentColor" />}
           </button>
 
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              actions.handlePause();
+              actions.handleSeek(0);
+            }}
+            disabled={state.loadingAudio}
+            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${state.loadingAudio
+              ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"
+              : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400"
+              }`}
+            title="Stop & Rewind"
+          >
+            <Square className="w-4 h-4" fill="currentColor" />
+          </button>
+
           <div className="text-xs text-zinc-500 font-mono tracking-wider">
             {Math.floor(state.positionMs / 1000)}s / {Math.floor(state.totalSongDurationMs / 1000)}s
           </div>
@@ -242,8 +270,9 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerPr
           )}
 
           {/* Wait Mode Popover / Fullscreen Toggle */}
-          {isFullscreen ? (
-            <div className="relative flex items-center">
+          {practiceRequired && (
+            isFullscreen ? (
+              <div className="relative flex items-center">
               <button
                 onClick={() => {
                   if (state.isWaitMode) {
@@ -424,7 +453,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId }: SnippetPlayerPr
                 </div>
               </PopoverContent>
             </Popover>
-          )}
+          ))}
 
           {/* Mixer Popover */}
           <Popover>

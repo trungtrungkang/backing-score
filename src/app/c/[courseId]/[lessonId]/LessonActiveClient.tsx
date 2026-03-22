@@ -7,7 +7,7 @@ import { getStudentProgress, saveWaitModeScore, ProgressDoc, LessonDoc } from "@
 import { CourseDoc } from "@/lib/appwrite/courses";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Lock, PlayCircle, Loader2, ChevronRight, Music, Unlock } from "lucide-react";
+import { CheckCircle2, Lock, PlayCircle, Loader2, ChevronRight, Music, Unlock, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TiptapViewer } from "@/components/editor/TiptapViewer";
@@ -29,6 +29,7 @@ export function LessonActiveClient({
   const [isValidating, setIsValidating] = useState(true);
   const [progressMap, setProgressMap] = useState<Map<string, ProgressDoc>>(new Map());
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -106,13 +107,14 @@ export function LessonActiveClient({
     if (!user) return;
     setIsUnlocking(true);
     try {
-      await saveWaitModeScore(user.$id, course.$id, activeLesson.$id, 100, undefined, 1);
+      // Pass totalSnippets = 0 to bypass the strict Gamification constraint math (0 >= 0 -> true)
+      await saveWaitModeScore(user.$id, course.$id, activeLesson.$id, 100, undefined, 0);
       
       const activeIdx = lessons.findIndex(l => l.$id === activeLesson.$id);
       const isLastLesson = activeIdx === lessons.length - 1;
 
       if (isLastLesson) {
-         toast.success("Masterclass Completed! 🎉 You have finished all lessons in this curriculum.");
+         toast.success("Course Completed! 🎉 You have finished all lessons in this curriculum.");
       } else {
          toast.success("Module Completed! Next lesson is now permanently unlocked.");
       }
@@ -136,46 +138,66 @@ export function LessonActiveClient({
   const activeIsCompleted = currentProgress?.completedAt;
 
   // Dynamically count how many snippets exist in the Tiptap document
-  const totalSnippetsInLesson = (() => {
+  const actualPracticeCount = (() => {
     try {
       const parsed = JSON.parse(activeLesson.contentRaw);
       let count = 0;
       const traverse = (node: any) => {
-        if (node.type === "musicSnippet") count++;
+        if (node.type === "musicSnippet" && node.attrs?.practiceRequired !== false) count++;
         if (node.content && Array.isArray(node.content)) {
            node.content.forEach(traverse);
         }
       };
       traverse(parsed);
-      return Math.max(1, count); // Ensure at least 1 so manual complete bypass works seamlessly
+      return count;
     } catch(e) {
-      return 1;
+      return 0;
     }
   })();
+  
+  const totalSnippetsInLesson = Math.max(1, actualPracticeCount); // Ensure at least 1 so database logic works properly
 
   const activeIdx = lessons.findIndex(l => l.$id === activeLesson.$id);
   const isLastLesson = activeIdx === lessons.length - 1;
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex font-sans">
+    <main className="h-screen bg-zinc-50 dark:bg-zinc-950 flex font-sans overflow-hidden">
       
+      {/* Mobile Nav Overlay */}
+      {isMobileNavOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[100] md:hidden backdrop-blur-sm" 
+          onClick={() => setIsMobileNavOpen(false)} 
+        />
+      )}
+
       {/* 1. Left Learner Navigation Array */}
-      <aside className="w-80 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] flex flex-col h-screen sticky top-0 hidden md:flex">
-        <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-           <Link href="/discover" className="text-xs font-bold text-blue-500 uppercase tracking-widest hover:underline mb-2 block">
-             &larr; Back to Platform
-           </Link>
-           <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-2">
-             {course.title}
-           </h1>
+      <aside className={`fixed inset-y-0 left-0 z-[110] w-[85vw] max-w-sm border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] flex flex-col transition-transform duration-300 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:static md:translate-x-0 md:w-80`}>
+        <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+           <div>
+             <Link href="/discover" className="text-xs font-bold text-blue-500 uppercase tracking-widest hover:underline mb-2 block">
+               &larr; Back to Platform
+             </Link>
+             <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-2">
+               {course.title}
+             </h1>
+           </div>
+           
+           <button 
+             onClick={() => setIsMobileNavOpen(false)}
+             className="md:hidden p-2 -mr-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+           >
+             <X className="w-5 h-5" />
+           </button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {lessons.map((lesson, idx) => {
             const isFirst = idx === 0;
             const previousProgress = idx > 0 ? progressMap.get(lessons[idx - 1].$id) : null;
-            const isUnlocked = isFirst || (previousProgress && previousProgress.unlocked);
             const isCompleted = progressMap.has(lesson.$id) && progressMap.get(lesson.$id)!.completedAt;
+            // Always unlock if it's the first, if it was manually/already completed, or if the previous lesson was fully unlocked
+            const isUnlocked = isFirst || isCompleted || (previousProgress && previousProgress.unlocked);
             const isActive = lesson.$id === activeLesson.$id;
             
             return (
@@ -208,7 +230,7 @@ export function LessonActiveClient({
                  </div>
 
                  {isUnlocked && !isActive && (
-                    <Link href={`/c/${course.$id}/${lesson.$id}`} className="absolute inset-0" />
+                    <Link href={`/c/${course.$id}/${lesson.$id}`} className="absolute inset-0" onClick={() => setIsMobileNavOpen(false)} />
                  )}
               </div>
             );
@@ -217,17 +239,32 @@ export function LessonActiveClient({
       </aside>
 
       {/* 2. Interactive Page Content (Tiptap Viewer Frame) */}
-      <section className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-12">
+      <section className="flex-1 overflow-y-auto relative w-full">
+         
+         {/* Mobile Header Bar */}
+         <div className="md:hidden flex items-center p-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] sticky top-0 z-[40]">
+           <button onClick={() => setIsMobileNavOpen(true)} className="p-2 -ml-2 rounded-lg text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+             <Menu className="w-6 h-6" />
+           </button>
+           <h2 className="ml-3 font-bold text-sm text-zinc-900 dark:text-white truncate">
+             {activeLesson.title}
+           </h2>
+         </div>
+
+         <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12">
           
           <div className="mb-6 flex flex-col">
             <h2 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
                {activeLesson.title}
             </h2>
             <div className="flex items-center gap-2 text-zinc-500 text-sm mt-2 font-medium">
-               <span>Interactive Lesson</span>
-               <ChevronRight className="w-4 h-4" />
-               <span className="text-blue-500">Wait Mode Enabled</span>
+               <span>{actualPracticeCount > 0 ? "Interactive Lesson" : "Theoretical Lesson"}</span>
+               {actualPracticeCount > 0 && (
+                 <>
+                   <ChevronRight className="w-4 h-4" />
+                   <span className="text-blue-500 dark:text-blue-400">Practice Required (Wait Mode)</span>
+                 </>
+               )}
             </div>
           </div>
 
@@ -247,7 +284,7 @@ export function LessonActiveClient({
              </div>
              
              {/* Manual Unlocking Override */}
-             {!activeIsCompleted && (
+             {!activeIsCompleted && actualPracticeCount === 0 && (
                  <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col items-center pb-8">
                     <div className="bg-blue-50 dark:bg-blue-900/10 rounded-full p-4 mb-4">
                        <Unlock className="w-8 h-8 text-blue-500" />

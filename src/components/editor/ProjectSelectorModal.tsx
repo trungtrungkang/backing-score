@@ -7,13 +7,14 @@ import { X, Search, Music4, CloudUpload, PlaySquare } from "lucide-react";
 interface ProjectSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (projectId: string) => void;
+  onSelect: (projectId: string, practiceRequired: boolean) => void;
 }
 
 export function ProjectSelectorModal({ isOpen, onClose, onSelect }: ProjectSelectorModalProps) {
   const [projects, setProjects] = useState<ProjectDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [practiceRequired, setPracticeRequired] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,6 +60,18 @@ export function ProjectSelectorModal({ isOpen, onClose, onSelect }: ProjectSelec
           </button>
         </div>
 
+        {/* Configuration Toolbar */}
+        <div className="px-6 py-4 bg-zinc-100/50 dark:bg-[#1A1A1E] border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+           <div className="flex flex-col">
+              <span className="text-sm font-bold text-zinc-900 dark:text-white">Require Practice (Wait Mode)</span>
+              <span className="text-xs text-zinc-500">If checked, the learner MUST complete this piece to pass the lesson.</span>
+           </div>
+           <label className="relative inline-flex items-center cursor-pointer">
+             <input type="checkbox" className="sr-only peer" checked={practiceRequired} onChange={e => setPracticeRequired(e.target.checked)} />
+             <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
+           </label>
+        </div>
+
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-zinc-50/50 dark:bg-zinc-950/20">
           {error && (
@@ -86,10 +99,10 @@ export function ProjectSelectorModal({ isOpen, onClose, onSelect }: ProjectSelec
                  <div 
                    key={p.$id} 
                    onClick={() => {
-                     onSelect(p.$id);
+                     onSelect(p.$id, practiceRequired);
                      onClose();
                    }}
-                   className="group flex items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-500/5 cursor-pointer transition-all shadow-sm"
+                   className="group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-500/5 cursor-pointer transition-all shadow-sm"
                  >
                     <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-zinc-200 dark:border-zinc-700/50">
                       {p.coverUrl ? (

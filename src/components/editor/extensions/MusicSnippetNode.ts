@@ -19,6 +19,13 @@ export const MusicSnippetNode = Node.create({
           return { 'data-project-id': attributes.projectId };
         }
       },
+      practiceRequired: {
+        default: true,
+        parseHTML: element => element.getAttribute('data-practice-required') !== 'false',
+        renderHTML: attributes => {
+          return { 'data-practice-required': attributes.practiceRequired === false ? 'false' : 'true' };
+        }
+      },
       snippetId: {
         default: null,
         parseHTML: element => element.getAttribute('data-snippet-id'),

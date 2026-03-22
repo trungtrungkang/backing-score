@@ -157,7 +157,7 @@ export function CourseGatewayClient({ course, lessons }: { course: CourseDoc; le
                     <CheckCircle2 className="w-12 h-12 text-green-500 mb-4" />
                     <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Free Curriculum Access</h3>
                     <p className="text-zinc-500 text-sm mb-6">
-                       This Masterclass is entirely free. However, you must log in and formally enroll so we can securely synchronize your instrument progress and Wait Mode achievements.
+                       This Course is entirely free. However, you must log in and formally enroll so we can securely synchronize your instrument progress and Wait Mode achievements.
                     </p>
                     {user ? (
                        <Button onClick={handleJoinFreeCourse} disabled={isJoining} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold h-12 rounded-xl text-lg shadow-lg shadow-blue-500/30">

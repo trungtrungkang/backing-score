@@ -9,6 +9,7 @@ export default function MusicSnippetView({ node, updateAttributes, selected }: N
   const projectId = node.attrs.projectId;
   const payloadRaw = node.attrs.payloadRaw;
   const snippetId = node.attrs.snippetId;
+  const practiceRequired = node.attrs.practiceRequired;
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +61,11 @@ export default function MusicSnippetView({ node, updateAttributes, selected }: N
       {payloadRaw ? (
         <div className="select-none" contentEditable={false}>
           {/* We must disable contentEditable inside the custom node to prevent Tiptap from hijacking keyboard inputs */}
-          <SnippetPlayer payload={JSON.parse(payloadRaw) as DAWPayload} snippetId={snippetId} />
+          <SnippetPlayer 
+            payload={JSON.parse(payloadRaw) as DAWPayload} 
+            snippetId={snippetId} 
+            practiceRequired={practiceRequired} 
+          />
         </div>
       ) : isLoading ? (
         <div className="p-10 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center animate-pulse">

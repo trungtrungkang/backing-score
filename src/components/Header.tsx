@@ -1,16 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert, Users, GraduationCap } from "lucide-react";
+import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert, Users, GraduationCap, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (pathname?.startsWith("/play")) return null;
 
@@ -70,8 +72,15 @@ export function Header() {
         </nav>
 
         {/* Right Icons */}
-        <div className="flex items-center gap-5">
-          <ThemeToggle hideBg className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white" />
+        <div className="flex items-center gap-3 sm:gap-5">
+          <button 
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-full transition-colors text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-white"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          
+          <ThemeToggle hideBg className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hidden sm:flex" />
           
           {user ? (
             <div className="flex items-center gap-2 sm:gap-4">
@@ -99,6 +108,43 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-20 left-0 w-full bg-white dark:bg-[#1A1A1E] border-b border-black/5 dark:border-white/5 shadow-xl flex flex-col p-4 gap-2 md:hidden animate-in slide-in-from-top-2">
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-colors ${pathname === '/' ? 'bg-[#C8A856]/10 text-[#C8A856]' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+              <Home className="w-5 h-5" />
+              Home
+            </Link>
+            <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-colors ${pathname.startsWith('/dashboard') ? 'bg-[#C8A856]/10 text-[#C8A856]' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+              <Library className="w-5 h-5" />
+              Library
+            </Link>
+            <Link href="/discover" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-colors ${pathname.startsWith('/discover') ? 'bg-[#C8A856]/10 text-[#C8A856]' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+              <Compass className="w-5 h-5" />
+              Explore
+            </Link>
+            <Link href="/academy" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-colors ${pathname.startsWith('/academy') ? 'bg-[#C8A856]/10 text-[#C8A856]' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+              <GraduationCap className="w-5 h-5" />
+              Academy
+            </Link>
+            {user && (
+              <Link href="/feed" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-semibold transition-colors ${pathname.startsWith('/feed') ? 'bg-[#C8A856]/10 text-[#C8A856]' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                <Users className="w-5 h-5" />
+                Community
+              </Link>
+            )}
+            {user?.labels?.includes("admin") && (
+              <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 p-3 rounded-lg text-sm font-extrabold transition-colors ${pathname.startsWith('/admin') ? 'bg-red-500/10 text-red-500' : 'text-red-400/80 dark:text-red-900/80 hover:bg-red-50 dark:hover:bg-red-900/20'}`}>
+                <ShieldAlert className="w-5 h-5" />
+                Admin
+              </Link>
+            )}
+            <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-center sm:hidden">
+              <ThemeToggle className="w-full justify-center" />
+            </div>
+        </div>
+      )}
     </header>
   );
 }
