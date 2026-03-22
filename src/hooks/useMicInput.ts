@@ -33,7 +33,7 @@ export function useMicInput() {
     if (isMicInitialized) return true;
 
     try {
-      // Bắt buộc tắt toàn bộ Noise Suppression mặc định của OS (iOS cực kỳ hung hăng với cái này)
+      // Force-disable default OS Noise Suppression (iOS is extremely aggressive with this by default)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: false,
@@ -47,13 +47,13 @@ export function useMicInput() {
       audioCtxRef.current = audioCtx;
       
       const analyser = audioCtx.createAnalyser();
-      // Flowkey Magic: Kéo FFT Size lên Mức Tối đa (32768) để chia tần số ra các mảng cực mịn (1.34 Hz/bin)
-      // Điều này cho phép thuật toán Peak-Picking dò ra chuẩn xác các hợp âm (Polyphonic Chords) mà YIN bó tay!
+      // Flowkey Magic: Maximize FFT Size (32768) to partition frequencies into ultra-fine bins (1.34 Hz/bin)
+      // This allows the Peak-Picking algorithm to accurately detect Polyphonic Chords which YIN natively fails at!
       analyser.fftSize = 32768; 
       analyser.smoothingTimeConstant = 0.5; 
       analyserRef.current = analyser;
 
-      // Khuếch đại âm lượng vật lý.
+      // Physically amplify raw input volume.
       const gainNode = audioCtx.createGain();
       gainNode.gain.value = 4.0; 
 
@@ -67,49 +67,49 @@ export function useMicInput() {
         if (!analyserRef.current || !audioCtxRef.current) return;
         
         const binCount = analyserRef.current.frequencyBinCount; // 16384 bins
-        // Dùng Frequency Domain (Phổ tần số) thay vì Time Domain (Sóng thời gian) để bóc tách Hợp Âm
+        // Utilize the Frequency Domain rather than Time Domain to isolate Polyphonic sequences
         const buffer = new Float32Array(binCount);
-        analyserRef.current.getFloatFrequencyData(buffer); // Trả về dạng Decibels (dB)
+        analyserRef.current.getFloatFrequencyData(buffer); // Array of Decibels (dB)
         
         const now = performance.now();
         const sampleRate = audioCtxRef.current.sampleRate;
         const binSize = (sampleRate / 2) / binCount;
         
-        // 1. Phân loại Âm Lượng Nhất (Loudest Peak) để loại bỏ Tạp âm nền (Background Noise)
+        // 1. Identify Loudest Peak to establish a dynamic background noise threshold
         let maxAmp = -Infinity;
         for (let i = 0; i < binCount; i++) {
           if (buffer[i] > maxAmp) maxAmp = buffer[i];
         }
 
-        // Ngưỡng phát hiện tiếng ồn thấp nhất tuyệt đối.
+        // Absolute Minimum Noise Floor Detection limit.
         const THRESHOLD_DB = -55;
 
-        // Bỏ qua 5 bin đầu tiên (Nhiễu điện DC) và 5 bin cuối
+        // Skip the first 5 bins (DC offset interference) and trailing 5 bins
         for (let i = 5; i < binCount - 5; i++) {
           const amp = buffer[i];
           
-          // Thuật toán: Tìm Điểm Cực Đại (Local Maxima / Peak Picking) khắt khe
-          // Điều kiện 1: Tần số phải to hơn mức Ngưỡng (Threshold)
-          // Điều kiện 2: Chỉ lấy Các ngọn nến sáng nhất (Không được bé hơn Nốt to nhất quá 30dB)
+          // Strict Local Maxima / Peak Picking Algorithm
+          // Condition 1: Amplitude strictly exceeds minimum absolute Threshold.
+          // Condition 2: Filter out dim peaks (Cannot drop more than 35dB below the loudest MaxAmp).
           if (amp > THRESHOLD_DB && amp > maxAmp - 35) {
             
-            // Điều kiện 3: Nó phải là "Đỉnh Núi" (To hơn bin hai bên)
+            // Condition 3: Topographic Local Maxima (Amplitude exceeds immediate neighbor bins).
             if (amp > buffer[i - 1] && amp > buffer[i + 1]) {
               
-              // Điều kiện 4: LỌC TẠP ÂM (Prominence Filter). Mấu chốt chặn tiếng HO/VỖ TAY!
-              // Tiếng ho là "Broadband Noise" (sóng Gồ Ghề Mập Mạp). Piano là sóng "Tonal" (Cao Vút Nhọn Hoắt).
-              // Ta sẽ soi 10 bin xung quanh nó (+/- 5 bin). Đỉnh nhô lên bao nhiêu DB?
+              // Condition 4: PROMINENCE FILTER (Crucial for rejecting Broadband Noise like Coughs/Clapping).
+              // Coughs are Broadband (Blunt/Flat shapes). Piano tones are Tonal (Extremely Sharp Spikes).
+              // We evaluate 10 surrounding bins (+/- 5 bins) to explicitly confirm the decibel prominence ratio.
               let localSum = 0;
               for (let j = -5; j <= 5; j++) {
                 localSum += buffer[i + j];
               }
               const localAvg = localSum / 11;
               
-              // Nếu Đỉnh chỉ nhô cao hơn mức trung bình xung quanh 10dB -> Là tiếng ho/rác -> BỎ!
-              // Nếu Đỉnh đâm xuyên qua mức trung bình > 15dB -> Là Nốt Nhạc của Piano/Guitar.
+              // If the peak barely rises 10dB above neighbors -> It's Broadband White Noise (Coughs) -> IGNORE!
+              // If the peak pierces 12dB or more above neighbors -> It's a clean Acoustic Piano Tone.
               if (amp - localAvg > 12) { 
                 
-                // Parabolic Interpolation (Làm tròn Parabol) để đoán tần số cực nét giữa 2 Bin
+                // Parabolic Interpolation logic smoothing frequency alignment perfectly between 2 overlapping Bins.
                 const valL = buffer[i - 1];
                 const valC = buffer[i];
                 const valR = buffer[i + 1];
@@ -118,11 +118,11 @@ export function useMicInput() {
                 const exactBin = i + p;
                 const freq = exactBin * binSize;
                 
-                // Giới hạn dải tần số của Đàn Piano
+                // Restrict evaluation bounds explicitly to Physical Piano Octave Frequencies
                 if (freq >= 27.5 && freq <= 4186) { 
                   const midiNote = Math.round(69 + 12 * Math.log2(freq / 440));
                   if (midiNote > 0 && midiNote < 128) {
-                    // Nhặt được 1 nốt Sạch trong Hợp âm!
+                    // Safe Polyphonic Chord Node Discovered!
                     pitchTimersRef.current.set(midiNote, now);
                   }
                 }
@@ -131,8 +131,8 @@ export function useMicInput() {
           }
         }
         
-        // 2. Tăng Time-To-Live (Grace period) lên 500ms. 
-        // Khi gõ mạn đàn (attack noise), Peak Picker có thể trượt mẻ Null trong 1-2 frames. Thời gian trễ vớt vát lại nốt.
+        // 2. Expand Array Grace Period parameters out to 500ms preventing immediate sustain dropout conditions.
+        // During Acoustic attack transients (hammer striking piano string), the Peak Picker can hallucinate blind Nulls for 1-2 frames.
         const newPitches = new Set<number>();
         pitchTimersRef.current.forEach((lastSeen, note) => {
             if (now - lastSeen < 500) {

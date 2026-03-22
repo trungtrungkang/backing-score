@@ -19,13 +19,14 @@ export interface MusicXMLVisualizerProps {
   isWaiting?: boolean;
   practiceTrackIds?: number[];
   className?: string;
+  defaultScale?: number;
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
-  isWaitMode = false, isWaiting = false, practiceTrackIds, className
+  isWaitMode = false, isWaiting = false, practiceTrackIds, className, defaultScale
 }: MusicXMLVisualizerProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,10 @@ export function MusicXMLVisualizer({
   const svgContentRef = useRef<string | null>(null); // holds raw SVG string
   const svgContainerRef = useRef<HTMLDivElement | null>(null); // DOM node for SVG
   const workerProxyRef = useRef<IVerovioWorkerProxy | null>(null);
+  
+  const [processedXml, setProcessedXml] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [debouncedWidth, setDebouncedWidth] = useState<number>(0);
 
   // Custom DOM refs for playhead
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,11 +48,18 @@ export function MusicXMLVisualizer({
   // Load saved zoom level for this score
   useEffect(() => {
     if (!scoreFileId) return;
-    // Default to "Zoom In 3x" (40 + 3*10 = 70) for Tablet/Desktop
+    
+    // Explicit override for embedded environments (e.g. Tiptap Snippet)
+    if (defaultScale !== undefined) {
+      setScale(defaultScale);
+      return;
+    }
+    
+    // System default for full-page `/c/[courseId]/[lessonId]` View
     if (window.innerWidth >= 768) {
       setScale(70);
     }
-  }, [scoreFileId]);
+  }, [scoreFileId, defaultScale]);
 
   // Initialize Worker once
   useEffect(() => {
@@ -72,7 +84,26 @@ export function MusicXMLVisualizer({
     };
   }, []);
 
-  // Fetch score and load into Verovio
+  // --- RESIZE OBSERVER ENGINE ---
+  useEffect(() => {
+    if (!svgContainerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+       for (const entry of entries) {
+           if (entry.contentRect.width > 0) {
+               setContainerWidth(Math.round(entry.contentRect.width));
+           }
+       }
+    });
+    observer.observe(svgContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+     const timer = setTimeout(() => setDebouncedWidth(containerWidth), 300);
+     return () => clearTimeout(timer);
+  }, [containerWidth]);
+
+  // --- EFFECT A: DATA FETCH, XML SANITIZATION & MIDI GENERATION (RUNS ONCE PER SCORE) ---
   useEffect(() => {
     if (!scoreFileId || !workerProxyRef.current) return;
 
@@ -166,27 +197,9 @@ export function MusicXMLVisualizer({
 
         const serializer = new XMLSerializer();
         const safeSvgText = serializer.serializeToString(baseXmlDoc);
-
-        // Load correct mathematical timings natively into the SVG Engine
-        const containerWidth = svgContainerRef.current?.clientWidth ?? 800;
-        await proxy.setOptions({
-          pageHeight: 60000, 
-          pageWidth: Math.round(containerWidth * (100 / scale)),
-          pageMarginLeft: 50,
-          pageMarginRight: 50,
-          pageMarginTop: 50,
-          pageMarginBottom: 50,
-          scale: scale,
-          adjustPageHeight: true,
-          breaks: "auto",
-        });
-        if (canceled) return;
-
-        await proxy.loadData(safeSvgText);
-        if (canceled) return;
-
-        const svg = await proxy.renderToSVG(1);
-        if (canceled) return;
+        
+        // Output the finalized clean document to absolute state for fast Render passes
+        setProcessedXml(safeSvgText);
 
         // --- ISOLATED MIDI GENERATION THREAD ---
         const midiWorkerUrl = "/dist/verovio/verovio-worker.js";
@@ -254,12 +267,11 @@ export function MusicXMLVisualizer({
 
         if (canceled) return;
 
-        svgContentRef.current = svg;
-        setRenderVersion(v => v + 1); // signal that SVG is ready to be written to DOM
       } catch (e: any) {
-        if (!canceled) setError(e.message ?? "Unknown error loading score");
-      } finally {
-        if (!canceled) setLoading(false);
+        if (!canceled) {
+           setError(e.message ?? "Unknown error loading score");
+           setLoading(false); // Only toggle loading off if error natively
+        }
       }
     };
 
@@ -267,7 +279,54 @@ export function MusicXMLVisualizer({
     return () => {
       canceled = true;
     };
-  }, [scoreFileId, scale]);
+  }, [scoreFileId]);
+
+  // --- EFFECT B: LIGHTWEIGHT WEBASSEMBLY VIEWPORT RENDER (RUNS ON SCALE / WIDTH CHANGES) ---
+  useEffect(() => {
+     if (!processedXml || !workerProxyRef.current || debouncedWidth === 0) return;
+     let canceled = false;
+     
+     const renderLayout = async () => {
+        setLoading(true);
+        try {
+           const proxy = workerProxyRef.current;
+           if (!proxy) return;
+
+           await proxy.setOptions({
+              pageHeight: 60000,
+              pageWidth: Math.round(debouncedWidth * (100 / scale)),
+              pageMarginLeft: 50,
+              pageMarginRight: 50,
+              pageMarginTop: 50,
+              pageMarginBottom: 50,
+              scale: scale,
+              spacingLinear: 0.25,
+              spacingNonLinear: 0.6,
+              adjustPageHeight: true,
+              breaks: "auto"
+           });
+           if (canceled) return;
+
+           await proxy.loadData(processedXml);
+           if (canceled) return;
+
+           const svg = await proxy.renderToSVG(1);
+           if (canceled) return;
+
+           svgContentRef.current = svg;
+           setRenderVersion(v => v + 1);
+        } catch(e) {
+           console.error("Verovio Render Layout failed:", e);
+        } finally {
+           if (!canceled) setLoading(false);
+        }
+     };
+
+     renderLayout();
+     return () => {
+        canceled = true;
+     };
+  }, [processedXml, scale, debouncedWidth]);
 
   // Write SVG string directly to DOM via ref (bypasses React reconciliation)
   // This ensures React never wipes CSS classes we add to SVG elements.
@@ -825,20 +884,20 @@ export function MusicXMLVisualizer({
       </div>
 
       {/* Floating Zoom Controls */}
-      <div className="absolute bottom-6 right-6 flex flex-col gap-2 z-10 opacity-70 hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => setScale(s => Math.min(s + 10, 120))}
-          className="w-10 h-10 bg-zinc-800 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-700"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-5 h-5" />
-        </button>
+      <div className="absolute top-4 right-4 flex gap-1 z-[90] opacity-30 hover:opacity-100 transition-opacity">
         <button
           onClick={() => setScale(s => Math.max(s - 10, 20))}
-          className="w-10 h-10 bg-zinc-800 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-700"
-          title="Zoom Out"
+          className="w-8 h-8 bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 rounded flex items-center justify-center shadow-sm hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm"
+          title="Thu nhỏ (Zoom Out)"
         >
-          <ZoomOut className="w-5 h-5" />
+          <ZoomOut className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setScale(s => Math.min(s + 10, 120))}
+          className="w-8 h-8 bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 rounded flex items-center justify-center shadow-sm hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm"
+          title="Phóng to (Zoom In)"
+        >
+          <ZoomIn className="w-4 h-4" />
         </button>
       </div>
     </div>

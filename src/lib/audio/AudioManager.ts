@@ -80,12 +80,12 @@ export class AudioManager {
    * Universal iOS/Safari Web Audio Unlocker.
    * MUST be called synchronously inside a user gesture (e.g. onClick).
    */
-  public unlockiOSAudio() {
+  public async unlockiOSAudio() {
     this.initContext();
     if (!this.context) return;
     try {
       if (this.context.state === 'suspended') {
-        this.context.resume();
+        await this.context.resume();
       }
       // Play 1 sample of silence to physically unlock the iOS audio hardware pipeline
       const buffer = this.context.createBuffer(1, 1, 22050);
@@ -181,7 +181,7 @@ export class AudioManager {
   }
 
   public getDurationMs(): number {
-    return this.tracks.size > 0 ? this.durationMs : 1800000; // 30 minutes fallback for metronome-only practice
+    return this.tracks.size > 0 ? this.durationMs : 0; // 30 minutes fallback moved to useScoreEngine
   }
 
   public async play() {

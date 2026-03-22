@@ -1,0 +1,27 @@
+{
+    "userId": "69babe340036bc7cdebe",
+    "name": "Twinkle Twinkle Little Star",
+    "mode": "practice",
+    "payload": "{\"version\":1,\"metadata\":{\"syncToTimemap\":true,\"tempo\":100,\"name\":\"Untitled\",\"scoreSynthMuted\":true},\"type\":\"multi-stems\",\"audioTracks\":[],\"notationData\":{\"type\":\"music-xml\",\"fileId\":\"69bfbef300355c5c49c6\",\"timemap\":[{\"measure\":1,\"timeMs\":0},{\"measure\":2,\"timeMs\":2399.9999999999986},{\"measure\":3,\"timeMs\":4799.999999999997},{\"measure\":4,\"timeMs\":7199.999999999998},{\"measure\":5,\"timeMs\":9599.999999999995},{\"measure\":6,\"timeMs\":11999.999999999998},{\"measure\":7,\"timeMs\":14399.999999999996},{\"measure\":8,\"timeMs\":16799.999999999993},{\"measure\":9,\"timeMs\":19199.99999999999},{\"measure\":10,\"timeMs\":21599.999999999985},{\"measure\":11,\"timeMs\":23999.999999999996},{\"measure\":12,\"timeMs\":26399.999999999996}]}}",
+    "payloadVersion": 1,
+    "published": false,
+    "publishedAt": null,
+    "coverUrl": null,
+    "description": null,
+    "creatorEmail": "trungtrungkang@gmail.com",
+    "tags": [],
+    "instruments": [],
+    "difficulty": 0,
+    "durationSec": 0,
+    "$sequence": 23,
+    "$id": "69bfbed5001f96c77258",
+    "$createdAt": "2026-03-22T10:05:09.860+00:00",
+    "$updatedAt": "2026-03-22T10:06:17.669+00:00",
+    "$permissions": [
+        "read(\"user:69babe340036bc7cdebe\")",
+        "update(\"user:69babe340036bc7cdebe\")",
+        "delete(\"user:69babe340036bc7cdebe\")"
+    ],
+    "$databaseId": "backing_score_db",
+    "$collectionId": "projects"
+}

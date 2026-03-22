@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap } from "lucide-react";
 import {
   listMyProjects,
   createProject,
@@ -141,6 +141,11 @@ export default function DashboardPage() {
             <Link href="/dashboard/favorites" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
               <Heart className="w-4 h-4" />
               Favorites
+            </Link>
+            
+            <Link href="/dashboard/courses" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors border-t border-zinc-800/50 pt-3">
+              <GraduationCap className="w-4 h-4 text-[#C8A856]" />
+              Creator Courses
             </Link>
             
             <Link href="/guide" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">

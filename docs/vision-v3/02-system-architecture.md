@@ -54,6 +54,12 @@ Cả Khóa học (EdTech) lẫn Mạng xã hội (Community) đều dùng chung 
 - **UI `<PlayShell>` (Cho Mạng xã hội)**: Giao diện Khổng lồ ôm trọn màn hình, có Cột Mixer, Thanh trượt Tempo, và Ô Lặp đoạn.
 - **UI `<SnippetPlayer>` (Cho Khóa Học Tiptap)**: Giao diện Nhỏ Xíu nằm gọn trong Text. Giấu tiệt mọi Menu chức năng rườm rà. Chỉ hiện Tờ nhạc được co rút (Zoom In), nút Play, và Nút [Bật Wait Mode] để học trò thổi Microphone. Cả hai đều mương chung dòng máu `useScoreEngine`.
 
+### 3. Kiến Trúc Quản Lý Giáo Trình (Curriculum Builder & Manager)
+Giải quyết triệt để vấn đề "1 Khóa học chứa nhiều Bài Giảng", giao diện phần mềm dành cho Creator được bóc tách định tuyến quy củ thành 3 phân hệ:
+- **Course List (`/dashboard/courses`)**: Cổng điều hướng và Khởi tạo Siêu dữ liệu `Course` (Đóng vai trò như việc tạo ra cái Bìa cuốn sách).
+- **Curriculum Manager (`/dashboard/courses/[courseId]/edit`)**: Trạm trung chuyển và Quản trị Lộ trình học tập (`1-to-N`). Cho phép Creator Thêm mới, Xóa, Sửa và Sắp xếp vị trí của vô số `Lesson` Document nằm dưới trướng 1 `Course` Document.
+- **Lesson Editor (`/dashboard/courses/creator?lessonId=XXX`)**: Trình Tiptap Studio được hạ cấp và tái sử dụng dưới dạng Quản lý Đơn phân tử, phục vụ duy nhất 1 mục đích là cập nhật trường dữ liệu Rich-Text `contentRaw` cho 1 Bài học cục bộ.
+
 ---
 
 ## PHẦN 3: CƠ SỞ DỮ LIỆU BAAAS (APPWRITE NOSQL SCHEMA)

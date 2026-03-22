@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert, Users } from "lucide-react";
+import { Home, Library, Compass, Search, Bell, User, LogOut, ShieldAlert, Users, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -50,6 +50,10 @@ export function Header() {
             <Link href="/discover" className={`h-full flex px-2 items-center gap-2 text-sm font-semibold transition-colors border-b-2 ${pathname.startsWith('/discover') ? 'text-[#C8A856] border-[#C8A856]' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200'}`}>
               <Compass className="w-[18px] h-[18px]" />
               Explore
+            </Link>
+            <Link href="/academy" className={`h-full flex px-2 items-center gap-2 text-sm font-semibold transition-colors border-b-2 ${pathname.startsWith('/academy') ? 'text-[#C8A856] border-[#C8A856]' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200'}`}>
+              <GraduationCap className="w-[18px] h-[18px]" />
+              Academy
             </Link>
             {user && (
               <Link href="/feed" className={`h-full flex px-2 items-center gap-2 text-sm font-semibold transition-colors border-b-2 ${pathname.startsWith('/feed') ? 'text-[#C8A856] border-[#C8A856]' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-zinc-200'}`}>

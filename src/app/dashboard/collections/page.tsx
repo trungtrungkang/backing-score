@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   CloudUpload, Heart, Globe, ListMusic, Plus,
-  FolderOpen, Settings, Eye, EyeOff, Music4, Trash2
+  FolderOpen, Settings, Eye, EyeOff, Music4, Trash2, GraduationCap
 } from "lucide-react";
 import {
   listMyPlaylists,
@@ -126,6 +126,11 @@ export default function CollectionsPage() {
             <Link href="/dashboard/favorites" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
               <Heart className="w-4 h-4" />
               Favorites
+            </Link>
+            
+            <Link href="/dashboard/courses" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors border-t border-zinc-800/50 pt-3">
+              <GraduationCap className="w-4 h-4 text-[#C8A856]" />
+              Creator Courses
             </Link>
             
             <Link href="/discover" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
