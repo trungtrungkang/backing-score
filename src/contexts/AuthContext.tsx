@@ -81,7 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         await account.createEmailPasswordSession({ email, password });
         try {
-          await account.createVerification(`${window.location.origin}/verify`);
+          const locale = window.location.pathname.split("/").filter(Boolean).find(p => ["en","vi","zh-CN","zh-TW","es","fr","de","ja","ko"].includes(p)) ?? "en";
+          await account.createVerification(`${window.location.origin}/${locale}/verify`);
         } catch (vErr) {
           console.error("Failed to send verification email:", vErr);
         }
@@ -99,8 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const loginWithOAuth = useCallback((provider: "google" | "apple") => {
-    const successUrl = `${window.location.origin}/dashboard`;
-    const failureUrl = `${window.location.origin}/login?error=oauth_failed`;
+    // Extract current locale from pathname (e.g. /en, /vi, /zh-CN)
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    const supportedLocales = ["en", "vi", "zh-CN", "zh-TW", "es", "fr", "de", "ja", "ko"];
+    const locale = supportedLocales.includes(pathParts[0]) ? pathParts[0] : "en";
+    const successUrl = `${window.location.origin}/${locale}/dashboard`;
+    const failureUrl = `${window.location.origin}/${locale}/login?error=oauth_failed`;
     const oAuthProvider = provider === "google" ? OAuthProvider.Google : OAuthProvider.Apple;
     
     // Redirects browser completely
@@ -110,7 +115,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendVerification = useCallback(async () => {
     setError(null);
     try {
-      await account.createVerification(`${window.location.origin}/verify`);
+      const locale = window.location.pathname.split("/").filter(Boolean).find(p => ["en","vi","zh-CN","zh-TW","es","fr","de","ja","ko"].includes(p)) ?? "en";
+      await account.createVerification(`${window.location.origin}/${locale}/verify`);
     } catch (e: unknown) {
       const msg =
         e && typeof e === "object" && "message" in e

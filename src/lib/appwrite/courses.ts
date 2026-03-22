@@ -12,6 +12,8 @@ export interface CourseDoc extends Models.Document {
   coverUrl?: string;
   published: boolean;
   createdAt?: string;
+  category?: string;    // e.g. "Music Theory", "Piano", "Guitar"
+  difficulty?: string;  // e.g. "Beginner", "Intermediate", "Advanced"
 }
 
 export interface EnrollmentDoc extends Models.Document {
@@ -70,7 +72,7 @@ export async function createCourse(creatorId: string, title: string, priceCents:
 
 export async function updateCourse(
   courseId: string, 
-  updates: { title?: string; description?: string; priceCents?: number; published?: boolean }
+  updates: { title?: string; description?: string; priceCents?: number; published?: boolean; category?: string; difficulty?: string }
 ): Promise<CourseDoc> {
   const doc = await databases.updateDocument(DATABASE_ID, COURSES_COLLECTION, courseId, updates);
   return doc as unknown as CourseDoc;

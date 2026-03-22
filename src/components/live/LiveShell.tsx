@@ -2,7 +2,7 @@
 
 import { getFileViewUrl } from "@/lib/appwrite";
 import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { ChevronLeft, Play, Pause, Sun, Moon, Activity, TimerReset } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import { TrackList } from "@/components/editor/TrackList";
