@@ -1,42 +1,41 @@
-# Mô Hình Kinh Doanh & Phân Quyền Nền Tảng (Creator Revenue & Rights)
+# Mô Hình Kinh Doanh & Chia Sẻ Doanh Thu (Creator Revenue Model)
 
-Tài liệu này định nghĩa Thỏa thuận Cộng tác (Collaborator Agreement) giữa Hệ thống (Nền tảng Backing & Score) và các Giáo viên/Nhạc sĩ (Creators).
+Tài liệu này thiết lập khung kế hoạch hợp tác giữa Hệ thống (Platform) và Đối tác nội dung (Creators).
 
 ---
 
-## 1. TRÁCH NHIỆM CHÉO (Responsibilities)
+## 1. PHÂN BỔ TRÁCH NHIỆM
 
 ### Trách Nhiệm Của Hệ Thống (Platform)
-- **Hạ Tầng Kỹ Thuật (Infrastructure)**: Vận hành toàn bộ máy chủ, Server Actions, Appwrite Database, lưu File MusicXML/MP3, và thuật toán chấm điểm `Wait Mode Engine`.
-- **Nguồn Lưu Lượng (Marketing & Traffic)**: Sử dụng Phễu Mạng Xã Hội (Community Feed) để chạy SEO kéo học sinh miễn phí vào. Sau đó chuyển đổi (Convert) họ thành người mua Gói Thuê bao (Subscription).
-- **Thanh Toán (Payment Clearing)**: Giao tiếp với Stripe, thu hộ tiền, đóng thuế, và tự động chia doanh thu (Revenue Share) minh bạch cho Creator vào mùng 10 hàng tháng.
-- **Bảo Vệ Bản Quyền (DRM/Copyright)**: Đảm bảo Mã nguồn và Video/Tài liệu bài giảng của Creator không bị copy tuồn ra ngoài. Chống Account-sharing (Dùng chung tài khoản).
+- **Hạ Tầng Kỹ Thuật (Infrastructure)**: Cung cấp và duy trì toàn bộ máy chủ, Server Actions, Appwrite Database, lưu trữ dữ liệu bản nhạc và hệ thống lõi Wait Mode.
+- **Phát triển Tệp Người Dùng**: Tối ưu hóa phễu chuyển đổi thông qua nền tảng chia sẻ âm nhạc miễn phí để tăng số lượng người dùng chuyển đổi sang các gói dịch vụ trả phí.
+- **Xử lý Thanh Toán**: Tích hợp các cổng thanh toán (Stripe, v.v.), thu hộ, xử lý các nghĩa vụ tài chính liên quan và phân bổ báo cáo doanh thu minh bạch định kỳ.
+- **Bảo Mật Nội Dung (DRM)**: Áp dụng các biện pháp kỹ thuật số để bảo vệ bản quyền tài liệu giảng dạy, hạn chế tình trạng chia sẻ tài khoản trái phép.
 
-### Trách Nhiệm Của Cộng Tác Viên (Creator)
-- **Sản Xuất Nội Dung Độc Quyền**: Soạn giáo án chữ (Tiptap Editor) và chọn Bản Nhạc (Snippet) đúng chuẩn sư phạm. Đảm bảo chất lượng giáo dục cao nhất.
-- **Chăm Sóc Cộng Đồng (Engagement)**: Trả lời Comments, giải đáp thắc mắc lý thuyết của học sinh ngay bên dưới Khóa Học của mình hoặc trên mạng xã hội nội bộ.
-- **Tính Chính Danh**: Không lôi kéo học viên ra các nền tảng bán khóa lậu bên ngoài. 
-
----
-
-## 2. QUYỀN LỢI & CHIA SẺ DOANH THU (Monetization & Rights)
-
-Vì nền tảng kinh doanh theo dạng **Gói Thuê Bao (Subscription)** kết hợp **Bán Lẻ**, dòng tiền sẽ được chia theo 3 nguồn chính để đảm bảo sự công bằng tuyệt đối:
-
-### A. Quỹ Thưởng Tương Tác (The Royalty Pool)
-*Áp dụng khi Học viên dùng Gói Thuê Bao (Subscription) tháng/năm học miễn phí mọi Khóa.*
-- Hệ thống trích ra X% (Ví dụ: 30%-50%) từ tổng doanh thu Subscriptions hàng tháng để ném vào "Quỹ Thưởng Hệ Sinh Thái" (Royalty Pool).
-- **Công thức tính tiền cho Creator**: Tiền thưởng được chia đều dựa trên **[Tổng Số Phút Học Viên Lưu Lại Đọc Tiptap]** + **[Số lượt vượt qua Wait Mode]** của khóa học đó. 
-- *Ý nghĩa*: Khóa nào càng cuốn hút, học viên thực hành cắm cáp đàn càng lâu, Creator đó càng nhận được nhiều tiền từ Quỹ. Khóa nào rác, tạo ra cho có, Quỹ chia bằng 0.
-
-### B. Doanh Thu Bán Lẻ (A-la-carte Sales)
-*Áp dụng khi Học viên không mua gói Sub, mà bỏ 500k ra Mua Đứt Khóa Học.*
-- Mức chia cao nhất. Creator nhận về Y% (Ví dụ: 50% - 70%) doanh thu sau khi trừ đi phí quẹt thẻ Stripe.
-- Hệ thống lấy phần còn lại để trang trải chi phí Máy Chủ WebMusicXML.
-
-### C. Hoa Hồng Affiliate (Creator Referral)
-- Nếu Creator tự dùng Mạng Xã Hội cá nhân (Tiktok/Youtube của họ) mang mã Giảm giá (Coupon) kêu gọi Fan vào đăng ký Gói Subscription của toàn Hệ thống.
-- Creator sẽ nhận ngay 20%-30% Hoa hồng giới thiệu trong tháng đầu tiên cho Users mới đem về. Đây là thỏi nam châm khổng lồ khích lệ Creator tự làm Marketing kéo khách cho App!
+### Trách Nhiệm Của Đối Tác (Creator)
+- **Sản Xuất Nội Dung**: Cung cấp các khóa học, tài liệu bằng công cụ nội bộ (Tiptap Editor) kèm cấu hình các bài tập thực hành (Snippet) đảm bảo đúng chất lượng sư phạm.
+- **Hỗ Trợ Cộng Đồng**: Giải đáp câu hỏi, phản hồi bình luận của học viên trong khuôn khổ khóa học hoặc trên diễn đàn chung của nền tảng.
+- **Cam kết Tích hợp**: Ưu tiên đóng góp giá trị nội dung trong hệ sinh thái của ứng dụng.
 
 ---
-*Bản thiết kế này giữ cho Hệ thống (Platform) có Quyền Sinh Sát tối cao, đồng thời kích thích các Creator sản xuất khóa học "Gây Bão" nhờ Cỗ máy chấm điểm Wait Mode độc quyền.*
+
+## 2. QUYỀN LỢI & CƠ CHẾ CHIA SẺ DOANH THU
+
+Hệ thống hoạt động chủ yếu dựa trên gói đăng ký (Subscription) và cung cấp thêm tùy chọn bán lẻ. Doanh thu dự kiến phân bổ theo 3 luồng:
+
+### A. Quỹ Tương Tác Nội Dung (Royalty Pool)
+*Áp dụng đối với học viên sử dụng gói thuê bao (Subscription) truy cập toàn hệ thống.*
+- Nền tảng phân bổ một tỷ lệ phần trăm (X%) từ tổng doanh thu Subscription vào "Quỹ Tương Tác" hàng tháng.
+- **Phương pháp phân bổ**: Doanh thu từ quỹ này được chia tỉ lệ thuận với hiệu suất thực tế của nội dung. Hiệu suất được đo lường dựa trên các chỉ số như: Tổng thời gian hoàn thành bài học, và Số lượng bài tập Wait Mode được vượt qua thành công trong khóa học đó.
+- Mục tiêu của quỹ này là khuyến khích Creators tạo ra các khóa học mang lại giá trị thực hành cao, giữ chân học viên gắn bó với hệ thống lâu hơn.
+
+### B. Doanh Thu Mua Trực Tiếp (A-la-carte Sales)
+*Áp dụng khi người dùng quyết định mua gói trọn đời hoặc mua lẻ từng khóa học (không tham gia Subscription).*
+- Creators nhận một tỷ lệ phân chia cố định (Y%) trên tổng giá trị giao dịch, sau khi đã trừ đi các chi phí liên quan đến cổng thanh toán.
+- Phần còn lại sẽ được hệ thống giữ để phục vụ chi phí vận hành máy chủ và bảo trì.
+
+### C. Cơ Chế Tiếp Thị Liên Kết (Affiliate / Referral)
+- Hệ thống cung cấp công cụ tạo mã giới thiệu (Coupon/Referral Links) cho các Creators.
+- Khi Creators sử dụng kênh cá nhân (Tiktok/Youtube/Blog) để điều hướng người dùng mới đăng ký vào hệ thống (Subscription hoặc Mua lẻ), Creators sẽ nhận mức hoa hồng cố định (Z%) cho giao dịch thành công đó.
+- Chương trình này khuyến khích Creators trở thành đại sứ thương hiệu để mở rộng mạng lưới người dùng chung.
+

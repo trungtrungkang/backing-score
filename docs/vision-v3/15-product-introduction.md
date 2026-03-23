@@ -1,42 +1,42 @@
 # GIỚI THIỆU SẢN PHẨM: BACKING & SCORE
 
-**Slogan:** Nơi Mọi Bản Nhạc Đều Trở Thành Người Thầy Của Bạn.  
+**Sứ mệnh:** Xây dựng môi trường thực hành âm nhạc có tính tương tác cao.  
 **Nền tảng:** Đa nền tảng (Web & Mobile Application).
 
 ---
 
-## 1. Backing & Score là gì?
-**Backing & Score** là một hệ sinh thái giáo dục và giải trí âm nhạc tương tác đa nền tảng (Mobile App & Web). Chúng tôi định hình lại hoàn toàn cách thế giới học và luyện tập nhạc cụ.
+## 1. Tổng Quan Về Backing & Score
+**Backing & Score** là dự án nền tảng giáo dục và thực hành âm nhạc tương tác đa thiết bị (Mobile App & Web). Chúng tôi hướng tới việc cung cấp giải pháp hỗ trợ thiết thực cho quá trình tự học nhạc và luyện tập.
 
-Khác với các nền tảng e-learning truyền thống (nơi bạn chỉ có thể xem video một chiều) hay các kho chứa sheet nhạc tĩnh (PDF mờ nhạt), Backing & Score tích hợp một Công Nghệ Cốt Lõi (Audio/Pitch Engine) biến thiết bị của bạn thành một phòng tập thông minh. Hệ thống lắng nghe bạn chơi nhạc qua Microphone hoặc cáp MIDI và tương tác ngược lại với bạn theo thời gian thực (Real-time).
+Điểm khác biệt so với các mô hình e-learning thông thường là sự kết hợp với Hệ thống Xử lý Tín hiệu Âm thanh (Audio/Pitch Engine). Backing & Score hỗ trợ công tác thực hành nội dung nhạc lý tĩnh (File văn bản/MusicXML) bằng cách lắng nghe và gửi phản hồi cho người học trong thời gian thực, thông qua kết nối Microphone hoặc MIDI.
 
-Đây không chỉ là một ứng dụng tĩnh. Hãy tưởng tượng nó là sự kết hợp hoàn hảo giữa thư viện giải trí khổng lồ của **Spotify** và mức độ tương tác chuyên sâu của một **Nhạc viện**.
+Đây là công cụ kết hợp tiện ích phân phối bản nhạc giải trí với tính giáo dục chuyên sâu có hồi đáp (Feedback Loop).
 
-## 2. Hai Trụ Cột Trải Nghiệm Chính
+## 2. Hai Trụ Cột Sử Dụng Cơ Bản
 
-### Trụ Cột 1: Mạng Lưới Giải Trí Ám Nhạc Tương Tác (The Play-Along Library)
-Dành cho những người yêu nhạc nghiệp dư (Hobbyists) muốn tự do đàn hát tại nhà sau một ngày làm việc:
-- **Discover Page:** Hoạt động giống như Spotify. Người dùng có thể lướt chọn các Bản nhạc Lẻ (Singles) hoặc Album (Collections) yêu thích (VD: Nhạc Pop Trending, Cổ điển, Nhạc phim).
-- **Trải Nghiệm "Play-Along":** Chỉ cần đặt màn hình lên giá nhạc, ứng dụng sẽ chạy nền nhạc đệm (Backing Track) kèm theo Sheet nhạc chạy nhịp nhàng. Bạn hóa thân thành nhạc công chính của dàn nhạc ngay tại phòng khách.
+### Trụ Cột 1: Môi Trường Thực Hành Giải Trí (The Play-Along Library)
+Phân hệ cung cấp không gian thư giãn và luyện ngón cho người dùng chơi nhạc nghiệp dư:
+- **Khám Phá Mục lục (Discover Page):** Cho phép người dùng trực tiếp tìm kiếm, chọn lọc và truy cập các bản nhạc đơn lẻ (Singles) hoặc theo cụm chủ đề (Albums).
+- **Thực Hành Dọc Tuyến (Play-Along):** Khi kích hoạt, bản nhạc hiển thị đồng bộ kết hợp với phần nhạc đệm (Backing Track), hỗ trợ người dùng thực hành kết hợp ngay lập tức.
 
-### Trụ Cột 2: Học Viện Chuyên Sâu (The EdTech Academy)
-Dành cho người thực sự muốn nâng cao trình độ kỹ thuật và tư duy âm nhạc:
-- **Khóa Học Từ Chuyên Gia:** Tuyển tập các lớp Masterclass được biên soạn bởi những Người có sức ảnh hưởng (Music KOLs) và Giảng viên chuyên nghiệp.
-- **Micro-Learning:** Giáo trình được chia nhỏ, kết hợp giữa video hướng dẫn và các bài tập luyện ngón được số hóa tương tác.
+### Trụ Cột 2: Hệ Sinh Thái Học Thuật (The EdTech Academy)
+Cung cấp giải pháp cho tổ chức/cá nhân muốn đào tạo chuyên môn có cấu trúc:
+- **Lộ trình Chuyên môn:** Phân phối các khóa học dạng Masterclass thiết kế bởi giảng viên/chuyên gia.
+- **Học tập Phân mảnh (Micro-Learning):** Bài giảng được chia nhỏ, xen kẽ lý thuyết tự học với bài tập kiểm tra hỗ trợ bởi công cụ tương tác.
 
-## 3. "Phép Thuật" Công Nghệ Cốt Lõi: Wait Mode
-Điều làm nên ranh giới tuyệt đối giữa Backing & Score và thị trường nằm ở công nghệ **Wait Mode (Chế độ Chờ Chấm Điểm)** được nhúng sâu vào mọi bản nhạc trên hệ thống.
+## 3. Công Nghệ Đánh Giá Cốt Lõi: Wait Mode
+Một trong những tiện ích hỗ trợ người dùng quan trọng nhất trên hệ thống là cơ chế Chờ & Phản hồi (**Wait Mode**).
 
-- Khi bạn cắm đàn/hát vào ứng dụng, thuật toán của chúng tôi liên tục quét tọa độ Nhịp và Cao độ (Pitch) ở độ trễ cực thấp.
-- Khi kích hoạt Wait Mode, toàn bộ nhạc nền (Backing Track) lập tức tắt đi để bạn tiến vào không gian Solo Acapella tĩnh lặng.
-- Nếu bạn đàn sai một nốt, bản nhạc lập tức **DỪNG LẠI và Khóa màn hình**. Nó kiên nhẫn đợi và bắt buộc bạn phải đàn trúng 100% cao độ âm thanh của nốt ấy thì hệ thống mới cho phép trỏ chuột chạy sang nốt tiếp theo.
-- Cơ chế **"Kỷ luật Thỏa mãn"** này giúp khắc sâu trí nhớ cơ bắp (Muscle Memory) – một trải nghiệm vốn trước đây chỉ có được khi bạn bỏ hàng triệu đồng thuê Gia sư ngồi cạnh kèm cặp.
+- Thuật toán (Audio Engine) đo lường độ trễ và cao độ âm thanh trực tiếp (Real-time).
+- Trong chế độ thực hành Wait Mode, tiếng nhạc đệm sẽ tự động ngưng phát.
+- Hệ thống thiết lập yêu cầu bắt buộc người chơi thực hiện cao độ / nhịp điệu chính xác tương ứng. Ứng dụng chỉ cho phép hiển thị các nốt nhạc tiếp theo khi người sử dụng hoàn thiện lỗi trước đó.
+- Cơ chế "Thực hành có chủ đích" này hỗ trợ sửa lỗi âm vực và rèn luyện kỹ năng thực tế với độ chuẩn xác cao.
 
-## 4. Giải Pháp Cho Nhà Sáng Tạo Nội Dung (For Creators)
-Không cần biết lập trình, bất kỳ giáo viên dạy nhạc nào cũng có thể đóng gói kiến thức thành một phần mềm tương tác:
-- **Tiptap Rich-Text Editor:** Một trình soạn thảo tối giản như MS Word nhúng sẵn bộ giải mã âm nhạc (MusicXML).
-- Giảng viên chỉ cần viết dàn ý, thả file bản nhạc gốc vào màn hình, đánh dấu Yêu Cầu Chấm Điểm (Wait Mode Required). Ngay lập tức, file tĩnh của họ biến thành một Trò Chơi Trí Tuệ Âm Nhạc sinh động và sẵn sàng xuất bản lên cửa hàng Ứng dụng để thu tiền học viên lập tức.
+## 4. Công Cụ Hỗ Trợ Đội Ngũ Giảng Dạy (For Creators)
+Bộ công cụ cho phép những nhà sáng tạo nội dung đóng gói giáo trình thành dạng số mà không cần rào cản kỹ thuật phức tạp:
+- **Tiptap Rich-Text Editor:** Trình biên soạn văn bản thông thường được tích hợp thành phần hiển thị định dạng chuẩn MusicXML.
+- Creators soạn thảo giáo án lý thuyết, chèn đường dẫn file gốc, cấu hình thuộc tính bắt buộc (Wait Mode Required) trực tiếp vào tài liệu để hoàn thiện bài tập thành công trình tương tác. 
 
-## Tầm Nhìn Của Chúng Tôi
-Tại Backing & Score, chúng tôi tin rằng Âm nhạc không nên chỉ được "Nghe" qua một cái loa, hay "Nhìn" qua một tấm kính màn hình. Nó sinh ra để được **"Tương tác"**.
-Chúng tôi đang xây dựng chuẩn mực kỹ thuật số tiếp theo cho cách mà nhân loại cảm thụ, thực hành và truyền đạt âm nhạc – ngay trong túi áo của mọi người.
+## Tầm Nhìn Phát Triển
+Tại Backing & Score, chúng tôi cung cấp giải pháp chuyển hóa kiến thức âm nhạc từ định dạng một chiều tiếp nhận sang mô hình giao tiếp trải nghiệm. 
+Mục tiêu phát triển nền tảng không chỉ phục vụ hệ thống giáo dục chính quy mà còn trở thành công cụ đắc lực đồng hành cùng người chơi nhạc hiện đại.

@@ -1,52 +1,52 @@
 # Danh Mục Tính Năng V3 (Feature Matrix & Core Ecosystem Setup)
 
-Tài liệu này liệt kê toàn bộ cấu trúc tính năng Nền tảng V3 dựa sát trên Mã nguồn (Source Code) thực dụng, chia theo 3 Lớp Xương Sống và chỉ ra phương pháp **Headless Architecting** nhằm giúp chúng không bao giờ tự "giẫm chân" gây ra lỗi trên giao diện.
+Tài liệu này liệt kê cấu trúc tính năng nền tảng V3 dựa trên mã nguồn (Source Code), phân chia theo 3 lớp hạ tầng (Layers) và mô tả cách vận hành **Headless Architecture**.
 
 ---
 
 ## 1. LAYER AUDIO TRUNG TÂM (CORE ENGINE - NO UI)
-*Bộ phận cơ bắp không lộ diện ra ngoài, được gọi qua Hook `useScoreEngine()`.*
+*Module lõi chuyên xử lý dữ liệu và âm thanh, được gọi thông qua Hook `useScoreEngine()`.*
 
-- **MusicXML Visual Render Engine (`MusicXMLVisualizer.tsx`)**: Chuyển đổi siêu nhanh SVG bằng Verovio WASM + Sync Tracking Tool.
-- **Tone.js SoundFonts Core**: Chuyển đổi nhạc cụ thời gian thực (MIDI AST Parsing), Trộn Mixer đa kênh, Lặp A-B và Dịch Tone (Pitch Shifting).
-- **Phần Cứng Đĩa (Wait Mode API)**:
-  - Wait Mode MIDI (Tách tay 100% không kẹt track qua Native Listeners).
-  - Wait Mode Acoustic (Mic YIN + Auto Merge Lenient đa tracks + Trễ tín hiệu 250ms Booster).
+- **MusicXML Visual Render Engine (`MusicXMLVisualizer.tsx`)**: Thành phần biên dịch vector SVG từ tài liệu MusicXML thông qua Verovio WASM kết hợp công cụ đồng bộ tọa độ (Sync Tracking Tool).
+- **Tone.js SoundFonts Core**: Chuyển đổi siêu dữ liệu thành sự kiện thời gian thực (MIDI AST Parsing), hỗ trợ Mixer đa kênh, lặp đoạn (A-B Looping) và tùy chỉnh cao độ (Pitch Shifting).
+- **Phân hệ Tương tác (Wait Mode API)**:
+  - Tín hiệu MIDI: Lắng nghe input vật lý từ cáp nối qua các Native Listeners.
+  - Tín hiệu Audio: Sử dụng Microphone với thuật toán YIN, kết hợp bộ đệm tín hiệu (250ms) để xử lý dữ liệu Acoustic mượt mà.
 
 ---
 
 ## 2. LAYER MẠNG XÃ HỘI (THE COMMUNITY PILLAR)
-*Trung tâm lưu giữ chân người dùng. Chạy trên Layout Full Page diện tích rộng của Next.js + Appwrite.*
+*Trung tâm tương tác người dùng, triển khai trên các layout chính của Next.js kết hợp Appwrite BaaS.*
 
-- **Dashboard / Studio Up Tải (`app/dashboard`)**: (Chỉ Admin/Creator) Upload Score qua Server actions lưu Appwrite Bucket.
-- **Trình Diễn Nhạc Chuyên Dụng (`PlayShell.tsx`)**: Giao diện ôm trọn màn hình, bám chặt Layer 1 để nhét đủ hàng chục nút bấm (Solo/Mute Mixer, Tempo Slider) phục vụ nhu cầu dân học đàn Hardcore.
+- **Dashboard / Studio (`app/dashboard`)**: Khu vực quản lý (Admin/Creator) thực hiện tải lên tập tin Score thông qua Server Actions.
+- **Trình Diễn Nhạc Chuyên Dụng (`PlayShell.tsx`)**: Giao diện tổng hợp hiển thị toàn màn hình, sử dụng Layer 1 để cung cấp đầy đủ các tiện ích như Solo/Mute Mixer, Tempo Slider cho nhu cầu tập luyện chi tiết.
 - **Quản Trị Dự Án & Bộ Sưu Tập (`lib/appwrite/projects.ts` & `playlists.ts`)**: 
   - Khởi tạo Single Tracks.
-  - Tổ chức Thư mục Nhạc cá nhân qua Playlists (Component `ProjectActionsMenu.tsx`).
+  - Tổ chức thư viện cá nhân thông qua Playlists (`ProjectActionsMenu.tsx`).
 - **Tương Tác Xã Hội - Social Engine (`app/feed` & `lib/appwrite/social.ts`)**:
-  - Scrolling Newsfeed.
-  - Bọc cấu trúc Đa Hình (Polymorphic) xử lý thao tác `Likes/Favorites`, `Shares`, `Comments` bắn chéo vào mọi Object.
-  - User Profiles (`app/u`) lưu trữ thành tựu.
+  - Newsfeed hiển thị cập nhật bài hát và hoạt động của cộng đồng.
+  - Cấu trúc đa hình (Polymorphic) xử lý thao tác Interactions (Likes, Comments, Shares) cho nhiều loại đối tượng (User/Project/Post).
+  - User Profiles (`app/u`) thống kê lịch sử tương tác và bài học hoạt động.
 
 ---
 
-## 3. LAYER HỌC VIỆN & TIPTAP EDTECH (THE COURSE PILLAR)
-*Mô-đun sắp phát triển, sử dụng giao diện nhỏ giọt, chèn lẫn lộn giữa Văn bản lý thuyết.*
+## 3. LAYER HỌC VIỆN & EDTECH (THE COURSE PILLAR)
+*Hệ thống quản lý khóa học LMS, phân phối thông qua giao diện văn bản và nội dung tương tác.*
 
-- **Hệ Thống Phân Phối (Marketplace)**: Thanh Toán (Enrollment Stripe), Lọc Khóa Học do Creator ủy quyền, Trình xem cấu trúc Chương, Bài.
-- **Trình Viết Mã Trực Quan (Tiptap Content Builder)**:
-  - Hỗ trợ Headings, Bullet List, Đoạn văn bản (Notion-like).
-  - Component nhúng Extension tự thiết kế `<musicSnippetNode>`. Import mã Truy xuất cực lẹ (Lấy chính ID Bài hát bên Layer 2 thẩy sang làm Bài thực hành).
-- **Trình Chạy Mini Wait Mode (`SnippetPlayer.tsx`)**: Gọi lõi `useScoreEngine()` nhưng Tắt Mute Mixer, Xóa AB Looping... Chỉ còn lại bảng Nhạc và Nút Mic. Không chiếm dụng quá 800px.
-- **Trình Chấm Điểm Tuyệt Mật (Progress Controller)**:
-  - API Action Backend: Khước từ chấm điểm Client. Tách riêng Module gọi `isCompleted = true` về DB khi nhận cờ (Flag) từ YIN Audio.
-  - Liên thông chéo: Đẩy Data lên lại Feed (Layer 2) để mọi người chúc mừng học viên!
+- **Hệ Thống Phân Phối (Marketplace)**: Xây dựng quy trình thanh toán (Stripe/Enrollment), danh sách khóa học, và khung truy cập dữ liệu chương bài.
+- **Trình Soạn Thảo (Tiptap Content Builder)**:
+  - Giao diện text editor hỗ trợ định dạng rich-text cơ bản (Headings, Bullet List).
+  - Cung cấp Extension tự thiết kế `<musicSnippetNode>`. Cho phép import một ID bài hát (Score) từ Layer 2 sang bài thực hành trong nội dung lý thuyết.
+- **Trình Chạy Mini Wait Mode (`SnippetPlayer.tsx`)**: Kế thừa logic từ `useScoreEngine()` nhưng sử dụng UI tinh gọn, được giới hạn trong một container hẹp. Khóa các tính năng Mixer hoặc AB Looping để học viên tập trung vào bài tập hiện tại.
+- **Trình Chấm Điểm & Tiến Độ (Progress Controller)**:
+  - Tiến hành xác thực hoàn thành bài qua Server Actions kết nối với Database. Biến trạng thái `isCompleted` được bảo mật.
+  - Khả năng liên thông sự kiện (Event Hook) đưa thông tin học viên hoàn thành lên Activity Feed ở Layer 2.
 
 ---
 
-## KIỂM ĐỊNH SỰ XUYÊN THẤU VÀ XUNG ĐỘT (Conflict Analysis Validation)
+## PHÂN TÍCH TƯƠNG THÍCH (Architecture Modularity)
 
-**ĐIỂM GIAO THOA HOÀN MỸ (Tránh Crash App)**
-- **UI KHÔNG XUNG ĐỘT**: `<SnippetPlayer>` và `<PlayShell>` là 2 lớp Da bọc ở ngoài tách biệt vật lý. Dù ta nhét chức năng Mixer nặng nề vào `<PlayShell>` thì thằng em nhỏ `<SnippetPlayer>` đang nằm khép nép giữa dòng chữ Blog Tiptap của khóa học cũng không phình to giao diện ra và làm vỡ cấu trúc bài học.
-- **THỰC THỂ KHÔNG XUNG ĐỘT**: Nhờ tính năng **Playlist** và **Projects** đã sẵn có, Hệ thống không phải lưu đúp 2 lần file `Score` vào Khóa học. Thay vào đó Tiptap chỉ lưu 1 chuỗi tham chiếu ID cực ngắn `scoreId=$x`. Toàn bộ dữ liệu nằm ở Appwrite an toàn và không gây trùng lặp Data.
-- **NETWORK BAY BỔNG**: Server Actions của Next.js chọc thẳng vào Appwrite SDK, giải phóng Tiptap khỏi băng thông Fetch. Tốc độ chuyển sinh thái đạt mốc phi thường.
+**Quản lý Phân định Trách nhiệm (Separation of Concerns):**
+- **Độc Lập Giao Diện (UI Isolation)**: `SnippetPlayer` và `PlayShell` là hai UI component sử dụng hai trạng thái trình bày riêng biệt nhưng chia sẻ cùng một Core Engine API (`useScoreEngine`). Cập nhật tính năng Mixer trong `PlayShell` sẽ không làm ảnh hưởng đến cấu hình của `SnippetPlayer`.
+- **Tối Ưu Hóa Bộ Nhớ (Data Normalization)**: Dữ liệu bài nhạc (Score) được tải lên và lưu trữ một lần. Khi Creator tích hợp bài vào một khóa học thông qua Editor, trình Tiptap chỉ lưu một id tham chiếu ngắn. Cấu trúc này giảm tải lưu trữ kép.
+- **Tối Ưu Giao Tiếp (Client-Server Request)**: Hạn chế rò rỉ dữ liệu hoặc fetch payload lớn bằng cách tích hợp Server Actions. Môi trường Editor làm việc trực tiếp với SDK phía backend (Appwrite).

@@ -1,44 +1,43 @@
-# 12. Creator Outreach & Onboarding (Chèo Kéo Khoa Học & Giảng Viên - Bản Hàn Lâm)
+# 12. Hướng Dẫn Kêu Gọi & Tích Hợp Giảng Viên (Creator Outreach & Onboarding)
 
-*Cấu trúc câu từ đanh thép, tôn vinh chuyên môn học thuật của Giảng viên/KOL, đánh mạnh vào yếu tố "Nâng tầm giáo án của thầy cô lên thành một hệ thống Khảo thí Công nghệ cao". Thích hợp gửi giảng viên Nhạc viện hoặc Nghệ sĩ có chuyên môn cứng.*
+*Tài liệu nội bộ về phương pháp tiếp cận và hỗ trợ các Giảng viên/KOL chuyên môn âm nhạc tham gia phát hành khóa học trên nền tảng.*
 
 ---
 
 ## 1. Mẫu Cold-Email Tiếp Cận Đối Tác Chuyên Môn (Giảng Viên/KOL)
 
-**Tiêu đề Email:** Nâng tầm giáo trình của [Tên_Giảng_Viên] thành Hệ thống Thực Hành Khảo Thí Tự Động cực kỳ giá trị.
+**Tiêu đề Email:** Đề xuất hợp tác: Số hóa và nâng cấp giáo trình của [Tên_Giảng_Viên] thành định dạng thực hành tương tác.
 
 Kính gửi thầy/cô [Tên_Giảng_Viên],
 
-Tôi là [Tên_Của_Bạn], một kỹ sư phần mềm chuyên về thiết kế Ứng dụng học tập tương tác (Interactive Learning Apps) và là một người thường xuyên theo dõi các bài giảng [Piano/Guitar/Nhạc lý] rất sâu sắc của Thầy/Cô.
+Tôi là [Tên_Của_Bạn], kỹ sư phần mềm phát triển ứng dụng giáo dục tương tác (Interactive EdTech) và là người theo dõi các bài giảng chuyên môn của Thầy/Cô.
 
-Là một người làm kỹ thuật và yêu nghệ thuật, tôi nhận thấy các giáo trình video tĩnh hiện tại (như trên YouTube, Patreon hay Teachable) đang gây lãng phí tầm ảnh hưởng sư phạm của Thầy/Cô. Học viên thụ động xem video mà thiếu đi Vòng lặp phản hồi thực tế (Feedback Loop), khiến họ dễ nản chí vì không biết mình tự đàn sai ở nhịp phách nào lúc tập ở nhà.
+Tôi nhận thấy các giáo trình dạng video hiện tại đôi khi gặp rào cản trong việc cung cấp phản hồi thực tế (Feedback Loop) cho học viên khi họ tự luyện tập tại nhà. Khó khăn trong việc bắt lỗi độ cao âm thanh hoặc nhịp phách khiến người học tốn nhiều thời gian hơn để làm chủ kỹ năng.
 
-Nhằm giải quyết triệt để nút thắt này, tôi đã dành tâm huyết phát triển **Backing & Score** – một Hệ Sinh Thái Ứng dụng Giáo dục (EdTech Mobile & Web) tích hợp lõi công nghệ **Audio Engine & MIDI Assessment tiên tiến**. 
-Với Ứng dụng này, giáo trình của Thầy/Cô sẽ biến thành một "Phòng tập thông minh":
-- Học viên chỉ cần mở ứng dụng (App) lên, dùng Microphone hoặc nhạc cụ để giải các bài tập tương tác trên chính bản nhạc Thầy/Cô đã soạn.
-- Cơ chế kiểm định **Wait Mode** buộc học viên phải đàn đúng 100% tọa độ âm vực và nhịp phách mới được Ứng dụng cho phép đi tiếp. Tính năng này tuân thủ khắt khe triết lý "Thực hành có chủ đích" (Deliberate Practice) chuẩn nhạc viện.
+Với mục tiêu cung cấp giải pháp, tôi đang phát triển **Backing & Score** – Nền tảng phân phối giáo dục âm nhạc tích hợp công nghệ phân tích âm thanh (Audio Engine & MIDI Assessment). Nền tảng này hỗ trợ chuyển đổi giáo trình của Thầy/Cô thành môi trường thực hành trực tiếp:
+- Học viên sử dụng Microphone hoặc nhạc cụ để giải các bài tập hiển thị trên bản nhạc do Thầy/Cô biên soạn.
+- Tính năng đánh giá **Wait Mode** yêu cầu học viên chơi chính xác nốt nhạc và nhịp phách trước khi được tiếp tục, tạo cơ chế "Thực hành có chủ đích" theo tiêu chuẩn khắt khe.
 
-Sự đột phá này không chỉ giữ chân học sinh trên App lâu hơn, mà còn **nâng cao định vị thương hiệu (Premium Value)** giúp Thầy/Cô thu học phí xứng đáng gấp nhiều lần so với các khoá học Video đại trà. Chắn chắn học sinh sẽ cực kỳ thích thú khi được thực hành qua phần mềm chuyên dụng.
+Công cụ này không chỉ hỗ trợ tối đa trải nghiệm của học viên mà còn giúp Thầy/Cô cung cấp những khóa học chất lượng cao, định vị phân khúc "Premium" hiệu quả hơn các lớp học video dùng chung.
 
-Hiện tại hệ thống đang trong giai đoạn phát hành Alpha, tôi vô cùng trân trọng muốn mời Thầy/Cô trở thành Nhà Giáo Dục Tiên Phong (Pioneer Educator). Tôi cam kết hỗ trợ toàn bộ kỹ thuật số hóa giáo án và áp dụng **0% phí hoa hồng (Platform Fee)** vĩnh viễn cho khóa học đầu tiên của Thầy/Cô.
+Ở giai đoạn phát hành sớm, tôi mong muốn mời Thầy/Cô trải nghiệm hệ thống với tư cách đối tác tiên phong. Tôi sẽ trực tiếp hỗ trợ số hóa toàn bộ giáo án đầu tiên và áp dụng mức **0% phí nền tảng (Platform Fee)** nhằm đảm bảo biên lợi nhuận tốt nhất cho Thầy/Cô.
 
-Kính gửi Thầy/Cô xem qua thước phim Demo 2 phút trình diễn khả năng ứng dụng chấm điểm hoàn toàn tự động tại đây: `[Link YouTube Demo thực tế 2 phút]`
+Mời Thầy/Cô theo dõi trực quan về cơ chế hoạt động tương tác trong bản Demo 2 phút sau: `[Link YouTube Demo]`
 
-Rất mong được sắp xếp một buổi hẹn ngắn 15 phút (Google Meet) để trình bày cặn kẽ hơn tiềm năng xuất bản giáo dục này. Cảm ơn Thầy/Cô đã cống hiến những kiến thức âm nhạc tuyệt vời.
+Nếu Thầy/Cô có hứng thú chia sẻ góc nhìn trao đổi, tôi rất mong được sắp xếp một lịch hẹn trực tuyến khoảng 15 phút.
 
 Trân trọng,
-[Tên_Bạn]  
-Lead Engineer & Founder @ Backing & Score.
+[Tên_Bạn]
+Founder / Lead Engineer @ Backing & Score
 
 ---
 
-## 2. Quy Trình Onboarding White-Glove (Dịch vụ trải thảm đỏ cho Giảng viên)
+## 2. Quy Trình Hỗ Trợ Đối Tác Mới (Onboarding Process)
 
-Vì đặc thù Giảng viên chuyên sâu thường rất giỏi Nhạc Lý nhưng hạn chế Công nghệ, bạn (Solo Dev) tuyệt đối đóng vai trò "Kỹ sư Sư phạm" trợ lý cho họ trong tháng đầu tiên:
+Nhằm giảm tải khó khăn kỹ thuật cho các giảng viên chuyên môn ở bước đầu tiếp cận phần mềm, quy trình hỗ trợ đề xuất theo 5 bước:
 
-1. **Giai đoạn Thu thập:** Đề nghị họ cung cấp tài liệu cơ bản (Giáo án Word, File Audio đánh mẫu, và Sheet nhạc ảnh/PDF gốc).
-2. **Giai đoạn Mapping (Số hóa):** Bạn dùng tài khoản Master tự tạo Course thay họ thông qua Tiptap Editor. Sử dụng công nghệ trích xuất đỉnh cao của hệ thống để biến File PDF của họ thành định dạng nhạc Interactive có gắn Wait Mode Rules.
-3. **Giai đoạn Validation (Nghiệm thu uy tín):** Cấp account Beta cho riêng giảng viên vào chơi thử chính giáo án của họ. Cảm giác bài nhạc do mình sáng tác bắt đền học sinh phải "đánh đúng nhạc cụ thật" trên App sẽ thuyết phục Giảng viên tuyệt đối (The "Aha" Moment).
-4. **Giai đoạn Phát hành:** Hỗ trợ họ lên kịch bản đăng bài Facebook/YouTube với thông điệp: *"Tôi vừa ra mắt Ứng dụng Khóa học Tương Tác 1-1 công nghệ mới nhất. Ứng dụng sẽ tự động chấm điểm các bạn tập ở nhà. Tải ngay và nhận giảm giá cho 100 slot đầu tiên..."*
-5. **Giai đoạn Tự chủ (Independence):** Thu thập phản hồi, dạy Giảng viên tự dùng Web Editor của Backing & Score khi họ đã thấy người dùng mua qua App sinh lời.
+1. **Giai đoạn Thu thập:** Nhận tài liệu giáo lý cơ bản từ giảng viên (File Word/Google Docs, hình ảnh bản nhạc PDF, file âm thanh tham khảo).
+2. **Giai đoạn Chuyển đổi Số (Digitization):** Hỗ trợ trực tiếp sử dụng Tiptap Editor trên nền tảng để thiết kế bài giảng. Biên dịch các file PDF cấu trúc tĩnh sang định dạng MusicXML có hỗ trợ thuộc tính Wait Mode.
+3. **Giai đoạn Nghiệm thu (Validation):** Cung cấp tài khoản thử nghiệm để giảng viên khảo sát góc độ học viên (User Experience). Đây là bước đối chiếu thực tế mức độ tương tác của khóa học.
+4. **Giai đoạn Ra mắt (Publishing):** Hỗ trợ xây dựng các kênh truyền thông ban đầu. Gợi ý thông điệp ra mắt thông qua ưu đãi nội dung và công nghệ mới.
+5. **Giai đoạn Chuyển giao (Hand-off):** Khi có những khóa học đầu tiên đạt doanh thu, cung cấp hướng dẫn (Documentation) chi tiết về các tính năng Editor và Analytics, giúp giảng viên tự chủ hoàn toàn các khóa học sau này.

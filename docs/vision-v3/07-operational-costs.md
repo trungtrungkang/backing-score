@@ -1,48 +1,48 @@
-# Hạch Toán Chi Phí Vận Hành (Operational Costs - OPEX)
+# Ước Tính Chi Phí Vận Hành (Operational Costs - OPEX)
 
-Tài liệu này ước tính chi phí duy trì Nền tảng EdTech V3 hàng tháng, dựa trên kiến trúc Serverless (Next.js) và BaaS (Appwrite).
+Tài liệu này cung cấp ước tính tham khảo về chi phí duy trì Nền tảng V3 hàng tháng, dựa trên kiến trúc Serverless (Next.js) và BaaS (Appwrite).
 
 ---
 
-## 1. Bí Mật Của Lõi "Wait Mode" (Chi Phí Xử Lý Bằng 0)
-Ở các nền tảng khác, việc chấm điểm âm thanh thường yêu cầu gửi tín hiệu Mic/Audio về Máy Chủ (Server) để chạy AI phân tích, tiêu tốn hàng ngàn USD tiền thuê siêu máy tính (GPU/CPU). 
+## 1. Chi Phí Xử Lý Wait Mode (Client-side Processing)
+Phương pháp tiếp cận xử lý tín hiệu âm thanh truyền thống thường yêu cầu gửi dữ liệu về máy chủ, phát sinh chi phí hạ tầng lớn.
+**Giải pháp của V3:** Các thuật toán YIN Pitchfinder (chiết xuất tần số âm thanh từ Microphone) và thu thập tín hiệu WebMIDI được thực thi hoàn toàn trên trình duyệt của người dùng (Client-side).
+**=> Chi phí CPU Server cho xử lý tín hiệu: Tối giản, không đáng kể.**
 
-**NHƯNG ĐỐI VỚI V3 CỦA CHÚNG TA:** Toàn bộ thuật toán YIN Pitchfinder (Xử lý Microphone) và Bắt nốt đàn (`WebMIDI`) chạy 100% trên **Trình duyệt của Học Sinh (Client-side)**. Máy tính/Điện thoại của Học sinh tự gánh toàn bộ sức mạnh xử lý âm thanh. 
-**=> Chi phí CPU Server cho khâu chấm điểm: $0/tháng.**
+## 2. Lưu Trữ và Băng Thông (Storage & Egress)
+Quản lý khóa học thường tiêu tốn nhiều dung lượng nếu tập trung vào định dạng Video.
+Hệ thống V3 tối ưu dung lượng bằng cách ưu tiên văn bản lý thuyết (Tiptap Editor) và công cụ nhúng nhạc `<SnippetPlayer>`.
+- File `.musicxml`: Kích thước rất nhỏ (vài chục KB).
+- File MP3 Backing Track: Cỡ trung bình (2MB - 5MB/bài).
+- **Giải Pháp Lưu Trữ:** Hệ thống sử dụng Cloudflare R2 để lưu trữ tài nguyên đa phương tiện, tối ưu hóa mức giá tính theo dung lượng và không tính phí băng thông truyền tải ra ngoài (Egress Fee).
+**=> Chi phí Storage/Bandwidth: Giới hạn trong mức cơ bản (Free Tier) hoặc ở mức thấp ($5 - $10/tháng).**
 
-## 2. Băng Thông & Lưu Trữ Bài Hát (Storage)
-Một gánh nặng khác của EdTech là lưu Video bài giảng (rất nặng).
-Trình soạn thảo Tiptap của chúng ta không xài Video. Nó chỉ lưu các dòng chữ (Dung lượng Byte) và nhúng thẻ `<SnippetPlayer>`.
-- File `.musicxml`: Siêu nhẹ, chỉ vài chục Kilobyte (KB).
-- File Backing Track (MP3): Nặng khoảng 2MB - 5MB/bài.
-- **Giải Pháp Lưu Trữ:** Đẩy toàn bộ File lên **Cloudflare R2** thay vì Amazon S3. R2 tính phí lưu trữ cực rẻ ($0.015/GB) và quan trọng nhất là **Miễn phí hoàn toàn Phí Băng Thông Bắn Ra (Zero Egress Fee)**. Dù cho 10.000 học sinh bấm Play bài hát cùng lúc, bạn cũng không bị mất 1 xu tiền phí truyền tải dữ liệu.
-**=> Chi phí Storage/Bandwidth: Giới hạn Free Tier, tối đa $5 - $10/tháng.**
+## 3. Quản Trị Cơ Sở Dữ Liệu (Appwrite BaaS)
+Appwrite đảm nhiệm các chức năng quản lý người dùng (Auth), cơ sở dữ liệu (Posts, Lessons, Progress) và hệ thống Server Actions.
+- **Tùy chọn Managed Cloud**: Gói cơ bản bắt đầu từ $15/tháng, đáp ứng tốt cấu trúc JSON NoSQL nhẹ.
+- **Tùy chọn Tự Lưu Trữ (Self-hosting)**: Quản lý Appwrite trên VPS cá nhân (như DigitalOcean/AWS) với chi phí khởi điểm khoảng $20/tháng.
+**=> Ước tính chi phí Database: ~$15 - $20/tháng.**
 
-## 3. Máy Chủ Dữ Liệu & API (Appwrite BaaS)
-Appwrite gánh toàn bộ User Auth, Database (Posts, Lessons, Progress), Server Actions.
-- **Dùng Appwrite Cloud (Pro)**: Giá cố định **$15/tháng** (Sức chứa 100,000 Users, cấu trúc JSON NoSQL siêu nhẹ).
-- **Hoặc Tự Host (DigitalOcean VPS)**: Thuê một máy chủ Linux $20/tháng và cài Appwrite qua Docker. Bạn làm chủ hoàn toàn dữ liệu.
-**=> Chi phí Database: ~$15 - $20/tháng.**
-
-## 4. Hosting Giao Diện (Frontend Next.js)
-Dựng Web App lên nền tảng **Vercel** hoặc **Cloudflare Pages**.
-- Sử dụng gói Vercel Pro: **$20/tháng**. 
-- Nếu dùng Cloudflare Pages: Hầu như **Miễn phí ($0)** cho Next.js App Router nếu ứng dụng gọi API sang Appwrite.
-**=> Chi phí Web Hosting: $0 - $20/tháng.**
+## 4. Hosting Frontend Vercel/Cloudflare
+Nền tảng ứng dụng giao diện Next.js App Router.
+- Có thể lưu trữ qua Vercel Pro (khoảng $20/tháng).
+- Hoặc sử dụng cấu hình Cloudflare Pages với mức phí tối ưu.
+**=> Ước tính chi phí Hosting: $0 - $20/tháng.**
 
 ## 5. Cổng Thanh Toán (Payment Gateway)
-Hệ thống sử dụng **Stripe** (hoặc nội địa như ZaloPay/Momo) để Thu tiền Subscription/Bán khóa lẻ của học viên.
-- Không mất phí duy trì hàng tháng.
-- Stripe chỉ cắn phần trăm hoa hồng trên giao dịch thành công (Khoảng **2.9% + $0.30** mỗi bill).
-**=> Chỉ tốn phí khi có doanh thu thật.**
+Hệ thống sử dụng Stripe (hoặc cổng thanh toán khu vực) để xử lý Subscription và bán lẻ.
+- Dịch vụ không tính phí duy trì nền tảng hàng tháng, tính phí giao dịch trên mỗi hóa đơn thành công (VD: Stripe áp dụng mức phí 2.9% + $0.30/giao dịch).
+**=> Phí giao dịch được khấu trừ trực tiếp theo doanh thu phát sinh.**
 
 ---
 
-### TỔNG KẾT BẢNG CHI PHÍ ƯỚC TÍNH (Cho 5.000 Users Đầu Tiên)
-1. Hosting Web: $0 - $20
-2. Database (Appwrite): $15
-3. Lưu trữ XML/MP3 (Cloudflare R2): Rơi vào mức Free Tier ($0).
-4. Phí Âm thanh Core: $0 (Chạy trên máy User).
+### TỔNG KẾT ƯỚC TÍNH CHI PHÍ CỐ ĐỊNH (Baseline OPEX)
+*Dự kiến cho quy mô nhỏ/ MVP thử nghiệm:*
+1. Web Hosting: $0 - $20
+2. Cơ Sở Dữ Liệu (Appwrite): $15
+3. Lưu trữ Media (Cloudflare R2): Mức phí rất thấp hoặc miễn phí.
+4. Xử lý Âm Thanh (Engine): Client-side ($0).
 
-**=> TỔNG OPEX DUY TRÌ BỘ MÁY GIAI ĐOẠN ĐẦU CHỈ: $15 - $35/Tháng.** (Chưa tới 1 triệu VNĐ).
-Mô hình này là một "Cỗ Máy In Tiền" vì Biên Lợi Nhuận (Profit Margin) cao khủng khiếp do bạn bán chất xám (Khóa học/Subscription) mà không tốn chi phí nguyên vật liệu và Vận chuyển Video hằng ngày!
+**=> TỔNG CHI PHÍ VẬN HÀNH CỐ ĐỊNH (OPEX) HÀNG THÁNG: Xấp xỉ $15 - $35.**
+Kiến trúc này giúp dự án khởi động với chi phí thấp trong giai đoạn MVP và dễ dàng mở rộng khi người dùng tăng lên, nhờ cơ chế tối ưu phân tán khả năng xử lý về phía Client.
+
