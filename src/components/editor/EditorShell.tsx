@@ -8,11 +8,12 @@ import { TrackList } from "./TrackList";
 import { MusicXMLVisualizer } from "./MusicXMLVisualizer";
 import { MeasureMapEditor } from "./MeasureMapEditor";
 import {
-  Play, Pause, Square, Repeat, ChevronDown, ChevronUp, Music, ArrowLeft, MoreVertical, X, Tag, Activity, Map, PlaySquare, Sun, Moon, MoreHorizontal, Check, Image as ImageIcon, Share, Search
+  Play, Pause, Square, Repeat, ChevronDown, ChevronUp, Music, ArrowLeft, MoreVertical, X, Tag, Activity, Map, PlaySquare, Sun, Moon, MoreHorizontal, Check, Image as ImageIcon, Share, Search, Wand2
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getFileViewUrl, createPost } from "@/lib/appwrite";
+import { analyzeMusicXML, type MusicXMLAnalysis } from "@/lib/score/musicxml-analyzer";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { toast } from "sonner";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -102,7 +103,7 @@ export function EditorShell({
   uploadingCover = false,
   coverUrl,
 }: EditorShellProps) {
-  const { prompt } = useDialogs();
+  const { prompt, confirm } = useDialogs();
   const [shareCopied, setShareCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
   const [muteByTrackId, setMuteByTrackId] = useState<Record<string, boolean>>({});
@@ -974,6 +975,82 @@ export function EditorShell({
     });
   };
 
+  // ── MusicXML Auto-Analyze ──
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handleAutoAnalyze = useCallback(async () => {
+    const fileId = payload.notationData?.fileId;
+    if (!fileId) return;
+
+    setAnalyzing(true);
+    try {
+      // Fetch MusicXML from storage
+      const url = getFileViewUrl(fileId);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buffer = await res.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let xmlText: string;
+
+      // Detect MXL (ZIP) by magic bytes "PK" (0x50, 0x4B)
+      if (bytes[0] === 0x50 && bytes[1] === 0x4B) {
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(buffer);
+        const xmlFile = Object.keys(zip.files).find(f => f.endsWith('.xml') && !f.startsWith('META-INF'));
+        if (!xmlFile) throw new Error('No XML file found in MXL archive');
+        xmlText = await zip.files[xmlFile].async('string');
+      } else {
+        xmlText = new TextDecoder().decode(buffer);
+      }
+
+      const analysis = analyzeMusicXML(xmlText);
+
+      // Build description for confirm dialog
+      const lines = [
+        `Tempo: ♩= ${Math.round(analysis.tempo)} BPM`,
+        `Time Sig: ${analysis.timeSignature}`,
+        `Key: ${analysis.keySignature}`,
+        `Measures: ${analysis.totalMeasures} (sheet) → ${analysis.totalPlaybackMeasures} (playback)`,
+      ];
+      if (analysis.tempoChanges.length > 1) {
+        lines.push(`\nTempo changes: ${analysis.tempoChanges.map(([m, t]) => `M${m}:${Math.round(t)}`).join(' → ')}`);
+      }
+      if (analysis.repeatDescriptions.length > 0) {
+        lines.push(`\nRepeats: ${analysis.repeatDescriptions.join(', ')}`);
+      }
+
+      const ok = await confirm({
+        title: '📋 MusicXML Analysis',
+        description: lines.join('\n'),
+        confirmText: 'Apply All',
+        cancelText: 'Cancel',
+      });
+
+      if (ok && onPayloadChange) {
+        onPayloadChange({
+          ...payload,
+          metadata: {
+            ...payload.metadata,
+            tempo: Math.round(analysis.tempo),
+            timeSignature: analysis.timeSignature,
+            keySignature: analysis.keySignature,
+          },
+          notationData: {
+            ...payload.notationData!,
+            timemap: analysis.timemap,
+            measureMap: Object.keys(analysis.measureMap).length > 0 ? analysis.measureMap : undefined,
+          },
+        });
+        toast.success(`Applied: ${analysis.totalPlaybackMeasures} measures, ${analysis.tempoChanges.length} tempo event(s)`);
+      }
+    } catch (err: any) {
+      console.error('Auto-analyze failed:', err);
+      toast.error(`Analysis failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [payload, onPayloadChange, confirm]);
+
   const scoreFileId = payload.notationData?.fileId;
 
   // Phase 22: Inject per-part MIDI tracks if multi-track info available, else fall back to single Score Synth
@@ -1596,6 +1673,18 @@ export function EditorShell({
           )}
 
           <div className="flex-1 overflow-hidden relative bg-white dark:bg-[#282c34] shadow-inner ring-1 ring-black/5 transition-colors duration-200">
+            {/* Auto-Analyze floating button */}
+            {scoreFileId && isOwner && (
+              <button
+                onClick={handleAutoAnalyze}
+                disabled={analyzing}
+                className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold shadow-lg hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 transition-all"
+                title="Auto-analyze MusicXML: extract tempo, time signature, key, repeats"
+              >
+                <Wand2 className={`w-3.5 h-3.5 ${analyzing ? 'animate-spin' : ''}`} />
+                {analyzing ? 'Analyzing...' : 'Auto-Analyze'}
+              </button>
+            )}
             <MusicXMLVisualizer
               scoreFileId={scoreFileId}
               positionMs={positionMs}

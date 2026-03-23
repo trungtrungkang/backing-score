@@ -290,7 +290,46 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       }
       const midi = new Midi(bytes.buffer);
       const tempoTarget = payload.metadata?.tempo || 120;
-      midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      
+      // Multi-tempo support: if timemap has per-measure tempo entries, preserve them
+      // and scale by playbackRate. Otherwise fall back to single tempo.
+      const timemap = payload.notationData?.timemap;
+      const tempoEntries = timemap?.filter(t => t.tempo !== undefined) || [];
+      
+      if (tempoEntries.length > 1) {
+        // Build tempo map from timemap: convert measure-based tempos to tick-based
+        // Each timemap entry with a tempo change → MIDI tempo event
+        const ticksPerBeat = midi.header.ppq || 480;
+        const newTempos: { ticks: number; bpm: number }[] = [];
+        let accTicks = 0;
+        let prevTempo = tempoTarget;
+        
+        if (timemap) {
+          for (let i = 0; i < timemap.length; i++) {
+            const entry = timemap[i];
+            // Calculate ticks for this measure based on time signature
+            const ts = entry.timeSignature || payload.metadata?.timeSignature || "4/4";
+            const [num, den] = ts.split("/").map(Number);
+            const beatsInMeasure = (num || 4) * (4 / (den || 4));
+            
+            if (entry.tempo !== undefined) {
+              newTempos.push({ ticks: accTicks, bpm: entry.tempo * playbackRate });
+              prevTempo = entry.tempo;
+            }
+            
+            accTicks += beatsInMeasure * ticksPerBeat;
+          }
+        }
+        
+        if (newTempos.length > 0) {
+          midi.header.tempos = newTempos;
+        } else {
+          midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+        }
+      } else {
+        // Single tempo mode (backward compatible)
+        midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      }
       
       // Apply pitch shift
       if (pitchShift !== 0) {

@@ -1,9 +1,26 @@
 /**
- * Resolves the physical chronological measure index bypassing Repeat/Volta signs from a virtual timeline.
+ * Resolves the physical (printed sheet) measure index from a latent (playback) measure index.
+ * The measureMap is SPARSE: only anchor points where the offset changes are stored.
+ * E.g. { 21: 5 } means latent 21→physical 5, latent 22→physical 6, latent 23→physical 7, etc.
+ * until the next anchor point.
  */
 export function getPhysicalMeasure(latent: number, measureMap?: Record<number, number>): number {
   if (!measureMap) return latent;
-  return measureMap[latent] !== undefined ? measureMap[latent] : latent;
+
+  // Direct hit
+  if (measureMap[latent] !== undefined) return measureMap[latent];
+
+  // Find nearest lower anchor point
+  let bestAnchorLatent = -1;
+  for (const key of Object.keys(measureMap)) {
+    const k = Number(key);
+    if (k <= latent && k > bestAnchorLatent) {
+      bestAnchorLatent = k;
+    }
+  }
+
+  if (bestAnchorLatent === -1) return latent; // No anchor below → identity
+  return measureMap[bestAnchorLatent] + (latent - bestAnchorLatent);
 }
 
 /**

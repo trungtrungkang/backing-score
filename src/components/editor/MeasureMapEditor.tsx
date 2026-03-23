@@ -220,6 +220,7 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
                 const physical = getPhysicalMeasure(latent, currentMap);
                 const isAnchor = currentMap[latent] !== undefined;
                 const hasSig = t.timeSignature !== undefined;
+                const hasTempo = t.tempo !== undefined;
                 const isActive = latent === activeLatent;
 
                 return (
@@ -231,13 +232,15 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
                       ${isActive ? 'bg-blue-100 border-blue-400 text-blue-900 shadow-sm' : 'bg-background border-border hover:bg-muted/50'}
                       ${isAnchor ? 'ring-1 ring-orange-400 border-orange-400' : ''}
                       ${hasSig && !isAnchor ? 'ring-1 ring-purple-400 border-purple-400' : ''}
+                      ${hasTempo && !isAnchor && !hasSig ? 'ring-1 ring-red-400 border-red-400' : ''}
                     `}
-                    title={`Audio Measure ${latent} ➔ Sheet Measure ${physical} ${hasSig ? `(${t.timeSignature})` : ''}`}
+                    title={`Audio Measure ${latent} ➔ Sheet Measure ${physical} ${hasSig ? `(${t.timeSignature})` : ''} ${hasTempo ? `[♩=${t.tempo}]` : ''}`}
                   >
                     <span className="font-mono font-bold">{latent}</span>
                     <span className="text-[10px] opacity-60">S:{physical}</span>
                     {isAnchor && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></div>}
                     {hasSig && <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-purple-500 rounded-full"></div>}
+                    {hasTempo && <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full" title={`♩=${t.tempo}`}></div>}
                   </button>
                 );
               })}

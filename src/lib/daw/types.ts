@@ -41,6 +41,7 @@ export interface TimemapEntry {
   timeMs: number;
   measure: number;
   timeSignature?: string; // Optional dynamic meter override (e.g. "6/8")
+  tempo?: number; // Optional dynamic tempo override (BPM) at this measure
 }
 
 export interface NotationData {
