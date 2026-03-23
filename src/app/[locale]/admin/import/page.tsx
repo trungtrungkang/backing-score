@@ -998,17 +998,27 @@ function ScorePreviewModal({ file, title, onClose }: { file: string; title: stri
     };
   }, [file]);
 
+  // Eagerly stop MIDI before unmounting (React cleanup runs too late for web components)
+  const handleClose = useCallback(() => {
+    try {
+      if (midiPlayerRef.current && typeof (midiPlayerRef.current as any).stop === 'function') {
+        (midiPlayerRef.current as any).stop();
+      }
+    } catch {}
+    onClose();
+  }, [onClose]);
+
   // Close on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [handleClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleClose}>
       <div
         className={`relative bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
           isExpanded
@@ -1058,7 +1068,7 @@ function ScorePreviewModal({ file, title, onClose }: { file: string; title: stri
             {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
           >
             <XIcon className="w-5 h-5" />

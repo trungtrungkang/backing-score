@@ -241,6 +241,12 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     }
 
     return () => {
+      // Stop MIDI player on unmount (critical: html-midi-player keeps playing after DOM removal)
+      try {
+        if (midiPlayerRef.current && typeof midiPlayerRef.current.stop === 'function') {
+          midiPlayerRef.current.stop();
+        }
+      } catch {}
       if (audioManagerRef.current) {
         audioManagerRef.current.stop();
         audioManagerRef.current = null;
@@ -249,6 +255,24 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       prevFilesRef.current = null;
     };
   }, [payload.metadata, payload.audioTracks]);
+
+  // Safety net: force-stop MIDI on any navigation (popstate covers browser back/forward)
+  useEffect(() => {
+    const stopMidi = () => {
+      try {
+        if (midiPlayerRef.current && typeof midiPlayerRef.current.stop === 'function') {
+          midiPlayerRef.current.stop();
+        }
+      } catch {}
+    };
+    window.addEventListener('popstate', stopMidi);
+    window.addEventListener('beforeunload', stopMidi);
+    return () => {
+      stopMidi(); // Also stop on effect cleanup (covers React unmount)
+      window.removeEventListener('popstate', stopMidi);
+      window.removeEventListener('beforeunload', stopMidi);
+    };
+  }, []);
 
   const [stretchedMidiBase64, setStretchedMidiBase64] = useState<string | null>(null);
 
