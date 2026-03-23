@@ -19,6 +19,13 @@ export const APPWRITE_COMMENTS_COLLECTION_ID = "comments";
 export const APPWRITE_REACTIONS_COLLECTION_ID = "reactions";
 export const APPWRITE_FOLLOWS_COLLECTION_ID = "follows";
 
+// Wiki / Encyclopedia collections
+export const APPWRITE_WIKI_ARTISTS_COLLECTION_ID = "wiki_artists";
+export const APPWRITE_WIKI_INSTRUMENTS_COLLECTION_ID = "wiki_instruments";
+export const APPWRITE_WIKI_COMPOSITIONS_COLLECTION_ID = "wiki_compositions";
+export const APPWRITE_WIKI_GENRES_COLLECTION_ID = "wiki_genres";
+export const APPWRITE_WIKI_TRANSLATIONS_COLLECTION_ID = "wiki_translations";
+
 export function isAppwriteConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT &&

@@ -6,7 +6,8 @@
     "academy": "아카데미",
     "community": "커뮤니티",
     "admin": "관리",
-    "login": "로그인"
+    "login": "로그인",
+    "wiki": "위키"
   },
   "Home": {
     "heroTitle": "인터랙티브 음악 생태계.",
@@ -285,5 +286,37 @@
     "shortcutSpace": "재생 / 일시정지 (Sync 모드에서는 마디 마킹)",
     "shortcutClick": "마디 클릭으로 해당 위치로 이동",
     "creatorOnlyNote": "크리에이터 기능은 크리에이터 계정이 필요합니다. 관리자에게 문의하세요."
+  },
+  "Wiki": {
+    "wiki": "위키",
+    "hubTitle": "음악 백과사전",
+    "hubSubtitle": "음악가, 악기, 장르, 작품을 탐색하세요.",
+    "searchPlaceholder": "아티스트, 악기, 작품 검색...",
+    "artists": "아티스트",
+    "instruments": "악기",
+    "compositions": "작품",
+    "genres": "장르",
+    "viewAll": "모두 보기",
+    "biography": "약력",
+    "works": "Backing & Score 작품",
+    "relatedProjects": "관련 프로젝트",
+    "practiceNow": "지금 연습하기",
+    "born": "출생",
+    "died": "사망",
+    "nationality": "국적",
+    "roles": "역할",
+    "family": "악기군",
+    "tuning": "튜닝",
+    "range": "음역",
+    "origin": "기원",
+    "period": "시대",
+    "key": "조성",
+    "tempo": "빠르기",
+    "difficulty": "난이도",
+    "year": "연도",
+    "era": "시대",
+    "subGenres": "하위 장르",
+    "noResults": "결과를 찾을 수 없습니다.",
+    "loading": "로딩 중..."
   }
 }

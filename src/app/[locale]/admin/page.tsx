@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { listAllUsers, toggleUserLabel } from "@/app/actions/admin";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ShieldAlert, Loader2 } from "lucide-react";
+import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight } from "lucide-react";
 
 interface UserInfo {
   id: string;
@@ -82,14 +80,40 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+      {/* Page Header */}
       <div className="flex items-center gap-4 mb-10">
         <div className="p-3 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-2xl shadow-inner">
           <ShieldAlert className="w-7 h-7" />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-1">Admin Dashboard</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Manage platform users, roles, and privileges.</p>
+          <p className="text-zinc-500 dark:text-zinc-400">Manage platform users, roles, and content.</p>
         </div>
+      </div>
+
+      {/* Quick-access cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        <div className="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6 text-blue-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-zinc-900 dark:text-white text-sm">User Management</h2>
+            <p className="text-xs text-zinc-400">{users.length} registered users</p>
+          </div>
+        </div>
+
+        <Link href="/admin/wiki" className="group bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-[#C8A856]/50 hover:shadow-lg hover:shadow-[#C8A856]/5 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+            <BookOpen className="w-6 h-6 text-amber-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-zinc-900 dark:text-white text-sm group-hover:text-[#C8A856] transition-colors">Wiki CMS</h2>
+            <p className="text-xs text-zinc-400">Manage encyclopedia content</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-[#C8A856] transition-colors" />
+        </Link>
       </div>
 
       {error && (
@@ -98,6 +122,10 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* Users Table */}
+      <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
+        <Users className="w-5 h-5 text-blue-500" /> User Management
+      </h2>
       <div className="bg-white dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-xl dark:shadow-black/50">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -107,12 +135,14 @@ export default function AdminDashboardPage() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Email</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Joined</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Creator Role</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Wiki Editor</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Admin Role</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
               {users.map((u) => {
                 const isCreator = u.labels.includes("creator");
+                const isWikiEditor = u.labels.includes("wiki_editor");
                 const isAdmin = u.labels.includes("admin");
                 
                 return (
@@ -131,6 +161,18 @@ export default function AdminDashboardPage() {
                       >
                         <span className={`inline-block w-4 h-4 bg-white rounded-full transition-transform shadow ${
                           isCreator ? "translate-x-7" : "translate-x-1"
+                        }`} />
+                      </button>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <button
+                        onClick={() => handleToggle(u.id, "wiki_editor", isWikiEditor)}
+                        className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-zinc-900 ${
+                          isWikiEditor ? "bg-amber-500" : "bg-zinc-300 dark:bg-zinc-700"
+                        }`}
+                      >
+                        <span className={`inline-block w-4 h-4 bg-white rounded-full transition-transform shadow ${
+                          isWikiEditor ? "translate-x-7" : "translate-x-1"
                         }`} />
                       </button>
                     </td>

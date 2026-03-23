@@ -6,7 +6,8 @@
     "academy": "Académie",
     "community": "Communauté",
     "admin": "Admin",
-    "login": "Connexion"
+    "login": "Connexion",
+    "wiki": "Wiki"
   },
   "Home": {
     "heroTitle": "L'Écosystème Musical Interactif.",
@@ -285,5 +286,37 @@
     "shortcutSpace": "Play / Pause (ou marquer une mesure en mode Sync)",
     "shortcutClick": "Cliquer sur une mesure pour y accéder",
     "creatorOnlyNote": "Les fonctionnalités Creator nécessitent un compte Creator. Contactez un administrateur pour en faire la demande."
+  },
+  "Wiki": {
+    "wiki": "Wiki",
+    "hubTitle": "Encyclopédie Musicale",
+    "hubSubtitle": "Explorez musiciens, instruments, genres et compositions.",
+    "searchPlaceholder": "Rechercher artistes, instruments, compositions...",
+    "artists": "Artistes",
+    "instruments": "Instruments",
+    "compositions": "Compositions",
+    "genres": "Genres",
+    "viewAll": "Voir tout",
+    "biography": "Biographie",
+    "works": "Œuvres sur Backing & Score",
+    "relatedProjects": "Projets associés",
+    "practiceNow": "Pratiquer maintenant",
+    "born": "Né(e)",
+    "died": "Décédé(e)",
+    "nationality": "Nationalité",
+    "roles": "Rôles",
+    "family": "Famille",
+    "tuning": "Accordage",
+    "range": "Tessiture",
+    "origin": "Origine",
+    "period": "Période",
+    "key": "Tonalité",
+    "tempo": "Tempo",
+    "difficulty": "Difficulté",
+    "year": "Année",
+    "era": "Époque",
+    "subGenres": "Sous-genres",
+    "noResults": "Aucun résultat.",
+    "loading": "Chargement..."
   }
 }

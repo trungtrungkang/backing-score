@@ -6,7 +6,8 @@
     "academy": "Học viện",
     "community": "Cộng đồng",
     "admin": "Quản trị",
-    "login": "Đăng nhập"
+    "login": "Đăng nhập",
+    "wiki": "Bách khoa"
   },
   "Home": {
     "heroTitle": "Hệ sinh thái Âm nhạc Tương tác.",
@@ -285,5 +286,37 @@
     "shortcutSpace": "Play / Pause (hoặc đánh dấu ô nhịp trong Sync Mode)",
     "shortcutClick": "Bấm vào ô nhịp để seek tới vị trí đó",
     "creatorOnlyNote": "Tính năng Creator yêu cầu tài khoản Creator. Liên hệ quản trị viên để được cấp quyền."
+  },
+  "Wiki": {
+    "wiki": "Bách khoa",
+    "hubTitle": "Bách Khoa Toàn Thư Âm Nhạc",
+    "hubSubtitle": "Khám phá nhạc sỹ, nhạc cụ, thể loại và tác phẩm.",
+    "searchPlaceholder": "Tìm nghệ sỹ, nhạc cụ, tác phẩm...",
+    "artists": "Nghệ sỹ",
+    "instruments": "Nhạc cụ",
+    "compositions": "Tác phẩm",
+    "genres": "Thể loại",
+    "viewAll": "Xem tất cả",
+    "biography": "Tiểu sử",
+    "works": "Tác phẩm trên Backing & Score",
+    "relatedProjects": "Dự án liên quan",
+    "practiceNow": "Thực hành ngay",
+    "born": "Sinh",
+    "died": "Mất",
+    "nationality": "Quốc tịch",
+    "roles": "Vai trò",
+    "family": "Họ nhạc cụ",
+    "tuning": "Âm chuẩn",
+    "range": "Âm vực",
+    "origin": "Xuất xứ",
+    "period": "Thời kỳ",
+    "key": "Khóa nhạc",
+    "tempo": "Nhịp độ",
+    "difficulty": "Độ khó",
+    "year": "Năm",
+    "era": "Thời đại",
+    "subGenres": "Thể loại con",
+    "noResults": "Không tìm thấy kết quả.",
+    "loading": "Đang tải..."
   }
 }

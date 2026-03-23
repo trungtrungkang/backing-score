@@ -88,3 +88,84 @@ export interface FollowDocument {
   followerId: string;
   followingId: string;
 }
+
+// ==========================================
+// Wiki / Encyclopedia Document Types
+// ==========================================
+
+export interface ArtistDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  name: string;
+  nameOriginal?: string;
+  slug: string;
+  bio?: string;
+  birthDate?: string;
+  deathDate?: string;
+  nationality?: string;
+  roles?: string[];
+  imageUrl?: string;
+  coverUrl?: string;
+  genreIds?: string[];
+  instrumentIds?: string[];
+  externalLinks?: string;
+}
+
+export interface InstrumentDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  name: string;
+  slug: string;
+  family?: string;
+  description?: string;
+  imageUrl?: string;
+  tuning?: string;
+  range?: string;
+  origin?: string;
+}
+
+export interface CompositionDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  title: string;
+  slug: string;
+  composerIds?: string[];
+  performerIds?: string[];
+  year?: number;
+  period?: string;
+  genreId?: string;
+  instrumentIds?: string[];
+  keySignature?: string;
+  tempo?: string;
+  timeSignature?: string;
+  description?: string;
+  difficulty?: string;
+  projectIds?: string[];
+}
+
+export interface GenreDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parentGenreId?: string;
+  era?: string;
+}
+
+export type WikiEntityType = "artist" | "instrument" | "composition" | "genre";
+
+export interface WikiTranslationDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  entityId: string;
+  entityType: WikiEntityType;
+  locale: string;
+  field: string;
+  value: string;
+}

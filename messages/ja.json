@@ -6,7 +6,8 @@
     "academy": "アカデミー",
     "community": "コミュニティ",
     "admin": "管理",
-    "login": "ログイン"
+    "login": "ログイン",
+    "wiki": "ウィキ"
   },
   "Home": {
     "heroTitle": "インタラクティブな音楽エコシステム。",
@@ -285,5 +286,37 @@
     "shortcutSpace": "再生 / 一時停止（シンクモードでは小節をマーク）",
     "shortcutClick": "小節をクリックしてその位置にシーク",
     "creatorOnlyNote": "クリエイター機能にはクリエイターアカウントが必要です。管理者にお問い合わせください。"
+  },
+  "Wiki": {
+    "wiki": "ウィキ",
+    "hubTitle": "音楽百科事典",
+    "hubSubtitle": "音楽家、楽器、ジャンル、作品を探索しましょう。",
+    "searchPlaceholder": "アーティスト、楽器、作品を検索...",
+    "artists": "アーティスト",
+    "instruments": "楽器",
+    "compositions": "作品",
+    "genres": "ジャンル",
+    "viewAll": "すべて表示",
+    "biography": "経歴",
+    "works": "Backing & Scoreの作品",
+    "relatedProjects": "関連プロジェクト",
+    "practiceNow": "今すぐ練習",
+    "born": "生年",
+    "died": "没年",
+    "nationality": "国籍",
+    "roles": "役割",
+    "family": "ファミリー",
+    "tuning": "チューニング",
+    "range": "音域",
+    "origin": "起源",
+    "period": "時代",
+    "key": "調",
+    "tempo": "テンポ",
+    "difficulty": "難易度",
+    "year": "年",
+    "era": "時代",
+    "subGenres": "サブジャンル",
+    "noResults": "結果が見つかりません。",
+    "loading": "読み込み中..."
   }
 }

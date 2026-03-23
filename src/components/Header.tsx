@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, usePathname } from "@/i18n/routing";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Home, Library, Compass, User, LogOut, ShieldAlert,
-  Users, GraduationCap, Menu, X, Settings2
+  Users, GraduationCap, Menu, X, Settings2, BookOpen, Search
 } from "lucide-react";
+import { WikiSearchDialog } from "@/components/WikiSearchDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslations } from "next-intl";
@@ -92,7 +93,9 @@ export function Header() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const closeSidebar = () => setSidebarOpen(false);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
 
   if (pathname?.startsWith("/play")) return null;
 
@@ -141,13 +144,25 @@ export function Header() {
             <NavTab href="/dashboard" icon={Library}       label={t("library")}   active={pathname.startsWith("/dashboard")} />
             <NavTab href="/discover"  icon={Compass}       label={t("explore")}   active={pathname.startsWith("/discover")} />
             <NavTab href="/academy"   icon={GraduationCap} label={t("academy")}   active={pathname.startsWith("/academy")} />
+            <NavTab href="/wiki"      icon={BookOpen}      label={t("wiki")}      active={pathname.startsWith("/wiki")} />
             {user && (
               <NavTab href="/feed"    icon={Users}         label={t("community")} active={pathname.startsWith("/feed")} />
             )}
           </nav>
 
-          {/* Col 3 — Options dropdown */}
-          <div className="flex items-center px-3 sm:px-5">
+          {/* Col 3 — Search + Options dropdown */}
+          <div className="flex items-center gap-1.5 px-3 sm:px-5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400"
+                >
+                  <Search className="w-[18px] h-[18px]" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="font-semibold text-xs">Search Wiki</TooltipContent>
+            </Tooltip>
             <DropdownMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -262,6 +277,7 @@ export function Header() {
           <SidebarItem href="/dashboard" icon={Library}       label={t("library")}   active={pathname.startsWith("/dashboard")} onClick={closeSidebar} />
           <SidebarItem href="/discover"  icon={Compass}       label={t("explore")}   active={pathname.startsWith("/discover")}  onClick={closeSidebar} />
           <SidebarItem href="/academy"   icon={GraduationCap} label={t("academy")}   active={pathname.startsWith("/academy")}   onClick={closeSidebar} />
+          <SidebarItem href="/wiki"      icon={BookOpen}      label={t("wiki")}      active={pathname.startsWith("/wiki")}      onClick={closeSidebar} />
           {user && (
             <SidebarItem href="/feed"    icon={Users}         label={t("community")} active={pathname.startsWith("/feed")}      onClick={closeSidebar} />
           )}
@@ -289,6 +305,9 @@ export function Header() {
           )}
         </div>
       </aside>
+
+      {/* Wiki Search Dialog */}
+      <WikiSearchDialog open={searchOpen} onClose={closeSearch} />
     </TooltipProvider>
   );
 }

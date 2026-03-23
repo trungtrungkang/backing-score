@@ -6,7 +6,8 @@
     "academy": "学院",
     "community": "社区",
     "admin": "管理",
-    "login": "登录"
+    "login": "登录",
+    "wiki": "百科"
   },
   "Home": {
     "heroTitle": "互动音乐生态系统。",
@@ -285,5 +286,37 @@
     "shortcutSpace": "播放 / 暂停（同步模式中标记小节）",
     "shortcutClick": "点击小节跳转到该位置",
     "creatorOnlyNote": "创作者功能需要创作者账户。请联系管理员申请权限。"
+  },
+  "Wiki": {
+    "wiki": "百科",
+    "hubTitle": "音乐百科全书",
+    "hubSubtitle": "探索音乐家、乐器、流派和作品。",
+    "searchPlaceholder": "搜索艺术家、乐器、作品...",
+    "artists": "艺术家",
+    "instruments": "乐器",
+    "compositions": "作品",
+    "genres": "流派",
+    "viewAll": "查看全部",
+    "biography": "传记",
+    "works": "Backing & Score 上的作品",
+    "relatedProjects": "相关项目",
+    "practiceNow": "立即练习",
+    "born": "出生",
+    "died": "逝世",
+    "nationality": "国籍",
+    "roles": "角色",
+    "family": "乐器家族",
+    "tuning": "调音",
+    "range": "音域",
+    "origin": "起源",
+    "period": "时期",
+    "key": "调性",
+    "tempo": "速度",
+    "difficulty": "难度",
+    "year": "年份",
+    "era": "时代",
+    "subGenres": "子流派",
+    "noResults": "未找到结果。",
+    "loading": "加载中..."
   }
 }
