@@ -19,6 +19,9 @@ import {
 } from "@/lib/appwrite";
 import { toast } from "sonner";
 import { EditorShell } from "@/components/editor/EditorShell";
+import { listInstruments } from "@/lib/appwrite/instruments";
+import { listGenres } from "@/lib/appwrite/genres";
+import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
 import {
   normalizePayload,
   defaultDAWPayload,
@@ -44,6 +47,11 @@ export default function ProjectPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [openingFile, setOpeningFile] = useState(false);
   const [openFileError, setOpenFileError] = useState<string | null>(null);
+  // Wiki entity state (Phase 2.5)
+  const [wikiGenreId, setWikiGenreId] = useState<string | undefined>();
+  const [wikiInstrumentIds, setWikiInstrumentIds] = useState<string[]>([]);
+  const [wikiInstruments, setWikiInstruments] = useState<InstrumentDocument[]>([]);
+  const [wikiGenres, setWikiGenres] = useState<GenreDocument[]>([]);
 
   const router = useRouter();
   const t = useTranslations("ProjectDetail");
@@ -66,6 +74,8 @@ export default function ProjectPage() {
       setProject(doc);
       setName(doc.name);
       setTags(doc.tags || []);
+      setWikiGenreId(doc.wikiGenreId || undefined);
+      setWikiInstrumentIds(doc.wikiInstrumentIds || []);
       setDescription(doc.description ?? "");
       try {
         const raw = JSON.parse(doc.payload) as Record<string, unknown> | null;
@@ -86,6 +96,11 @@ export default function ProjectPage() {
 
   useEffect(() => {
     load();
+    // Fetch wiki data for pickers
+    Promise.all([listInstruments(100), listGenres(100)]).then(([insts, gens]) => {
+      setWikiInstruments(insts);
+      setWikiGenres(gens);
+    }).catch(() => {});
   }, [load]);
 
   const isOwner = user && project && project.userId === user.$id;
@@ -99,6 +114,8 @@ export default function ProjectPage() {
         name: name.trim() || "Untitled",
         payload: payload as ProjectPayload,
         tags: tags,
+        wikiGenreId: wikiGenreId || "",
+        wikiInstrumentIds: wikiInstrumentIds,
       });
       setProject((prev) =>
         prev ? { ...prev, name: name.trim() || "Untitled" } : null
@@ -112,7 +129,7 @@ export default function ProjectPage() {
     } finally {
       setSaving(false);
     }
-  }, [project, projectId, isOwner, saving, name, payload, tags]);
+  }, [project, projectId, isOwner, saving, name, payload, tags, wikiGenreId, wikiInstrumentIds]);
 
   const handleUploadScore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     let file = e.target.files?.[0];
@@ -318,6 +335,8 @@ export default function ProjectPage() {
           publishedAt: new Date().toISOString(),
           description: description.trim() || undefined,
           tags: tags,
+          wikiGenreId: wikiGenreId || "",
+          wikiInstrumentIds: wikiInstrumentIds,
         },
         publishPermissions
       );
@@ -427,6 +446,12 @@ export default function ProjectPage() {
             onDeleteTrack={isOwner ? handleDeleteTrack : undefined}
             tags={tags}
             onTagsChange={isOwner ? setTags : undefined}
+            wikiGenreId={wikiGenreId}
+            onWikiGenreIdChange={isOwner ? setWikiGenreId : undefined}
+            wikiInstrumentIds={wikiInstrumentIds}
+            onWikiInstrumentIdsChange={isOwner ? setWikiInstrumentIds : undefined}
+            wikiInstruments={wikiInstruments}
+            wikiGenres={wikiGenres}
             uploadingScore={uploadingScore}
             uploadingAudio={uploadingAudio}
             uploadError={uploadError}

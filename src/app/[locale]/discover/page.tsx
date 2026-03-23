@@ -6,6 +6,9 @@ import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorite, listMyFavorites, getFileViewUrl, type ProjectDocument, type PlaylistDocument } from "@/lib/appwrite";
+import { listInstruments } from "@/lib/appwrite/instruments";
+import { listGenres } from "@/lib/appwrite/genres";
+import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
 import { Play, Bookmark, Music4, Search, SlidersHorizontal, ChevronRight, Pencil, Heart, ListMusic, LayoutGrid, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
@@ -21,11 +24,7 @@ function formatDate(iso: string | undefined) {
   }
 }
 
-const TAG_GROUPS = {
-  Instruments: ["Piano", "Acoustic Guitar", "Electric Guitar", "Bass", "Violin", "Cello", "Trumpet", "Saxophone", "Drums", "Vocals", "Flute", "Clarinet"],
-  Genres: ["Pop", "Rock", "Jazz", "Classical", "Blues", "R&B", "Country", "Folk", "Latin", "Electronic", "Hip Hop"],
-  Difficulty: ["Beginner", "Intermediate", "Advanced"],
-};
+const DIFFICULTY_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
 
 export default function DiscoverPage() {
   const router = useRouter();
@@ -41,6 +40,12 @@ export default function DiscoverPage() {
   const [copyError, setCopyError] = useState<string | null>(null);
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
   const [togglingFavId, setTogglingFavId] = useState<string | null>(null);
+  // Wiki-based filter state (Phase 2.5)
+  const [wikiInstruments, setWikiInstruments] = useState<InstrumentDocument[]>([]);
+  const [wikiGenres, setWikiGenres] = useState<GenreDocument[]>([]);
+  const [activeInstrumentIds, setActiveInstrumentIds] = useState<string[]>([]);
+  const [activeGenreId, setActiveGenreId] = useState<string | undefined>();
+  const [activeDifficulty, setActiveDifficulty] = useState<string[]>([]);
 
   const handleCopyToMine = async (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
@@ -66,8 +71,12 @@ export default function DiscoverPage() {
     
     async function loadData() {
       try {
+        const wikiFilters = {
+          ...(activeGenreId ? { genreId: activeGenreId } : {}),
+          ...(activeInstrumentIds.length ? { instrumentIds: activeInstrumentIds } : {}),
+        };
         const [publishedList, publishedCollections, myFavs] = await Promise.all([
-          listPublished(activeTags),
+          listPublished(activeDifficulty.length ? activeDifficulty : undefined, undefined, Object.keys(wikiFilters).length ? wikiFilters : undefined),
           listPublishedPlaylists(),
           user ? listMyFavorites("project") : Promise.resolve([])
         ]);
@@ -91,7 +100,15 @@ export default function DiscoverPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTags, user]);
+  }, [activeDifficulty, activeGenreId, activeInstrumentIds, user]);
+
+  // Load wiki data for filter pills
+  useEffect(() => {
+    Promise.all([listInstruments(100), listGenres(100)]).then(([insts, gens]) => {
+      setWikiInstruments(insts);
+      setWikiGenres(gens);
+    }).catch(() => {});
+  }, []);
 
   const handleToggleFavorite = async (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
@@ -176,9 +193,9 @@ export default function DiscoverPage() {
             </span>
             <div className="flex flex-wrap items-center gap-2 flex-1">
               <button
-                onClick={() => setActiveTags([])}
+                onClick={() => { setActiveTags([]); setActiveInstrumentIds([]); setActiveGenreId(undefined); setActiveDifficulty([]); }}
                 className={`px-5 py-2 whitespace-nowrap rounded-full text-[13px] font-bold transition-all duration-300 flex items-center gap-2 ${
-                  activeTags.length === 0
+                  activeTags.length === 0 && activeInstrumentIds.length === 0 && !activeGenreId && activeDifficulty.length === 0
                     ? "bg-[#C8A856] text-black shadow-[0_0_15px_rgba(200,168,86,0.3)] border border-transparent"
                     : "bg-white dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/70"
                 }`}
@@ -188,29 +205,75 @@ export default function DiscoverPage() {
             </div>
           </div>
 
-          {/* Category Rows */}
-          {Object.entries(TAG_GROUPS).map(([groupName, tags]) => (
-            <div key={groupName} className="flex items-start gap-4 w-full">
+          {/* Instruments Row (from wiki) */}
+          {wikiInstruments.length > 0 && (
+            <div className="flex items-start gap-4 w-full">
               <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
-                {groupName}
+                Instruments
               </span>
               <div className="flex flex-wrap items-center gap-2 flex-1">
-                {tags.map((tag) => (
+                {wikiInstruments.map((inst) => (
                   <button
-                    key={tag}
-                    onClick={() => setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                    key={inst.$id}
+                    onClick={() => setActiveInstrumentIds(prev => prev.includes(inst.$id) ? prev.filter(id => id !== inst.$id) : [...prev, inst.$id])}
                     className={`px-4 py-1.5 whitespace-nowrap rounded-full text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      activeTags.includes(tag)
+                      activeInstrumentIds.includes(inst.$id)
                         ? "bg-[#C8A856] text-black shadow-[0_0_15px_rgba(200,168,86,0.2)] border border-transparent"
                         : "bg-white dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/70"
                     }`}
                   >
-                    {tag}
+                    {inst.name}
                   </button>
                 ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Genres Row (from wiki) */}
+          {wikiGenres.length > 0 && (
+            <div className="flex items-start gap-4 w-full">
+              <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+                Genres
+              </span>
+              <div className="flex flex-wrap items-center gap-2 flex-1">
+                {wikiGenres.map((genre) => (
+                  <button
+                    key={genre.$id}
+                    onClick={() => setActiveGenreId(prev => prev === genre.$id ? undefined : genre.$id)}
+                    className={`px-4 py-1.5 whitespace-nowrap rounded-full text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      activeGenreId === genre.$id
+                        ? "bg-[#C8A856] text-black shadow-[0_0_15px_rgba(200,168,86,0.2)] border border-transparent"
+                        : "bg-white dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/70"
+                    }`}
+                  >
+                    {genre.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Difficulty Row */}
+          <div className="flex items-start gap-4 w-full">
+            <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+              Difficulty
+            </span>
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              {DIFFICULTY_OPTIONS.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveDifficulty(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                  className={`px-4 py-1.5 whitespace-nowrap rounded-full text-[13px] font-semibold transition-all duration-300 flex items-center gap-2 ${
+                    activeDifficulty.includes(tag)
+                      ? "bg-[#C8A856] text-black shadow-[0_0_15px_rgba(200,168,86,0.2)] border border-transparent"
+                      : "bg-white dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/70"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {error && (

@@ -27,6 +27,11 @@ export interface ProjectDocument {
   instruments?: string[];
   difficulty?: number;
   durationSec?: number;
+  /** Wiki entity links (Phase 2.5) */
+  wikiGenreId?: string;
+  wikiInstrumentIds?: string[];
+  wikiCompositionId?: string;
+  wikiComposerIds?: string[];
 }
 
 export type ProjectPayload = Record<string, any>;

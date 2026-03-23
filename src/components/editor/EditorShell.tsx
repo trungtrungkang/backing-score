@@ -42,6 +42,14 @@ export interface EditorShellProps {
   onDeleteTrack?: (trackId: string) => void;
   tags?: string[];
   onTagsChange?: (tags: string[]) => void;
+  /** Wiki entity links (Phase 2.5) */
+  wikiGenreId?: string;
+  onWikiGenreIdChange?: (id: string | undefined) => void;
+  wikiInstrumentIds?: string[];
+  onWikiInstrumentIdsChange?: (ids: string[]) => void;
+  /** Pre-fetched wiki data for pickers */
+  wikiInstruments?: { $id: string; name: string; family?: string }[];
+  wikiGenres?: { $id: string; name: string; era?: string }[];
   uploadingScore?: boolean;
   uploadingAudio?: boolean;
   uploadError?: string | null;
@@ -69,6 +77,12 @@ export function EditorShell({
   onDeleteTrack,
   tags = [],
   onTagsChange,
+  wikiGenreId,
+  onWikiGenreIdChange,
+  wikiInstrumentIds = [],
+  onWikiInstrumentIdsChange,
+  wikiInstruments = [],
+  wikiGenres = [],
   uploadingScore = false,
   uploadingAudio = false,
   uploadError,
@@ -149,12 +163,8 @@ export function EditorShell({
   // A-B Looping State (Phase 7.1)
   const [loopState, setLoopState] = useState<LoopState>({ enabled: false, startBar: 1, endBar: 4 });
 
-  // Tags Editor (Phase 9)
-  const TAG_GROUPS = {
-    Instruments: ["Piano", "Acoustic Guitar", "Electric Guitar", "Bass", "Violin", "Cello", "Trumpet", "Saxophone", "Drums", "Vocals", "Flute", "Clarinet"],
-    Genres: ["Pop", "Rock", "Jazz", "Classical", "Blues", "R&B", "Country", "Folk", "Latin", "Electronic", "Hip Hop"],
-    Difficulty: ["Beginner", "Intermediate", "Advanced"],
-  };
+  // Tags Editor (Phase 9 → Phase 2.5 wiki migration)
+  const DIFFICULTY_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
   const [isEditingTags, setIsEditingTags] = useState(false);
 
   const handleToggleTag = (tag: string) => {
@@ -1056,54 +1066,111 @@ export function EditorShell({
                 <button className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 rounded-md text-xs font-semibold text-zinc-600 dark:text-zinc-300 shadow-sm transition-colors focus:outline-none">
                   <Tag className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Tags</span>
-                  {tags.length > 0 && (
+                  {(tags.length + wikiInstrumentIds.length + (wikiGenreId ? 1 : 0)) > 0 && (
                     <span className="bg-[#C8A856] text-black text-[10px] font-bold px-1.5 rounded-full min-w-[20px] text-center flex items-center justify-center -ml-0.5">
-                      {tags.length}
+                      {tags.length + wikiInstrumentIds.length + (wikiGenreId ? 1 : 0)}
                     </span>
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 shadow-xl p-1 z-[150]" align="start">
-                <div className="max-h-72 overflow-y-auto pr-1">
-                  {tags.length === 0 && !isOwner && (
+              <DropdownMenuContent className="w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 shadow-xl p-1 z-[150]" align="start">
+                <div className="max-h-80 overflow-y-auto pr-1">
+                  {/* Instruments (from wiki) */}
+                  {(isOwner || wikiInstrumentIds.length > 0) && wikiInstruments.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 px-2 py-1 tracking-wider sticky top-0 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-md z-10">
+                        Instruments
+                      </div>
+                      {(isOwner ? wikiInstruments : wikiInstruments.filter(i => wikiInstrumentIds.includes(i.$id))).map(inst => {
+                        const isSelected = wikiInstrumentIds.includes(inst.$id);
+                        return (
+                          <DropdownMenuItem
+                            key={inst.$id}
+                            onClick={(e) => {
+                              if (!isOwner || !onWikiInstrumentIdsChange) { e.preventDefault(); return; }
+                              const newIds = isSelected
+                                ? wikiInstrumentIds.filter(id => id !== inst.$id)
+                                : [...wikiInstrumentIds, inst.$id];
+                              onWikiInstrumentIdsChange(newIds);
+                              e.preventDefault();
+                            }}
+                            className={cn(
+                              "text-xs font-semibold px-2 py-1.5 cursor-pointer rounded transition-colors ml-2 flex items-center justify-between group",
+                              isOwner ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "cursor-default",
+                              isSelected ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20" : "text-zinc-600 dark:text-zinc-400"
+                            )}
+                          >
+                            <span>{inst.name}{inst.family && <span className="text-zinc-400 ml-1 text-[10px]">({inst.family})</span>}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Genres (from wiki) */}
+                  {(isOwner || wikiGenreId) && wikiGenres.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 px-2 py-1 tracking-wider sticky top-0 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-md z-10">
+                        Genre
+                      </div>
+                      {(isOwner ? wikiGenres : wikiGenres.filter(g => g.$id === wikiGenreId)).map(genre => {
+                        const isSelected = wikiGenreId === genre.$id;
+                        return (
+                          <DropdownMenuItem
+                            key={genre.$id}
+                            onClick={(e) => {
+                              if (!isOwner || !onWikiGenreIdChange) { e.preventDefault(); return; }
+                              onWikiGenreIdChange(isSelected ? undefined : genre.$id);
+                              e.preventDefault();
+                            }}
+                            className={cn(
+                              "text-xs font-semibold px-2 py-1.5 cursor-pointer rounded transition-colors ml-2 flex items-center justify-between group",
+                              isOwner ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "cursor-default",
+                              isSelected ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : "text-zinc-600 dark:text-zinc-400"
+                            )}
+                          >
+                            <span>{genre.name}{genre.era && <span className="text-zinc-400 ml-1 text-[10px]">({genre.era})</span>}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Difficulty */}
+                  <div className="mb-2">
+                    <div className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 px-2 py-1 tracking-wider sticky top-0 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-md z-10">
+                      Difficulty
+                    </div>
+                    {DIFFICULTY_OPTIONS.map(tag => {
+                      const isSelected = tags.includes(tag);
+                      if (!isOwner && !isSelected) return null;
+                      return (
+                        <DropdownMenuItem
+                          key={tag}
+                          onClick={(e) => {
+                            if (!isOwner) { e.preventDefault(); return; }
+                            handleToggleTag(tag);
+                            e.preventDefault();
+                          }}
+                          className={cn(
+                            "text-xs font-semibold px-2 py-1.5 cursor-pointer rounded transition-colors ml-2 flex items-center justify-between group",
+                            isOwner ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "cursor-default",
+                            isSelected ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-zinc-600 dark:text-zinc-400"
+                          )}
+                        >
+                          <span>{tag}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </div>
+
+                  {/* Empty state */}
+                  {tags.length === 0 && wikiInstrumentIds.length === 0 && !wikiGenreId && !isOwner && (
                     <div className="text-xs text-zinc-500 p-3 text-center">No tags added</div>
                   )}
-                  {Object.entries(TAG_GROUPS).map(([category, catTags]) => {
-                    const viewableTags = isOwner ? catTags : catTags.filter(t => tags.includes(t));
-                    if (viewableTags.length === 0) return null;
-
-                    return (
-                      <div key={category} className="mb-2">
-                        <div className="text-[10px] uppercase font-bold text-zinc-400 dark:text-zinc-500 px-2 py-1 tracking-wider sticky top-0 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-md z-10">
-                          {category}
-                        </div>
-                        {viewableTags.map(tag => {
-                          const isSelected = tags.includes(tag);
-                          return (
-                            <DropdownMenuItem 
-                              key={tag}
-                              onClick={(e) => {
-                                if (!isOwner) {
-                                  e.preventDefault();
-                                  return;
-                                }
-                                handleToggleTag(tag);
-                                e.preventDefault(); // Keep menu open to allow multi-select
-                              }}
-                              className={cn(
-                                "text-xs font-semibold px-2 py-1.5 cursor-pointer rounded transition-colors ml-2 flex items-center justify-between group",
-                                isOwner ? "hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800" : "cursor-default",
-                                isSelected ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20" : "text-zinc-600 dark:text-zinc-400"
-                              )}
-                            >
-                              <span>{tag}</span>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />}
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>

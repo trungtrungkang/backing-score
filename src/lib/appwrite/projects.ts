@@ -27,6 +27,10 @@ export async function createProject(params: {
   payload: ProjectPayload;
   payloadVersion?: number;
   tags?: string[];
+  wikiGenreId?: string;
+  wikiInstrumentIds?: string[];
+  wikiCompositionId?: string;
+  wikiComposerIds?: string[];
 }): Promise<ProjectDocument> {
   const user = await account.get();
   const payloadStr = JSON.stringify(params.payload);
@@ -43,6 +47,10 @@ export async function createProject(params: {
       published: false,
       creatorEmail: user.email,
       tags: params.tags || [],
+      ...(params.wikiGenreId && { wikiGenreId: params.wikiGenreId }),
+      ...(params.wikiInstrumentIds?.length && { wikiInstrumentIds: params.wikiInstrumentIds }),
+      ...(params.wikiCompositionId && { wikiCompositionId: params.wikiCompositionId }),
+      ...(params.wikiComposerIds?.length && { wikiComposerIds: params.wikiComposerIds }),
     },
     [
       Permission.read(Role.user(user.$id)),
@@ -66,6 +74,10 @@ export async function updateProject(
     coverUrl?: string;
     description?: string;
     tags?: string[];
+    wikiGenreId?: string;
+    wikiInstrumentIds?: string[];
+    wikiCompositionId?: string;
+    wikiComposerIds?: string[];
   },
   /** When publishing, pass [owner read/update/delete, read(any)] so Discovery can read. */
   permissions?: string[]
@@ -86,6 +98,10 @@ export async function updateProject(
   if (updates.coverUrl !== undefined) body.coverUrl = updates.coverUrl;
   if (updates.description !== undefined) body.description = updates.description;
   if (updates.tags !== undefined) body.tags = updates.tags;
+  if (updates.wikiGenreId !== undefined) body.wikiGenreId = updates.wikiGenreId;
+  if (updates.wikiInstrumentIds !== undefined) body.wikiInstrumentIds = updates.wikiInstrumentIds;
+  if (updates.wikiCompositionId !== undefined) body.wikiCompositionId = updates.wikiCompositionId;
+  if (updates.wikiComposerIds !== undefined) body.wikiComposerIds = updates.wikiComposerIds;
 
   const doc = await databases.updateDocument(dbId, collId, projectId, body, permissions);
   return doc as unknown as ProjectDocument;
@@ -114,8 +130,12 @@ export async function listMyProjects(tagFilters?: string[]): Promise<ProjectDocu
   return documents as unknown as ProjectDocument[];
 }
 
-/** List published projects for Discovery. */
-export async function listPublished(tagFilters?: string[], authorId?: string): Promise<ProjectDocument[]> {
+/** List published projects for Discovery. Supports both legacy tag filters and wiki entity filters. */
+export async function listPublished(
+  tagFilters?: string[],
+  authorId?: string,
+  wikiFilters?: { genreId?: string; instrumentIds?: string[] }
+): Promise<ProjectDocument[]> {
   const queries = [
     Query.equal("published", true),
     Query.orderDesc("publishedAt"),
@@ -126,6 +146,12 @@ export async function listPublished(tagFilters?: string[], authorId?: string): P
     tagFilters.forEach(tag => {
       if (tag !== "All") queries.push(Query.contains("tags", [tag]));
     });
+  }
+  if (wikiFilters?.genreId) {
+    queries.push(Query.equal("wikiGenreId", wikiFilters.genreId));
+  }
+  if (wikiFilters?.instrumentIds?.length) {
+    queries.push(Query.contains("wikiInstrumentIds", wikiFilters.instrumentIds));
   }
   const { documents } = await databases.listDocuments(dbId, collId, queries);
   return documents as unknown as ProjectDocument[];
@@ -160,5 +186,9 @@ export async function copyProjectToMine(projectId: string): Promise<ProjectDocum
     payload,
     payloadVersion: source.payloadVersion,
     tags: source.tags || [],
+    wikiGenreId: source.wikiGenreId,
+    wikiInstrumentIds: source.wikiInstrumentIds,
+    wikiCompositionId: source.wikiCompositionId,
+    wikiComposerIds: source.wikiComposerIds,
   });
 }
