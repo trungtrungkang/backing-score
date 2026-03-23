@@ -8,7 +8,7 @@ import { listInstruments } from "@/lib/appwrite/instruments";
 import { searchCompositions, listCompositions } from "@/lib/appwrite/compositions";
 import { listGenres } from "@/lib/appwrite/genres";
 import type { ArtistDocument, InstrumentDocument, CompositionDocument, GenreDocument } from "@/lib/appwrite/types";
-import { Search, Music, Guitar, BookOpen, Tag, ChevronRight, User2, Disc3, Settings2 } from "lucide-react";
+import { Search, Music, Guitar, BookOpen, Tag, ChevronRight, ChevronDown, User2, Disc3, Settings2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -22,14 +22,15 @@ export default function WikiPage() {
   const [compositions, setCompositions] = useState<CompositionDocument[]>([]);
   const [genres, setGenres] = useState<GenreDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      listArtists(8),
-      listInstruments(8),
-      listCompositions(8),
-      listGenres(20),
+      listArtists(100),
+      listInstruments(100),
+      listCompositions(100),
+      listGenres(100),
     ]).then(([a, i, c, g]) => {
       setArtists(a);
       setInstruments(i);
@@ -37,6 +38,10 @@ export default function WikiPage() {
       setGenres(g);
     }).finally(() => setLoading(false));
   }, []);
+
+  const PREVIEW_COUNT = 8;
+  const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  const visible = <T,>(items: T[], key: string) => expanded[key] ? items : items.slice(0, PREVIEW_COUNT);
 
   useEffect(() => {
     if (!search.trim()) return;
@@ -122,10 +127,17 @@ export default function WikiPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <User2 className="w-5 h-5 text-violet-500" /> {t("artists")}
+                    <span className="text-sm font-normal text-zinc-400 ml-1">({artists.length})</span>
                   </h2>
+                  {artists.length > PREVIEW_COUNT && (
+                    <button onClick={() => toggle("artists")} className="flex items-center gap-1 text-sm font-semibold text-[#C8A856] hover:text-[#b8983e] transition-colors">
+                      {expanded.artists ? "Show Less" : `View All (${artists.length})`}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expanded.artists ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {artists.map((a) => (
+                  {visible(artists, "artists").map((a) => (
                     <Link href={`/wiki/artists/${a.slug}`} key={a.$id} className="group block">
                       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-2xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-500/10 flex items-center justify-center mb-3">
@@ -155,10 +167,17 @@ export default function WikiPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <Guitar className="w-5 h-5 text-amber-500" /> {t("instruments")}
+                    <span className="text-sm font-normal text-zinc-400 ml-1">({instruments.length})</span>
                   </h2>
+                  {instruments.length > PREVIEW_COUNT && (
+                    <button onClick={() => toggle("instruments")} className="flex items-center gap-1 text-sm font-semibold text-[#C8A856] hover:text-[#b8983e] transition-colors">
+                      {expanded.instruments ? "Show Less" : `View All (${instruments.length})`}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expanded.instruments ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {instruments.map((inst) => (
+                  {visible(instruments, "instruments").map((inst) => (
                     <Link href={`/wiki/instruments/${inst.slug}`} key={inst.$id} className="group block">
                       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-2xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-3">
@@ -185,10 +204,17 @@ export default function WikiPage() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     <Music className="w-5 h-5 text-sky-500" /> {t("compositions")}
+                    <span className="text-sm font-normal text-zinc-400 ml-1">({compositions.length})</span>
                   </h2>
+                  {compositions.length > PREVIEW_COUNT && (
+                    <button onClick={() => toggle("compositions")} className="flex items-center gap-1 text-sm font-semibold text-[#C8A856] hover:text-[#b8983e] transition-colors">
+                      {expanded.compositions ? "Show Less" : `View All (${compositions.length})`}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expanded.compositions ? "rotate-180" : ""}`} />
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {compositions.map((comp) => (
+                  {visible(compositions, "compositions").map((comp) => (
                     <Link href={`/wiki/compositions/${comp.slug}`} key={comp.$id} className="group block">
                       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-2xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
                         <Disc3 className="w-8 h-8 text-sky-500 mb-3" />
