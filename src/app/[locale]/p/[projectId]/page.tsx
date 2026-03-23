@@ -21,7 +21,9 @@ import { toast } from "sonner";
 import { EditorShell } from "@/components/editor/EditorShell";
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
-import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
+import { listCompositions } from "@/lib/appwrite/compositions";
+import { listArtists } from "@/lib/appwrite/artists";
+import type { InstrumentDocument, GenreDocument, CompositionDocument, ArtistDocument } from "@/lib/appwrite/types";
 import {
   normalizePayload,
   defaultDAWPayload,
@@ -52,6 +54,10 @@ export default function ProjectPage() {
   const [wikiInstrumentIds, setWikiInstrumentIds] = useState<string[]>([]);
   const [wikiInstruments, setWikiInstruments] = useState<InstrumentDocument[]>([]);
   const [wikiGenres, setWikiGenres] = useState<GenreDocument[]>([]);
+  const [wikiCompositionId, setWikiCompositionId] = useState<string | undefined>();
+  const [wikiComposerIds, setWikiComposerIds] = useState<string[]>([]);
+  const [wikiCompositions, setWikiCompositions] = useState<CompositionDocument[]>([]);
+  const [wikiComposers, setWikiComposers] = useState<ArtistDocument[]>([]);
 
   const router = useRouter();
   const t = useTranslations("ProjectDetail");
@@ -76,6 +82,8 @@ export default function ProjectPage() {
       setTags(doc.tags || []);
       setWikiGenreId(doc.wikiGenreId || undefined);
       setWikiInstrumentIds(doc.wikiInstrumentIds || []);
+      setWikiCompositionId(doc.wikiCompositionId || undefined);
+      setWikiComposerIds(doc.wikiComposerIds || []);
       setDescription(doc.description ?? "");
       try {
         const raw = JSON.parse(doc.payload) as Record<string, unknown> | null;
@@ -97,9 +105,11 @@ export default function ProjectPage() {
   useEffect(() => {
     load();
     // Fetch wiki data for pickers
-    Promise.all([listInstruments(100), listGenres(100)]).then(([insts, gens]) => {
+    Promise.all([listInstruments(100), listGenres(100), listCompositions(100), listArtists(100)]).then(([insts, gens, comps, arts]) => {
       setWikiInstruments(insts);
       setWikiGenres(gens);
+      setWikiCompositions(comps);
+      setWikiComposers(arts);
     }).catch(() => {});
   }, [load]);
 
@@ -116,6 +126,8 @@ export default function ProjectPage() {
         tags: tags,
         wikiGenreId: wikiGenreId || "",
         wikiInstrumentIds: wikiInstrumentIds,
+        wikiCompositionId: wikiCompositionId || "",
+        wikiComposerIds: wikiComposerIds,
       });
       setProject((prev) =>
         prev ? { ...prev, name: name.trim() || "Untitled" } : null
@@ -129,7 +141,7 @@ export default function ProjectPage() {
     } finally {
       setSaving(false);
     }
-  }, [project, projectId, isOwner, saving, name, payload, tags, wikiGenreId, wikiInstrumentIds]);
+  }, [project, projectId, isOwner, saving, name, payload, tags, wikiGenreId, wikiInstrumentIds, wikiCompositionId, wikiComposerIds]);
 
   const handleUploadScore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     let file = e.target.files?.[0];
@@ -337,6 +349,8 @@ export default function ProjectPage() {
           tags: tags,
           wikiGenreId: wikiGenreId || "",
           wikiInstrumentIds: wikiInstrumentIds,
+          wikiCompositionId: wikiCompositionId || "",
+          wikiComposerIds: wikiComposerIds,
         },
         publishPermissions
       );
@@ -452,6 +466,12 @@ export default function ProjectPage() {
             onWikiInstrumentIdsChange={isOwner ? setWikiInstrumentIds : undefined}
             wikiInstruments={wikiInstruments}
             wikiGenres={wikiGenres}
+            wikiCompositionId={wikiCompositionId}
+            onWikiCompositionIdChange={isOwner ? setWikiCompositionId : undefined}
+            wikiComposerIds={wikiComposerIds}
+            onWikiComposerIdsChange={isOwner ? setWikiComposerIds : undefined}
+            wikiCompositions={wikiCompositions}
+            wikiComposers={wikiComposers}
             uploadingScore={uploadingScore}
             uploadingAudio={uploadingAudio}
             uploadError={uploadError}
