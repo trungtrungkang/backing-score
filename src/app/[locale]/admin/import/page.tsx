@@ -987,6 +987,10 @@ function ScorePreviewModal({ file, title, onClose }: { file: string; title: stri
 
     return () => {
       canceled = true;
+      // Stop MIDI playback when dialog closes
+      if (midiPlayerRef.current && typeof (midiPlayerRef.current as any).stop === 'function') {
+        (midiPlayerRef.current as any).stop();
+      }
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;

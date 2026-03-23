@@ -313,6 +313,9 @@ export function EditorShell({
 
     // Cleanup on unmount
     return () => {
+      if (midiPlayerRef.current) {
+        midiPlayerRef.current.stop();
+      }
       if (audioManagerRef.current) {
         audioManagerRef.current.stop();
         audioManagerRef.current = null;

@@ -268,6 +268,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       const tempoTarget = payload.metadata?.tempo || 120;
       midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
       
+      // Apply pitch shift
       if (pitchShift !== 0) {
         midi.tracks.forEach(track => {
           track.notes.forEach(note => {
@@ -278,6 +279,32 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
           });
         });
       }
+
+      // Apply instrument overrides from EditorShell metadata
+      // Programs in metadata are 1-indexed (GM spec), @tonejs/midi uses 0-indexed
+      const instrumentOverrides = payload.metadata?.scoreMidiInstrumentOverrides;
+      if (instrumentOverrides) {
+        Object.entries(instrumentOverrides).forEach(([trackIdxStr, program]) => {
+          const trackIdx = parseInt(trackIdxStr, 10);
+          if (trackIdx >= 0 && trackIdx < midi.tracks.length && typeof program === 'number') {
+            midi.tracks[trackIdx].instrument.number = program - 1; // 1-indexed → 0-indexed
+          }
+        });
+      }
+
+      // Apply per-track volume by scaling note velocity
+      const perTrackVolume = payload.metadata?.scoreMidiPerTrackVolume;
+      if (perTrackVolume) {
+        Object.entries(perTrackVolume).forEach(([trackIdxStr, vol]) => {
+          const trackIdx = parseInt(trackIdxStr, 10);
+          if (trackIdx >= 0 && trackIdx < midi.tracks.length && typeof vol === 'number' && vol !== 1) {
+            midi.tracks[trackIdx].notes.forEach(note => {
+              note.velocity = Math.max(0.01, Math.min(1, note.velocity * vol));
+            });
+          }
+        });
+      }
+
       const newBytes = midi.toArray();
       let newBinaryString = "";
       for (let i = 0; i < newBytes.length; i++) {
@@ -293,7 +320,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       console.error("Failed to transform MIDI", e);
       setStretchedMidiBase64(midiBase64);
     }
-  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo]);
+  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo, payload.metadata?.scoreMidiInstrumentOverrides, payload.metadata?.scoreMidiPerTrackVolume]);
 
   useEffect(() => {
     if (audioManagerRef.current) {
