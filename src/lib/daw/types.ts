@@ -33,6 +33,8 @@ export interface FileMetadata {
   scoreSynthMuted?: boolean;
   scoreSynthSolo?: boolean;
   scoreSynthOffsetMs?: number;
+  scoreMidiInstrumentOverrides?: Record<number, number>; // trackIndex → GM program (1-indexed)
+  scoreMidiPerTrackVolume?: Record<number, number>; // trackIndex → volume (0-1)
 }
 
 export interface TimemapEntry {

@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 import { Waveform } from "./Waveform";
 import { PianoRollRegion } from "./PianoRollRegion";
 import { AudioManager } from "@/lib/audio/AudioManager";
-import { ChevronDown, ChevronUp, MoveRight, Trash2, Plus, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveRight, Trash2, Plus, Info, Music } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Midi } from "@tonejs/midi";
 import { useDialogs } from "@/components/ui/dialog-provider";
+import { GM_INSTRUMENTS, getGMInstrumentName } from "@/lib/score/midi-instruments";
 
 export interface TrackListProps {
   tracks: AudioTrack[];
@@ -41,6 +42,9 @@ export interface TrackListProps {
   isDarkMode?: boolean;
   midiBase64?: string | null;
   uploadingAudio?: boolean;
+  midiChannelByTrackId?: Record<string, number>;
+  midiInstrumentByTrackId?: Record<string, number>; // current GM program per track
+  onInstrumentChange?: (trackId: string, program: number | null) => void; // null = reset to default
 }
 
 export function TrackList({
@@ -72,9 +76,14 @@ export function TrackList({
   isDarkMode = false,
   midiBase64,
   uploadingAudio = false,
+  midiChannelByTrackId = {},
+  midiInstrumentByTrackId = {},
+  onInstrumentChange,
 }: TrackListProps) {
   const { confirm } = useDialogs();
   const [zoomLevel, setZoomLevel] = useState(4);
+  const [openInstTrackId, setOpenInstTrackId] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
@@ -370,7 +379,62 @@ export function TrackList({
                                 </PopoverContent>
                               </Popover>
                             )}
-                            {onDeleteTrack && (
+                            {track.type === "midi" && onInstrumentChange ? (
+                              <Popover open={openInstTrackId === track.id} onOpenChange={(open) => {
+                                setOpenInstTrackId(open ? track.id : null);
+                                if (!open) setExpandedCategory(null);
+                              }}>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    className="text-zinc-500 hover:text-amber-400 transition-colors p-0.5 outline-none"
+                                    title={`Change instrument${midiInstrumentByTrackId[track.id] ? ` (${getGMInstrumentName(midiInstrumentByTrackId[track.id])})` : ''}`}
+                                  >
+                                    <Music className="w-3.5 h-3.5" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="right" align="start" className="w-56 bg-zinc-900 border-zinc-700 p-0 shadow-xl outline-none max-h-[320px] overflow-y-auto">
+                                  {/* Default option */}
+                                  <button
+                                    onClick={() => { onInstrumentChange(track.id, null); setOpenInstTrackId(null); }}
+                                    className={cn(
+                                      "w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors border-b border-zinc-800 flex items-center gap-2",
+                                      !midiInstrumentByTrackId[track.id] ? "text-amber-400 font-semibold" : "text-zinc-300"
+                                    )}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" style={{ opacity: !midiInstrumentByTrackId[track.id] ? 1 : 0 }} />
+                                    ↺ Default (auto-detect)
+                                  </button>
+                                  {/* Categories */}
+                                  {GM_INSTRUMENTS.map(cat => (
+                                    <div key={cat.category}>
+                                      <button
+                                        onClick={() => setExpandedCategory(expandedCategory === cat.category ? null : cat.category)}
+                                        className="w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors flex items-center justify-between"
+                                      >
+                                        {cat.category}
+                                        <ChevronDown className={cn("w-3 h-3 transition-transform", expandedCategory === cat.category && "rotate-180")} />
+                                      </button>
+                                      {expandedCategory === cat.category && cat.instruments.map(inst => {
+                                        const isActive = midiInstrumentByTrackId[track.id] === inst.program;
+                                        return (
+                                          <button
+                                            key={inst.program}
+                                            onClick={() => { onInstrumentChange(track.id, inst.program); setOpenInstTrackId(null); }}
+                                            className={cn(
+                                              "w-full text-left px-4 py-1.5 text-xs hover:bg-zinc-800 transition-colors flex items-center gap-2",
+                                              isActive ? "text-amber-400 font-medium bg-zinc-800/60" : "text-zinc-400"
+                                            )}
+                                          >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" style={{ opacity: isActive ? 1 : 0 }} />
+                                            {inst.name}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  ))}
+                                </PopoverContent>
+                              </Popover>
+                            ) : onDeleteTrack && track.type !== "midi" ? (
                               <button
                                 onClick={async () => {
                                   if (await confirm({ title: "Delete Track", description: `Are you sure you want to delete the track "${track.name}"?`, confirmText: "Delete", cancelText: "Cancel" })) {
@@ -382,7 +446,7 @@ export function TrackList({
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -406,17 +470,26 @@ export function TrackList({
                       </div>
                     </div>
                   <div className="flex-1 h-full bg-zinc-900 dark:bg-[#111115] relative flex items-center opacity-80 group-hover:opacity-100 transition-all">
-                    {track.type === "midi" ? (
-                      <PianoRollRegion
-                        base64Midi={midiBase64 || null}
-                        positionMs={positionMs}
-                        durationMs={durationMs}
-                        offsetMs={track.offsetMs}
-                        onOffsetChange={(offset) => onOffsetChange(track.id, offset)}
-                        color={isMute ? "#52525b" : scheme.color}
-                        progressColor={isMute ? "#3f3f46" : scheme.progress}
-                      />
-                    ) : (
+                    {track.type === "midi" ? (() => {
+                      // Extract track index for per-part MIDI tracks (score-midi-0, score-midi-1...)
+                      const midiTrackIndex = track.id.startsWith("score-midi-")
+                        ? parseInt(track.id.replace("score-midi-", ""), 10)
+                        : undefined;
+                      const midiChannel = midiChannelByTrackId[track.id];
+                      return (
+                        <PianoRollRegion
+                          base64Midi={midiBase64 || null}
+                          positionMs={positionMs}
+                          durationMs={durationMs}
+                          offsetMs={track.offsetMs}
+                          onOffsetChange={(offset) => onOffsetChange(track.id, offset)}
+                          color={isMute ? "#52525b" : scheme.color}
+                          progressColor={isMute ? "#3f3f46" : scheme.progress}
+                          trackIndex={midiTrackIndex}
+                          midiChannel={midiChannel}
+                        />
+                      );
+                    })() : (
                       <Waveform
                         buffer={buffer}
                         positionMs={positionMs}

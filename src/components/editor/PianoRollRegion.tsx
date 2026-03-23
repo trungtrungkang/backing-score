@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Midi } from "@tonejs/midi";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,8 @@ interface PianoRollRegionProps {
   className?: string;
   color?: string;
   progressColor?: string;
+  trackIndex?: number; // When set, only render notes from this specific MIDI track
+  midiChannel?: number; // When set, filter notes by MIDI channel across all tracks
 }
 
 export function PianoRollRegion({
@@ -22,35 +24,90 @@ export function PianoRollRegion({
   offsetMs = 0,
   onOffsetChange,
   className,
-  color = "#8B5CF6", // Purple by default
+  color = "#8B5CF6",
   progressColor = "#7C3AED",
+  trackIndex,
+  midiChannel,
 }: PianoRollRegionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Use refs for values that change frequently to avoid useEffect teardown/setup
+  const positionMsRef = useRef(positionMs);
+  const durationMsRef = useRef(durationMs);
+  const offsetMsRef = useRef(offsetMs);
+  const colorRef = useRef(color);
+  const progressColorRef = useRef(progressColor);
+
+  // Keep refs in sync
+  positionMsRef.current = positionMs;
+  durationMsRef.current = durationMs;
+  offsetMsRef.current = offsetMs;
+  colorRef.current = color;
+  progressColorRef.current = progressColor;
+
   // Parse MIDI data
   const midiDataRef = useRef<Midi | null>(null);
+  const notesRef = useRef<any[]>([]);
+  const noteStatsRef = useRef({ minPitch: 0, maxPitch: 127, pitchRange: 127, minTimeMs: 0 });
 
   useEffect(() => {
     if (!base64Midi) {
       midiDataRef.current = null;
+      notesRef.current = [];
       return;
     }
     
     try {
-      // Decode Base64 safely
       const binaryString = window.atob(base64Midi.split(",")[1] || base64Midi);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      midiDataRef.current = new Midi(bytes);
+      const midi = new Midi(bytes);
+      midiDataRef.current = midi;
+
+      // Pre-compute filtered notes and stats once
+      let allNotes: any[];
+      if (midiChannel !== undefined) {
+        allNotes = midi.tracks.flatMap(t => 
+          t.notes.filter(n => n.midi !== undefined && t.channel === midiChannel)
+        );
+        if (allNotes.length === 0) {
+          if (trackIndex !== undefined && midi.tracks[trackIndex]) {
+            allNotes = midi.tracks[trackIndex].notes;
+          } else {
+            allNotes = midi.tracks.flatMap(t => t.notes);
+          }
+        }
+      } else if (trackIndex !== undefined) {
+        allNotes = midi.tracks[trackIndex]?.notes || [];
+      } else {
+        allNotes = midi.tracks.flatMap(t => t.notes);
+      }
+      notesRef.current = allNotes;
+
+      // Pre-compute pitch range and time offset
+      if (allNotes.length > 0) {
+        let minPitch = 127, maxPitch = 0, minTimeMs = Infinity;
+        allNotes.forEach(n => {
+          if (n.midi < minPitch) minPitch = n.midi;
+          if (n.midi > maxPitch) maxPitch = n.midi;
+          const startMs = n.time * 1000;
+          if (startMs < minTimeMs) minTimeMs = startMs;
+        });
+        if (minTimeMs === Infinity) minTimeMs = 0;
+        minPitch = Math.max(0, minPitch - 5);
+        maxPitch = Math.min(127, maxPitch + 5);
+        noteStatsRef.current = { minPitch, maxPitch, pitchRange: maxPitch - minPitch, minTimeMs };
+      }
     } catch (err) {
       console.error("Failed to parse Base64 MIDI for Piano Roll", err);
       midiDataRef.current = null;
+      notesRef.current = [];
     }
-  }, [base64Midi]);
+  }, [base64Midi, trackIndex, midiChannel]);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -71,7 +128,6 @@ export function PianoRollRegion({
     if (!isDragging || !onOffsetChange || !dimensions.width || !durationMs) return;
     const deltaX = e.clientX - dragStartX.current;
     const deltaMs = (deltaX / dimensions.width) * durationMs;
-    // Don't allow negative offsetMs (audio before 0 time)
     const newOffset = Math.max(0, startOffsetMs.current + deltaMs);
     onOffsetChange(newOffset);
   };
@@ -81,140 +137,114 @@ export function PianoRollRegion({
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  // Handle Resize of the outer container
+  // Handle Resize
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
-        setDimensions({
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        });
+        setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
       }
     });
-
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
 
-  // Render Piano Roll
+  // Render Piano Roll — optimized: set up RAF loop once, read refs for per-frame values
+  const dimensionsRef = useRef(dimensions);
+  dimensionsRef.current = dimensions;
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !midiDataRef.current || dimensions.width === 0 || dimensions.height === 0 || durationMs <= 0) return;
+    if (!canvas || dimensions.width === 0 || dimensions.height === 0) return;
 
     const scrollContainer = canvas.closest('.overflow-x-auto') as HTMLDivElement;
     if (!scrollContainer) return;
 
     let rafId: number;
+    let needsDraw = true;
 
     const draw = () => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      const allNotes = notesRef.current;
+      const curDurationMs = durationMsRef.current;
+      const curPositionMs = positionMsRef.current;
+      const curOffsetMs = offsetMsRef.current;
+      const curColor = colorRef.current;
+      const curProgressColor = progressColorRef.current;
+      const { width, height } = dimensionsRef.current;
+
+      if (allNotes.length === 0 || curDurationMs <= 0 || width === 0) return;
+
       const visibleWidth = scrollContainer.clientWidth - 256;
       const scrollLeft = scrollContainer.scrollLeft;
       const dpr = window.devicePixelRatio || 1;
 
-      // Restrict Canvas Memory Size to Visible Width
       if (canvas.width !== visibleWidth * dpr) {
         canvas.width = visibleWidth * dpr;
         canvas.style.width = `${visibleWidth}px`;
       }
-      if (canvas.height !== dimensions.height * dpr) {
-        canvas.height = dimensions.height * dpr;
-        canvas.style.height = `${dimensions.height}px`;
+      if (canvas.height !== height * dpr) {
+        canvas.height = height * dpr;
+        canvas.style.height = `${height}px`;
       }
 
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
-
-      const width = dimensions.width;
-      const height = dimensions.height;
-
-      // Clear Visible Area
       ctx.clearRect(0, 0, visibleWidth, height);
-
-      // Translate context so drawing coordinates perfectly map absolute document pixels
       ctx.translate(-scrollLeft, 0);
 
-      const midi = midiDataRef.current;
-      if (!midi || midi.tracks.length === 0) return;
-
-      // Flatten notes from all tracks
-      const allNotes = midi.tracks.flatMap(t => t.notes);
-      if (allNotes.length === 0) return;
-
-      // Find min/max pitch to scale Y axis efficiently, and find absolute start time to normalize
-      let minPitch = 127;
-      let maxPitch = 0;
-      let minTimeMs = Infinity;
-      
-      allNotes.forEach(n => {
-        if (n.midi < minPitch) minPitch = n.midi;
-        if (n.midi > maxPitch) maxPitch = n.midi;
-        const startMs = n.time * 1000;
-        if (startMs < minTimeMs) minTimeMs = startMs;
-      });
-      
-      // If no valid time found, default to 0
-      if (minTimeMs === Infinity) minTimeMs = 0;
-
-      // Add padding
-      minPitch = Math.max(0, minPitch - 5);
-      maxPitch = Math.min(127, maxPitch + 5);
-      const pitchRange = maxPitch - minPitch;
-
-      const progressX = (positionMs / durationMs) * width;
-
-      // Optimize: Only draw notes that are visible (with a 500px safe buffer so long notes don't pop out)
+      const { minPitch, pitchRange, minTimeMs } = noteStatsRef.current;
       const minDrawX = Math.max(0, scrollLeft - 500);
       const maxDrawX = Math.min(width, scrollLeft + visibleWidth + 500);
 
-      allNotes.forEach((note) => {
-        // Normalize time so the first note is exactly at 0
+      allNotes.forEach((note: any) => {
         const startMs = (note.time * 1000) - minTimeMs;
         const durMs = note.duration * 1000;
         const endMs = startMs + durMs;
 
-        const x = ((startMs + offsetMs) / durationMs) * width;
-        const noteWidth = Math.max(2, (durMs / durationMs) * width); // minimum 2px width
+        const x = ((startMs + curOffsetMs) / curDurationMs) * width;
+        const noteWidth = Math.max(2, (durMs / curDurationMs) * width);
         
-        if (x + noteWidth < minDrawX || x > maxDrawX) {
-          return; // Skip drawing notes that are outside the visible port
-        }
+        if (x + noteWidth < minDrawX || x > maxDrawX) return;
 
-        // Invert Y: highest pitch at top (y=0)
         const normalizedPitch = (note.midi - minPitch) / pitchRange;
-        const y = height - (normalizedPitch * height) - 4; // 4px note height
-        const noteHeight = 4;
+        const y = height - (normalizedPitch * height) - 4;
 
-        // Highlight ONLY if the playhead is actively inside the note's duration
-        if (startMs + offsetMs <= positionMs && endMs + offsetMs >= positionMs) {
-          ctx.fillStyle = progressColor; 
-        } else {
-          ctx.fillStyle = color;
-        }
+        ctx.fillStyle = (startMs + curOffsetMs <= curPositionMs && endMs + curOffsetMs >= curPositionMs)
+          ? curProgressColor
+          : curColor;
 
-        ctx.fillRect(x, y, noteWidth, noteHeight);
+        ctx.fillRect(x, y, noteWidth, 4);
       });
     };
 
-    const handleScroll = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(draw);
+    // Animation loop — only draws when needed
+    const tick = () => {
+      if (needsDraw) {
+        draw();
+        needsDraw = false;
+      }
+      rafId = requestAnimationFrame(tick);
     };
 
-    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-    
-    draw();
+    // Mark as needing redraw whenever positionMs changes (via MutationObserver on a data attribute)
+    const markDirty = () => { needsDraw = true; };
+
+    scrollContainer.addEventListener("scroll", markDirty, { passive: true });
+    rafId = requestAnimationFrame(tick);
+
+    // Use an interval to mark dirty at 30fps instead of re-running the entire useEffect at 60fps
+    const dirtyInterval = setInterval(markDirty, 33);
 
     return () => {
-      scrollContainer.removeEventListener("scroll", handleScroll);
-      if (rafId) cancelAnimationFrame(rafId);
+      scrollContainer.removeEventListener("scroll", markDirty);
+      cancelAnimationFrame(rafId);
+      clearInterval(dirtyInterval);
     };
-  }, [positionMs, durationMs, offsetMs, color, progressColor, base64Midi, dimensions]);
+  }, [dimensions, base64Midi, trackIndex, midiChannel]); // Note: positionMs NOT in deps
 
   return (
     <div 

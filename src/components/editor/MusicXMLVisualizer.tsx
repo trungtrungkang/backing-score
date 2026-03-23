@@ -23,11 +23,15 @@ export interface MusicXMLVisualizerProps {
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
+import { injectMidiInstruments } from "@/lib/score/midi-instruments";
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
   isWaitMode = false, isWaiting = false, practiceTrackIds, className, defaultScale
 }: MusicXMLVisualizerProps) {
+  // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
+  const positionMsRef = useRef(positionMs);
+  positionMsRef.current = positionMs;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [renderVersion, setRenderVersion] = useState(0); // increments when SVG is updated
@@ -249,7 +253,9 @@ export function MusicXMLVisualizer({
         }
         
         const safeMidiText = serializer.serializeToString(midiXmlDoc);
-        await midiProxy.loadData(safeMidiText);
+        // Inject MIDI instrument program changes for proper instrument sounds
+        const enrichedMidiText = injectMidiInstruments(safeMidiText);
+        await midiProxy.loadData(enrichedMidiText);
         
         let midiStr = '';
         if (!canceled) {
@@ -425,109 +431,133 @@ export function MusicXMLVisualizer({
   }, [renderVersion, timemap]);
 
   // Playback position -> active measure highlight & SMOOTH PLAYHEAD
+  // Uses a RAF loop instead of useEffect[positionMs] to avoid main-thread blocking
+  // from expensive SVG layout queries (getBBox, getScreenCTM, getBoundingClientRect)
+  const playheadRafRef = useRef<number>(0);
+  const lastPlayheadMsRef = useRef(-1);
+
   useEffect(() => {
-    if (!timemap || timemap.length === 0 || renderVersion === 0) return;
-
-    let currentEvent: { measure: number, timeMs: number } | null = null;
-    let nextEvent: { measure: number, timeMs: number } | null = null;
-
-    for (let i = 0; i < timemap.length; i++) {
-      if (positionMs >= timemap[i].timeMs) {
-        currentEvent = timemap[i];
-      } else {
-        nextEvent = timemap[i];
-        break;
-      }
+    if (!timemap || timemap.length === 0 || renderVersion === 0) {
+      return;
     }
 
-    const container = svgContainerRef.current;
-    const playhead = playheadRef.current;
+    const updatePlayhead = () => {
+      const currentPosMs = positionMsRef.current;
+      // Skip if position hasn't changed enough (throttle SVG queries)
+      if (Math.abs(currentPosMs - lastPlayheadMsRef.current) < 30) {
+        playheadRafRef.current = requestAnimationFrame(updatePlayhead);
+        return;
+      }
+      lastPlayheadMsRef.current = currentPosMs;
 
-    if (currentEvent && container && playhead && measuresCacheRef.current) {
-      // Calculate interpolation progress (0.0 to 1.0) inside the current measure
-      let progress = 0;
-      if (nextEvent) {
-        const duration = nextEvent.timeMs - currentEvent.timeMs;
-        if (duration > 0) {
-          progress = Math.max(0, Math.min(1, (positionMs - currentEvent.timeMs) / duration));
+      let currentEvent: { measure: number, timeMs: number } | null = null;
+      let nextEvent: { measure: number, timeMs: number } | null = null;
+
+      for (let i = 0; i < timemap.length; i++) {
+        if (currentPosMs >= timemap[i].timeMs) {
+          currentEvent = timemap[i];
+        } else {
+          nextEvent = timemap[i];
+          break;
         }
       }
 
-      const physicalIndex = getPhysicalMeasure(currentEvent.measure, measureMap);
-      const measureEl = measuresCacheRef.current[physicalIndex - 1] as SVGGElement | undefined;
+      const container = svgContainerRef.current;
+      const playhead = playheadRef.current;
 
-      if (measureEl) {
-        // Highlight active entire measure box (Force DOM flush if Wait Mode actively mutates)
-        if (currentEvent.measure !== activeMeasureRef.current || prevIsWaitModeRef.current !== isWaitMode) {
-          activeMeasureRef.current = currentEvent.measure;
-          prevIsWaitModeRef.current = isWaitMode;
-          highlightMeasure(measureEl, isPlaying);
-        }
-
-        // --- SAFARI-SAFE GET_BOUNDING_CLIENT_RECT ---
-        // Safari has a bug where getBoundingClientRect() on <g> returns 0 if it contains <use> tags.
-        // We use getBBox() and getScreenCTM() to manually compute the screen rect.
-        const bbox = measureEl.getBBox();
-        const ctm = measureEl.getScreenCTM();
-        if (!ctm) return;
-
-        // Calculate actual screen coordinates
-        const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
-        const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
-        const screenWidth = bbox.width * ctm.a;
-        const screenHeight = bbox.height * ctm.d;
-
-        const scrollContainerNode = containerRef.current;
-        if (!scrollContainerNode) return;
-
-        const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
-        const scrollLeft = scrollContainerNode.scrollLeft || 0;
-        const scrollTop = scrollContainerNode.scrollTop || 0;
-
-        const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
-        const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
-
-        // Calculate true width by interpolating to the next measure's left edge
-        let trueWidth = screenWidth;
+      if (currentEvent && container && playhead && measuresCacheRef.current) {
+        let progress = 0;
         if (nextEvent) {
-          const nextPhysicalIndex = getPhysicalMeasure(nextEvent.measure, measureMap);
-          const nextMeasureEl = measuresCacheRef.current[nextPhysicalIndex - 1] as SVGGElement | undefined;
-          if (nextMeasureEl) {
-            const nextBbox = nextMeasureEl.getBBox();
-            const nextCtm = nextMeasureEl.getScreenCTM();
-            if (nextCtm) {
-              const nextScreenLeft = nextBbox.x * nextCtm.a + nextBbox.y * nextCtm.c + nextCtm.e;
-              const nextScreenTop = nextBbox.x * nextCtm.b + nextBbox.y * nextCtm.d + nextCtm.f;
-
-              // Only use next measure's left if it's on the same staff system
-              if (Math.abs(nextScreenTop - screenTop) < 50 && nextScreenLeft > screenLeft) {
-                trueWidth = nextScreenLeft - screenLeft;
-              }
-            }
+          const duration = nextEvent.timeMs - currentEvent.timeMs;
+          if (duration > 0) {
+            progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
           }
         }
 
-        // Apply interpolation
-        const playheadX = startX + (trueWidth * progress);
-        const playheadY = absoluteY;
+        const physicalIndex = getPhysicalMeasure(currentEvent.measure, measureMap);
+        const measureEl = measuresCacheRef.current[physicalIndex - 1] as SVGGElement | undefined;
 
-        if (isWaitMode) {
-          playhead.style.opacity = '0';
+        if (measureEl) {
+          if (currentEvent.measure !== activeMeasureRef.current || prevIsWaitModeRef.current !== isWaitMode) {
+            activeMeasureRef.current = currentEvent.measure;
+            prevIsWaitModeRef.current = isWaitMode;
+            highlightMeasure(measureEl, isPlaying);
+          }
+
+          const bbox = measureEl.getBBox();
+          const ctm = measureEl.getScreenCTM();
+          if (ctm) {
+            const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+            const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+            const screenWidth = bbox.width * ctm.a;
+            const screenHeight = bbox.height * ctm.d;
+
+            const scrollContainerNode = containerRef.current;
+            if (scrollContainerNode) {
+              const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+              const scrollLeft = scrollContainerNode.scrollLeft || 0;
+              const scrollTop = scrollContainerNode.scrollTop || 0;
+
+              const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
+              const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+
+              let trueWidth = screenWidth;
+              if (nextEvent) {
+                const nextPhysicalIndex = getPhysicalMeasure(nextEvent.measure, measureMap);
+                const nextMeasureEl = measuresCacheRef.current[nextPhysicalIndex - 1] as SVGGElement | undefined;
+                if (nextMeasureEl) {
+                  const nextBbox = nextMeasureEl.getBBox();
+                  const nextCtm = nextMeasureEl.getScreenCTM();
+                  if (nextCtm) {
+                    const nextScreenLeft = nextBbox.x * nextCtm.a + nextBbox.y * nextCtm.c + nextCtm.e;
+                    const nextScreenTop = nextBbox.x * nextCtm.b + nextBbox.y * nextCtm.d + nextCtm.f;
+                    if (Math.abs(nextScreenTop - screenTop) < 50 && nextScreenLeft > screenLeft) {
+                      trueWidth = nextScreenLeft - screenLeft;
+                    }
+                  }
+                }
+              }
+
+              const playheadX = startX + (trueWidth * progress);
+              const playheadY = absoluteY;
+
+              if (isWaitMode) {
+                playhead.style.opacity = '0';
+              } else {
+                playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
+                playhead.style.height = `${screenHeight}px`;
+                playhead.style.opacity = '1';
+              }
+            }
+          }
         } else {
-          playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
-          playhead.style.height = `${screenHeight}px`;
-          playhead.style.opacity = '1';
+          playhead.style.opacity = '0';
         }
       } else {
-        playhead.style.opacity = '0';
+        if (playheadRef.current) playheadRef.current.style.opacity = '0';
+        highlightMeasure(null, false);
+        activeMeasureRef.current = null;
       }
+
+      if (isPlaying) {
+        playheadRafRef.current = requestAnimationFrame(updatePlayhead);
+      }
+    };
+
+    if (isPlaying) {
+      lastPlayheadMsRef.current = -1; // Force first update
+      playheadRafRef.current = requestAnimationFrame(updatePlayhead);
     } else {
-      if (playheadRef.current) playheadRef.current.style.opacity = '0';
-      highlightMeasure(null, false);
-      activeMeasureRef.current = null;
+      // One-shot update when not playing (for seek/stop position)
+      lastPlayheadMsRef.current = -1;
+      updatePlayhead();
     }
+
+    return () => {
+      if (playheadRafRef.current) cancelAnimationFrame(playheadRafRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positionMs, isPlaying, timemap, measureMap, renderVersion, isWaitMode]);
+  }, [isPlaying, timemap, measureMap, renderVersion, isWaitMode]);
 
   // Handle clicking on measures to seek
   const handleSvgClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -627,11 +657,12 @@ export function MusicXMLVisualizer({
   // Active Playback Highlighting (Blue) + Inverse Sieve Extraction
   useEffect(() => {
     if (isPlaying || (isWaitMode && !isWaiting)) {
-      if (Math.abs(positionMs - lastActiveQueryMsRef.current) > 50 && !isQueryingActiveNotesRef.current && workerProxyRef.current) {
-        lastActiveQueryMsRef.current = positionMs;
+      const currentPosMs = positionMsRef.current;
+      if (Math.abs(currentPosMs - lastActiveQueryMsRef.current) > 50 && !isQueryingActiveNotesRef.current && workerProxyRef.current) {
+        lastActiveQueryMsRef.current = currentPosMs;
         isQueryingActiveNotesRef.current = true;
 
-        const qPos = Math.round(positionMs);
+        const qPos = Math.round(currentPosMs);
         workerProxyRef.current.getElementsAtTime(qPos).then((data: any) => {
           isQueryingActiveNotesRef.current = false;
           const container = svgContainerRef.current;
@@ -679,13 +710,15 @@ export function MusicXMLVisualizer({
     } else if (!isPlaying && !isWaitMode && svgContainerRef.current) {
       svgContainerRef.current.querySelectorAll(".note-playing-correct").forEach(el => el.classList.remove("note-playing-correct"));
     }
-  }, [positionMs, isPlaying, isWaitMode, isWaiting]);
+    // positionMs intentionally read from ref, not deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, isWaitMode, isWaiting]);
 
   // Wait Mode Precedential Targeting Highlighting (Red) + Inverse Sieve Extraction
   useEffect(() => {
     if (isWaitMode && isWaiting && workerProxyRef.current && svgContainerRef.current) {
       const container = svgContainerRef.current;
-      const qPos = Math.round(positionMs);
+      const qPos = Math.round(positionMsRef.current);
 
       workerProxyRef.current.getElementsAtTime(qPos + 5).then((data: any) => {
         const notes = data?.notes || [];
@@ -764,7 +797,9 @@ export function MusicXMLVisualizer({
     } else if (svgContainerRef.current) {
       svgContainerRef.current.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
     }
-  }, [isWaitMode, isWaiting, positionMs, renderVersion, practiceTrackIds]);
+    // positionMs intentionally read from ref, not deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWaitMode, isWaiting, renderVersion, practiceTrackIds]);
 
   const hasSvg = svgContentRef.current !== null;
 

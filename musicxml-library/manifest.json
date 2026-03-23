@@ -1,0 +1,87 @@
+{
+  "source": "music21 corpus",
+  "license": "Public Domain / BSD",
+  "total": 8,
+  "pieces": [
+    {
+      "file": "bach/bwv1.6.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv1.6.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv1.6.mxl",
+      "parts": 5,
+      "measures": 21,
+      "key": "F major"
+    },
+    {
+      "file": "bach/bwv10.7.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv10.7.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv10.7.mxl",
+      "parts": 4,
+      "measures": 22,
+      "key": "g minor"
+    },
+    {
+      "file": "bach/bwv101.7.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv101.7.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv101.7.mxl",
+      "parts": 4,
+      "measures": 15,
+      "key": "d minor"
+    },
+    {
+      "file": "bach/bwv102.7.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv102.7.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv102.7.mxl",
+      "parts": 4,
+      "measures": 15,
+      "key": "c minor"
+    },
+    {
+      "file": "bach/bwv103.6.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv103.6.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv103.6.mxl",
+      "parts": 4,
+      "measures": 15,
+      "key": "b minor"
+    },
+    {
+      "file": "bach/bwv104.6.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv104.6.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv104.6.mxl",
+      "parts": 4,
+      "measures": 12,
+      "key": "A major"
+    },
+    {
+      "file": "bach/bwv108.6.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv108.6.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv108.6.mxl",
+      "parts": 4,
+      "measures": 16,
+      "key": "b minor"
+    },
+    {
+      "file": "bach/bwv11.6.musicxml",
+      "composer": "Johann Sebastian Bach",
+      "composer_key": "bach",
+      "title": "bwv11.6.mxl",
+      "corpus_path": "/private/tmp/music21-env/lib/python3.13/site-packages/music21/corpus/bach/bwv11.6.mxl",
+      "parts": 4,
+      "measures": 23,
+      "key": "D major"
+    }
+  ]
+}

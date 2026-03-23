@@ -112,6 +112,8 @@ export function EditorShell({
   const [isPlaying, setIsPlaying] = useState(false);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
+  const positionMsRef = useRef(0);
+  positionMsRef.current = positionMs;
   const [durationMs, setDurationMs] = useState(0);
   const requestRef = useRef<number>(0);
   const prevFilesRef = useRef<string | null>(null);
@@ -144,6 +146,20 @@ export function EditorShell({
   const midiPlayStartTimeRef = useRef<number>(0);
   const midiPlayStartPosRef = useRef<number>(0);
 
+  // Phase 22: Per-part MIDI track info extracted from MIDI data
+  interface ScoreMidiTrackInfo {
+    index: number;       // Track index in @tonejs/midi
+    name: string;        // Track/instrument name
+    channel: number;     // MIDI channel
+    noteCount: number;   // Number of notes in this track
+    instrument: string;  // GM instrument name
+  }
+  const [scoreMidiTracks, setScoreMidiTracks] = useState<ScoreMidiTrackInfo[]>([]);
+  const [scoreMidiMuted, setScoreMidiMuted] = useState<Record<number, boolean>>({});
+  const [scoreMidiInstrumentOverride, setScoreMidiInstrumentOverride] = useState<Record<number, number>>(
+    () => payload.metadata?.scoreMidiInstrumentOverrides || {} // Load from saved metadata
+  );
+
   const handleMidiExtracted = useCallback((base64: string) => {
     setMidiBase64(base64);
     try {
@@ -160,10 +176,24 @@ export function EditorShell({
       }));
       setMidiStartOffsetMs(minMs === Infinity ? 0 : minMs);
       setMidiDurationMs(maxMs);
+
+      // Extract per-part track info
+      const trackInfos: ScoreMidiTrackInfo[] = midi.tracks
+        .map((t, i) => ({
+          index: i,
+          name: t.name || `Track ${i + 1}`,
+          channel: t.channel ?? i,
+          noteCount: t.notes.length,
+          instrument: t.instrument?.name || "Piano",
+        }))
+        .filter(t => t.noteCount > 0); // Only tracks with notes
+      setScoreMidiTracks(trackInfos);
+      console.log(`[EditorShell] Extracted ${trackInfos.length} MIDI tracks:`, trackInfos.map(t => t.name));
     } catch (err) {
       console.error("Failed to parse initial MIDI offset", err);
       setMidiStartOffsetMs(0);
       setMidiDurationMs(0);
+      setScoreMidiTracks([]);
     }
   }, []);
 
@@ -217,16 +247,36 @@ export function EditorShell({
       // Override internal verovio default MIDI tempos for perfect Sync
       midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
       
-      if (pitchShift !== 0) {
-        midi.tracks.forEach(track => {
+      midi.tracks.forEach((track, trackIndex) => {
+        // Apply pitch shift
+        if (pitchShift !== 0) {
           track.notes.forEach(note => {
             const newMidi = note.midi + pitchShift;
             if (newMidi >= 0 && newMidi <= 127) {
               note.midi = newMidi;
             }
           });
-        });
-      }
+        }
+
+        // Phase 22: Mute tracks by clearing notes for muted channels
+        if (scoreMidiMuted[trackIndex]) {
+          track.notes.length = 0;
+        }
+
+        // Apply instrument override (change MIDI program/channel instrument)
+        if (scoreMidiInstrumentOverride[trackIndex] !== undefined) {
+          track.instrument.number = scoreMidiInstrumentOverride[trackIndex] - 1; // @tonejs/midi uses 0-indexed
+        }
+
+        // Apply per-track volume via velocity scaling (read from metadata, not reactive)
+        const perTrackVols = payload.metadata?.scoreMidiPerTrackVolume;
+        const trackVolume = perTrackVols?.[trackIndex];
+        if (trackVolume !== undefined && trackVolume < 1.0) {
+          track.notes.forEach(note => {
+            note.velocity = Math.max(0.01, note.velocity * trackVolume);
+          });
+        }
+      });
 
       const newBytes = midi.toArray();
       let newBinaryString = "";
@@ -235,11 +285,11 @@ export function EditorShell({
       }
       const newBase64 = "data:audio/midi;base64," + window.btoa(newBinaryString);
       setStretchedMidiBase64(newBase64);
-      console.log(`[EditorShell] Generated synced MIDI base64 (tempo=${tempoTarget}, rate=${playbackRate}, pitch=${pitchShift})`);
 
-      // We must reload the player if it's currently loaded
-      if (midiPlayerRef.current && midiPlayerRef.current.currentTime > 0) {
-        // Force the player to accept the new source instantly if the user changes it mid-song
+      // Only update the player's src when NOT playing.
+      // html-midi-player can't hot-swap src without audio interruption,
+      // so mute/instrument changes take effect on next play.
+      if (midiPlayerRef.current && !isPlayingRef.current) {
         midiPlayerRef.current.src = newBase64;
       }
 
@@ -247,7 +297,11 @@ export function EditorShell({
       console.error("[EditorShell] Failed to transform MIDI for pitch/time shift", e);
       setStretchedMidiBase64(midiBase64); // fallback
     }
-  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo]);
+    // Note: scoreMidiPerTrackVolume intentionally excluded from deps — volume changes
+    // save to metadata but don't trigger MIDI regeneration during playback to avoid
+    // audio interruption. Volume is applied whenever MIDI regenerates for other reasons.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo, scoreMidiMuted, scoreMidiInstrumentOverride]);
 
   useEffect(() => {
     // Initialize standard Web Audio Manager
@@ -415,7 +469,9 @@ export function EditorShell({
 
     setPositionMs(prev => {
       const roundedPos = Math.round(currentPos);
-      if (Math.abs(prev - roundedPos) < 16) return prev;
+      // Throttle React re-renders to ~20fps (50ms) instead of ~60fps (16ms)
+      // RAF loop still runs at native framerate for accurate internal clock
+      if (Math.abs(prev - roundedPos) < 50) return prev;
       return roundedPos;
     });
 
@@ -576,7 +632,7 @@ export function EditorShell({
 
     if (midiPlayerRef.current && stretchedMidiBase64 && !payload.metadata?.scoreSynthMuted) {
       const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
-      const targetTimeSecs = (positionMs - offsetMs + midiStartOffsetMs) / 1000;
+      const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000;
       
       if (targetTimeSecs >= 0) {
         midiPlayerRef.current.currentTime = targetTimeSecs;
@@ -598,13 +654,13 @@ export function EditorShell({
     // Capture accurate Start Times for Smooth MIDI Telemetry Interpolation Tracker
     if (payload.audioTracks.length === 0) {
       midiPlayStartTimeRef.current = performance.now();
-      midiPlayStartPosRef.current = positionMs;
+      midiPlayStartPosRef.current = positionMsRef.current;
     }
 
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
     isPlayingRef.current = true;
-  }, [payload.audioTracks.length, stretchedMidiBase64, payload.metadata?.scoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
+  }, [payload.audioTracks.length, stretchedMidiBase64, payload.metadata?.scoreSynthMuted, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handlePause = useCallback(() => {
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
@@ -917,25 +973,93 @@ export function EditorShell({
 
   const scoreFileId = payload.notationData?.fileId;
 
-  // Phase 20: Inject synthetic Score Synth track if MusicXML exists
+  // Phase 22: Inject per-part MIDI tracks if multi-track info available, else fall back to single Score Synth
   const displayTracks = useMemo(() => {
     const tracks = [...payload.audioTracks];
     if (scoreFileId) {
-      tracks.push({
-        id: "score-midi",
-        name: "Score Synth (Piano)",
-        type: "midi",
-        muted: payload.metadata?.scoreSynthMuted ?? false,
-        solo: payload.metadata?.scoreSynthSolo ?? false,
-        volume: payload.metadata?.scoreSynthVolume ?? 1.0,
-        pan: 0,
-        offsetMs: payload.metadata?.scoreSynthOffsetMs ?? 0,
-      });
+      if (scoreMidiTracks.length > 0) {
+        // Multi-track mode: one track per MusicXML part
+        scoreMidiTracks.forEach((mt) => {
+          tracks.push({
+            id: `score-midi-${mt.index}`,
+            name: mt.name,
+            type: "midi",
+            muted: scoreMidiMuted[mt.index] ?? false,
+            solo: false,
+            volume: payload.metadata?.scoreMidiPerTrackVolume?.[mt.index] ?? 1.0,
+            pan: 0,
+            offsetMs: payload.metadata?.scoreSynthOffsetMs ?? 0,
+          });
+        });
+      } else {
+        // Fallback: single Score Synth track
+        tracks.push({
+          id: "score-midi",
+          name: "Score Synth (Piano)",
+          type: "midi",
+          muted: payload.metadata?.scoreSynthMuted ?? false,
+          solo: payload.metadata?.scoreSynthSolo ?? false,
+          volume: payload.metadata?.scoreSynthVolume ?? 1.0,
+          pan: 0,
+          offsetMs: payload.metadata?.scoreSynthOffsetMs ?? 0,
+        });
+      }
     }
     return tracks;
-  }, [payload.audioTracks, scoreFileId, payload.metadata]);
+  }, [payload.audioTracks, scoreFileId, payload.metadata, scoreMidiTracks, scoreMidiMuted]);
+
+  // Build channel map for PianoRollRegion per-track filtering
+  const midiChannelByTrackId = useMemo(() => {
+    const map: Record<string, number> = {};
+    scoreMidiTracks.forEach(mt => {
+      map[`score-midi-${mt.index}`] = mt.channel;
+    });
+    return map;
+  }, [scoreMidiTracks]);
+
+  // Build instrument map for TrackList instrument picker
+  const midiInstrumentByTrackId = useMemo(() => {
+    const map: Record<string, number> = {};
+    scoreMidiTracks.forEach(mt => {
+      const override = scoreMidiInstrumentOverride[mt.index];
+      if (override !== undefined) {
+        map[`score-midi-${mt.index}`] = override;
+      }
+    });
+    return map;
+  }, [scoreMidiTracks, scoreMidiInstrumentOverride]);
+
+  const handleInstrumentChange = useCallback((trackId: string, program: number | null) => {
+    if (!trackId.startsWith("score-midi-")) return;
+    const idx = parseInt(trackId.replace("score-midi-", ""), 10);
+    let nextOverrides: Record<number, number> = {};
+    setScoreMidiInstrumentOverride(prev => {
+      const next = { ...prev };
+      if (program === null) {
+        delete next[idx];
+      } else {
+        next[idx] = program;
+      }
+      nextOverrides = next;
+      return next;
+    });
+    // Persist to metadata outside the updater to avoid setState-during-render
+    if (onPayloadChange) {
+      setTimeout(() => {
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiInstrumentOverrides: nextOverrides }});
+      }, 0);
+    }
+  }, [onPayloadChange, payload]);
 
   const handleVirtualMuteChange = useCallback((trackId: string, mute: boolean) => {
+    // Per-part MIDI track mute: score-midi-0, score-midi-1, etc.
+    if (trackId.startsWith("score-midi-")) {
+      const trackIndex = parseInt(trackId.replace("score-midi-", ""), 10);
+      setScoreMidiMuted(prev => ({ ...prev, [trackIndex]: mute }));
+      setMuteByTrackId(prev => ({ ...prev, [trackId]: mute }));
+      return;
+    }
+    // Legacy single Score Synth track
     if (trackId === "score-midi") {
       setMuteByTrackId(prev => ({ ...prev, [trackId]: mute }));
       if (onPayloadChange) {
@@ -946,9 +1070,11 @@ export function EditorShell({
     handleMuteChange(trackId, mute);
   }, [handleMuteChange, onPayloadChange, payload]);
 
-  // Dynamic MIDI Mute/Unmute during playback
+  // Dynamic MIDI Mute/Unmute during playback (legacy single-track mode only)
   useEffect(() => {
     if (!midiPlayerRef.current) return;
+    // Skip in multi-track mode — muting is handled by scoreMidiMuted → stretchedMidiBase64 regeneration
+    if (scoreMidiTracks.length > 0) return;
     if (isPlaying) {
       if (payload.metadata?.scoreSynthMuted) {
         midiPlayerRef.current.stop();
@@ -978,6 +1104,40 @@ export function EditorShell({
   }, [payload.metadata?.scoreSynthMuted]);
 
   const handleVirtualSoloChange = useCallback((trackId: string, solo: boolean) => {
+    // Per-part MIDI track solo: toggle solo on this track and mute others
+    if (trackId.startsWith("score-midi-")) {
+      const trackIndex = parseInt(trackId.replace("score-midi-", ""), 10);
+      setSoloByTrackId(prev => ({ ...prev, [trackId]: solo }));
+      if (solo) {
+        // Solo this track: mute all other MIDI tracks
+        const newMuted: Record<number, boolean> = {};
+        scoreMidiTracks.forEach(mt => {
+          newMuted[mt.index] = mt.index !== trackIndex;
+        });
+        setScoreMidiMuted(newMuted);
+        setMuteByTrackId(prev => {
+          const next = { ...prev };
+          scoreMidiTracks.forEach(mt => {
+            next[`score-midi-${mt.index}`] = mt.index !== trackIndex;
+          });
+          return next;
+        });
+      } else {
+        // Un-solo: unmute all MIDI tracks
+        const newMuted: Record<number, boolean> = {};
+        scoreMidiTracks.forEach(mt => { newMuted[mt.index] = false; });
+        setScoreMidiMuted(newMuted);
+        setMuteByTrackId(prev => {
+          const next = { ...prev };
+          scoreMidiTracks.forEach(mt => {
+            next[`score-midi-${mt.index}`] = false;
+          });
+          return next;
+        });
+      }
+      return;
+    }
+    // Legacy single Score Synth track
     if (trackId === "score-midi") {
       setSoloByTrackId(prev => ({ ...prev, [trackId]: solo }));
       if (onPayloadChange) {
@@ -986,12 +1146,15 @@ export function EditorShell({
       return;
     }
     handleSoloChange(trackId, solo);
-  }, [handleSoloChange, onPayloadChange, payload]);
+  }, [handleSoloChange, onPayloadChange, payload, scoreMidiTracks]);
 
   const handleVirtualVolumeChange = useCallback((trackId: string, volume: number) => {
-    if (trackId === "score-midi") {
+    if (trackId.startsWith("score-midi-")) {
+      const idx = parseInt(trackId.replace("score-midi-", ""), 10);
+      const currentPerTrack = payload.metadata?.scoreMidiPerTrackVolume || {};
+      const newPerTrack = { ...currentPerTrack, [idx]: volume };
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthVolume: volume }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiPerTrackVolume: newPerTrack }});
       }
       return;
     }
@@ -999,7 +1162,7 @@ export function EditorShell({
   }, [handleVolumeChange, onPayloadChange, payload]);
 
   const handleVirtualOffsetChange = useCallback((trackId: string, offsetMs: number) => {
-    if (trackId === "score-midi") {
+    if (trackId.startsWith("score-midi")) {
       if (onPayloadChange) {
         onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthOffsetMs: offsetMs }});
       }
@@ -1495,7 +1658,7 @@ export function EditorShell({
               onOffsetChange={handleVirtualOffsetChange}
               audioManager={audioManagerRef.current}
               positionMs={positionMs}
-              durationMs={durationMs}
+              durationMs={totalSongDurationMs}
               bpm={payload.metadata?.tempo || 120}
               timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
               timeSignature={{
@@ -1516,6 +1679,9 @@ export function EditorShell({
               isDarkMode={isDarkMode}
               midiBase64={midiBase64}
               uploadingAudio={uploadingAudio}
+              midiChannelByTrackId={midiChannelByTrackId}
+              midiInstrumentByTrackId={midiInstrumentByTrackId}
+              onInstrumentChange={handleInstrumentChange}
             />
           </div>
         </div>
