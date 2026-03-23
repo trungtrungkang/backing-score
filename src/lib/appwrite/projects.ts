@@ -192,3 +192,28 @@ export async function copyProjectToMine(projectId: string): Promise<ProjectDocum
     wikiComposerIds: source.wikiComposerIds,
   });
 }
+
+/** List published projects linked to a specific wiki composition. */
+export async function listProjectsByComposition(compositionId: string, limit = 20): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.equal("wikiCompositionId", compositionId),
+    Query.orderDesc("publishedAt"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+
+/** List published projects linked to a specific wiki artist (as composer). */
+export async function listProjectsByArtist(artistId: string, limit = 20): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.contains("wikiComposerIds", [artistId]),
+    Query.orderDesc("publishedAt"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+

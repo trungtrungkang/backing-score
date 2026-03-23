@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { getArtistBySlug } from "@/lib/appwrite/artists";
-import { listPublished } from "@/lib/appwrite";
+import { listProjectsByArtist } from "@/lib/appwrite/projects";
 import { getTranslationsForEntity, applyTranslations } from "@/lib/appwrite/wikiTranslations";
 import type { ArtistDocument, ProjectDocument } from "@/lib/appwrite/types";
-import { User2, MapPin, Calendar, ArrowLeft, Play, ExternalLink, Music, Globe, ChevronRight } from "lucide-react";
+import { User2, MapPin, Calendar, ArrowLeft, ExternalLink, Globe } from "lucide-react";
 import { useParams } from "next/navigation";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
+import { PracticeCard } from "@/components/wiki/PracticeCard";
 
 export default function ArtistDetailPage() {
   const t = useTranslations("Wiki");
@@ -27,12 +28,8 @@ export default function ArtistDetailPage() {
         const translations = await getTranslationsForEntity(a.$id, locale);
         setArtist(applyTranslations(a, translations));
         try {
-          const all = await listPublished();
-          const related = all.filter(
-            (p: any) =>
-              p.composerIds?.includes(a.$id) || p.performerIds?.includes(a.$id)
-          );
-          setProjects(related);
+          const linked = await listProjectsByArtist(a.$id);
+          setProjects(linked);
         } catch {}
       } else {
         setArtist(null);
@@ -136,31 +133,8 @@ export default function ArtistDetailPage() {
               </section>
             )}
 
-            {/* Related Projects */}
-            {projects.length > 0 && (
-              <section className="mb-10">
-                <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
-                  <span className="w-1 h-6 bg-[#C8A856] rounded-full" />
-                  {t("works")}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {projects.map((p) => (
-                    <Link href={`/play/${p.$id}`} key={p.$id} className="group block">
-                      <div className="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg hover:shadow-[#C8A856]/5 hover:-translate-y-0.5 transition-all">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#C8A856]/20 to-[#C8A856]/5 flex items-center justify-center shrink-0">
-                          <Play className="w-5 h-5 text-[#C8A856]" />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-[15px] truncate group-hover:text-[#C8A856] transition-colors">{p.name}</h3>
-                          <p className="text-xs text-zinc-500 mt-0.5">{t("practiceNow")}</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 ml-auto shrink-0 group-hover:text-[#C8A856] transition-colors" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* Practice Projects */}
+            <PracticeCard projects={projects} accentColor="violet" />
           </div>
 
           {/* Sidebar */}
