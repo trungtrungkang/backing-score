@@ -129,7 +129,7 @@ export function EditorShell({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [tagTab, setTagTab] = useState<"inst" | "genre" | "comp" | "artist" | "diff">("inst");
   const [tagSearch, setTagSearch] = useState("");
-  
+
   const { resolvedTheme } = useTheme();
   const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -143,6 +143,11 @@ export function EditorShell({
   const [midiStartOffsetMs, setMidiStartOffsetMs] = useState(0);
   const [midiDurationMs, setMidiDurationMs] = useState(0);
   const midiPlayerRef = useRef<any>(null);
+
+  // Auto-unmute MIDI synth when no audio tracks exist (match PlayShell behavior)
+  const isScoreSynthMuted = payload.audioTracks.length === 0
+    ? false  // No audio tracks → always unmute score synth
+    : (payload.metadata?.scoreSynthMuted ?? false);
   const midiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const midiPlayStartTimeRef = useRef<number>(0);
   const midiPlayStartPosRef = useRef<number>(0);
@@ -241,13 +246,43 @@ export function EditorShell({
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      
+
       const midi = new Midi(bytes.buffer);
       const tempoTarget = payload.metadata?.tempo || 120;
+
+      // Multi-tempo support: if timemap has per-measure tempo entries, preserve them
+      // and scale by playbackRate. Otherwise fall back to single tempo.
+      const timemap = payload.notationData?.timemap;
+      const tempoEntries = timemap?.filter(t => t.tempo !== undefined) || [];
       
-      // Override internal verovio default MIDI tempos for perfect Sync
-      midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
-      
+      if (tempoEntries.length > 1) {
+        const ticksPerBeat = midi.header.ppq || 480;
+        const newTempos: { ticks: number; bpm: number }[] = [];
+        let accTicks = 0;
+        
+        if (timemap) {
+          for (let i = 0; i < timemap.length; i++) {
+            const entry = timemap[i];
+            const ts = entry.timeSignature || payload.metadata?.timeSignature || "4/4";
+            const [num, den] = ts.split("/").map(Number);
+            const beatsInMeasure = (num || 4) * (4 / (den || 4));
+            
+            if (entry.tempo !== undefined) {
+              newTempos.push({ ticks: accTicks, bpm: entry.tempo * playbackRate });
+            }
+            
+            accTicks += beatsInMeasure * ticksPerBeat;
+          }
+        }
+        
+        midi.header.tempos = newTempos.length > 0
+          ? newTempos
+          : [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      } else {
+        midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+      }
+
+
       midi.tracks.forEach((track, trackIndex) => {
         // Apply pitch shift
         if (pitchShift !== 0) {
@@ -425,18 +460,18 @@ export function EditorShell({
   const totalSongDurationMs = useMemo(() => {
     let maxAudio = durationMs || 0;
     let maxMidi = midiDurationMs || 0;
-    
+
     let maxTimemap = 0;
     const timemap = payload.notationData?.timemap;
     if (timemap && timemap.length > 0) {
-       const lastMap = timemap[timemap.length - 1];
-       const bpm = payload.metadata?.tempo || 120;
-       const ts = payload.metadata?.timeSignature || "4/4";
-       const [numStr, denStr] = ts.split("/");
-       const beatsPerMeasure = parseInt(numStr, 10) || 4;
-       const noteValue = parseInt(denStr, 10) || 4;
-       const measureMs = (60 * 1000 / bpm) * (4 / noteValue) * beatsPerMeasure;
-       maxTimemap = lastMap.timeMs + measureMs;
+      const lastMap = timemap[timemap.length - 1];
+      const bpm = payload.metadata?.tempo || 120;
+      const ts = payload.metadata?.timeSignature || "4/4";
+      const [numStr, denStr] = ts.split("/");
+      const beatsPerMeasure = parseInt(numStr, 10) || 4;
+      const noteValue = parseInt(denStr, 10) || 4;
+      const measureMs = (60 * 1000 / bpm) * (4 / noteValue) * beatsPerMeasure;
+      maxTimemap = lastMap.timeMs + measureMs;
     }
     const finalMax = Math.max(maxAudio, maxMidi, maxTimemap);
     return finalMax > 0 ? finalMax : 0;
@@ -445,7 +480,7 @@ export function EditorShell({
   // Playback Loop for UI
   const updatePosition = useCallback(() => {
     if (!isPlayingRef.current) return;
-    
+
     let currentPos = 0;
     // MIDI Fallback Routing
     if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
@@ -621,40 +656,40 @@ export function EditorShell({
       if (audioManagerRef.current) {
         audioManagerRef.current.unlockiOSAudio();
       }
-      
+
       // Also force Web Component Tone.js resume for the MIDI player fallback
       const globalTone = (window as any).Tone;
       if (globalTone && globalTone.context && globalTone.context.state === 'suspended') {
         globalTone.context.resume();
       }
-    } catch (e) { 
-      console.warn("iOS Resume bypass failed", e); 
+    } catch (e) {
+      console.warn("iOS Resume bypass failed", e);
     }
 
     let playPromises: Promise<void>[] = [];
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
 
-    if (midiPlayerRef.current && stretchedMidiBase64 && !payload.metadata?.scoreSynthMuted) {
+    if (midiPlayerRef.current && stretchedMidiBase64 && !isScoreSynthMuted) {
       const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
       const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000;
-      
+
       if (targetTimeSecs >= 0) {
         midiPlayerRef.current.currentTime = targetTimeSecs;
-        playPromises.push(Promise.resolve(midiPlayerRef.current.start()).catch((e:any) => console.error(e)));
+        playPromises.push(Promise.resolve(midiPlayerRef.current.start()).catch((e: any) => console.error(e)));
       } else {
-        midiPlayerRef.current.currentTime = 0; 
+        midiPlayerRef.current.currentTime = 0;
         const delayMs = -targetTimeSecs * 1000;
         midiTimeoutRef.current = setTimeout(() => {
-          if (isPlayingRef.current && !payload.metadata?.scoreSynthMuted) { // We check isPlayingRef instead of state isPlaying because it's a timeout
-             Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
+          if (isPlayingRef.current && !isScoreSynthMuted) { // We check isPlayingRef instead of state isPlaying because it's a timeout
+            Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
           }
         }, delayMs);
       }
     }
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
-      playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.error(e)));
+      playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e: any) => console.error(e)));
     }
-    
+
     // Capture accurate Start Times for Smooth MIDI Telemetry Interpolation Tracker
     if (payload.audioTracks.length === 0) {
       midiPlayStartTimeRef.current = performance.now();
@@ -664,7 +699,7 @@ export function EditorShell({
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
     isPlayingRef.current = true;
-  }, [payload.audioTracks.length, stretchedMidiBase64, payload.metadata?.scoreSynthMuted, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
+  }, [payload.audioTracks.length, stretchedMidiBase64, isScoreSynthMuted, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handlePause = useCallback(() => {
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
@@ -690,8 +725,8 @@ export function EditorShell({
       if (e.repeat) return;
 
       if (
-        document.activeElement?.tagName === "INPUT" || 
-        document.activeElement?.tagName === "TEXTAREA" || 
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA" ||
         document.activeElement?.hasAttribute("contenteditable")
       ) {
         return;
@@ -740,7 +775,7 @@ export function EditorShell({
       if (document.hidden && isPlayingRef.current) {
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
         if (isMobile) {
-           handlePause();
+          handlePause();
         }
       }
     };
@@ -768,18 +803,18 @@ export function EditorShell({
       const targetTimeSecs = (ms - offsetMs + midiStartOffsetMs) / 1000;
       if (targetTimeSecs >= 0) {
         midiPlayerRef.current.currentTime = targetTimeSecs;
-        if (isPlayingRef.current && !payload.metadata?.scoreSynthMuted) {
-          Promise.resolve(midiPlayerRef.current.start()).catch((e:any) => console.error(e));
+        if (isPlayingRef.current && !isScoreSynthMuted) {
+          Promise.resolve(midiPlayerRef.current.start()).catch((e: any) => console.error(e));
         }
       } else {
         midiPlayerRef.current.stop();
         midiPlayerRef.current.currentTime = 0;
-        if (isPlayingRef.current && !payload.metadata?.scoreSynthMuted) {
+        if (isPlayingRef.current && !isScoreSynthMuted) {
           const delayMs = -targetTimeSecs * 1000;
           midiTimeoutRef.current = setTimeout(() => {
-             if (isPlayingRef.current && !payload.metadata?.scoreSynthMuted) {
-                Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
-             }
+            if (isPlayingRef.current && !isScoreSynthMuted) {
+              Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
+            }
           }, delayMs);
         }
       }
@@ -788,13 +823,13 @@ export function EditorShell({
       audioManagerRef.current.seek(ms);
     }
     setPositionMs(ms);
-    
+
     // Sync continuous MIDI telemetry stopwatch
     if (payload.audioTracks.length === 0) {
       midiPlayStartTimeRef.current = performance.now();
       midiPlayStartPosRef.current = ms;
     }
-  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, payload.metadata?.scoreSynthMuted]);
+  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, isScoreSynthMuted]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = origin ? `${origin}/p/${projectId}` : "";
@@ -1077,7 +1112,7 @@ export function EditorShell({
           id: "score-midi",
           name: "Score Synth (Piano)",
           type: "midi",
-          muted: payload.metadata?.scoreSynthMuted ?? false,
+          muted: isScoreSynthMuted,
           solo: payload.metadata?.scoreSynthSolo ?? false,
           volume: payload.metadata?.scoreSynthVolume ?? 1.0,
           pan: 0,
@@ -1126,7 +1161,7 @@ export function EditorShell({
     // Persist to metadata outside the updater to avoid setState-during-render
     if (onPayloadChange) {
       setTimeout(() => {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiInstrumentOverrides: nextOverrides }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiInstrumentOverrides: nextOverrides } });
       }, 0);
     }
   }, [onPayloadChange, payload]);
@@ -1143,7 +1178,7 @@ export function EditorShell({
     if (trackId === "score-midi") {
       setMuteByTrackId(prev => ({ ...prev, [trackId]: mute }));
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthMuted: mute }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthMuted: mute } });
       }
       return;
     }
@@ -1156,7 +1191,7 @@ export function EditorShell({
     // Skip in multi-track mode — muting is handled by scoreMidiMuted → stretchedMidiBase64 regeneration
     if (scoreMidiTracks.length > 0) return;
     if (isPlaying) {
-      if (payload.metadata?.scoreSynthMuted) {
+      if (isScoreSynthMuted) {
         midiPlayerRef.current.stop();
       } else if (stretchedMidiBase64) {
         let currentPos = positionMs;
@@ -1165,7 +1200,7 @@ export function EditorShell({
         }
         const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
         const targetTimeSecs = (currentPos - offsetMs + midiStartOffsetMs) / 1000;
-        
+
         if (targetTimeSecs >= 0) {
           midiPlayerRef.current.currentTime = targetTimeSecs;
           Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
@@ -1173,15 +1208,15 @@ export function EditorShell({
           midiPlayerRef.current.currentTime = 0;
           if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
           midiTimeoutRef.current = setTimeout(() => {
-             if (isPlayingRef.current && !payload.metadata?.scoreSynthMuted) {
-                Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
-             }
+            if (isPlayingRef.current && !isScoreSynthMuted) {
+              Promise.resolve(midiPlayerRef.current.start()).catch(e => console.error(e));
+            }
           }, -targetTimeSecs * 1000);
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payload.metadata?.scoreSynthMuted]);
+  }, [isScoreSynthMuted]);
 
   const handleVirtualSoloChange = useCallback((trackId: string, solo: boolean) => {
     // Per-part MIDI track solo: toggle solo on this track and mute others
@@ -1221,7 +1256,7 @@ export function EditorShell({
     if (trackId === "score-midi") {
       setSoloByTrackId(prev => ({ ...prev, [trackId]: solo }));
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthSolo: solo }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthSolo: solo } });
       }
       return;
     }
@@ -1234,7 +1269,7 @@ export function EditorShell({
       const currentPerTrack = payload.metadata?.scoreMidiPerTrackVolume || {};
       const newPerTrack = { ...currentPerTrack, [idx]: volume };
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiPerTrackVolume: newPerTrack }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiPerTrackVolume: newPerTrack } });
       }
       return;
     }
@@ -1244,7 +1279,7 @@ export function EditorShell({
   const handleVirtualOffsetChange = useCallback((trackId: string, offsetMs: number) => {
     if (trackId.startsWith("score-midi")) {
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthOffsetMs: offsetMs }});
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthOffsetMs: offsetMs } });
       }
       return;
     }
@@ -1253,38 +1288,38 @@ export function EditorShell({
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[#0E0E11] text-zinc-300">
-      
+
       {/* 1. Global Header (TransportBar) */}
       <TransportBar
-              bpm={payload.metadata?.tempo ?? 120}
-              onBpmChange={isOwner && onPayloadChange ? handleBpmChange : undefined}
-              playbackRate={playbackRate}
-              onPlaybackRateChange={handlePlaybackRateChange}
-              isMetronomeEnabled={isMetronomeEnabled}
-              onMetronomeToggle={handleMetronomeToggle}
-              isPreRollEnabled={isPreRollEnabled}
-              onPreRollToggle={handlePreRollToggle}
-              timeSignature={timeSignature}
-              onTimeSignatureChange={onPayloadChange ? handleTimeSignatureChange : undefined}
-              keySignature={payload.metadata?.keySignature || "C Maj"}
-              onKeySignatureChange={onPayloadChange ? handleKeySignatureChange : undefined}
-              positionMs={positionMs}
-              durationMs={totalSongDurationMs}
-              isPlaying={isPlaying}
-              loop={loopState}
-              onLoopChange={onPayloadChange ? handleLoopChange : undefined}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onStop={handleStop}
-              isSyncMode={isSyncMode}
-              onToggleSyncMode={() => setIsSyncMode(!isSyncMode)}
-              isElasticGrid={!!payload.metadata?.syncToTimemap}
-              onToggleElasticGrid={handleToggleElasticGrid}
-              timemap={payload.notationData?.timemap}
-              isMapEditorOpen={showMapEditor}
-              onToggleMapEditor={() => setShowMapEditor(!showMapEditor)}
-              disabled={loadingAudio}
-              title={projectName || "Untitled"}
+        bpm={payload.metadata?.tempo ?? 120}
+        onBpmChange={isOwner && onPayloadChange ? handleBpmChange : undefined}
+        playbackRate={playbackRate}
+        onPlaybackRateChange={handlePlaybackRateChange}
+        isMetronomeEnabled={isMetronomeEnabled}
+        onMetronomeToggle={handleMetronomeToggle}
+        isPreRollEnabled={isPreRollEnabled}
+        onPreRollToggle={handlePreRollToggle}
+        timeSignature={timeSignature}
+        onTimeSignatureChange={onPayloadChange ? handleTimeSignatureChange : undefined}
+        keySignature={payload.metadata?.keySignature || "C Maj"}
+        onKeySignatureChange={onPayloadChange ? handleKeySignatureChange : undefined}
+        positionMs={positionMs}
+        durationMs={totalSongDurationMs}
+        isPlaying={isPlaying}
+        loop={loopState}
+        onLoopChange={onPayloadChange ? handleLoopChange : undefined}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onStop={handleStop}
+        isSyncMode={isSyncMode}
+        onToggleSyncMode={() => setIsSyncMode(!isSyncMode)}
+        isElasticGrid={!!payload.metadata?.syncToTimemap}
+        onToggleElasticGrid={handleToggleElasticGrid}
+        timemap={payload.notationData?.timemap}
+        isMapEditorOpen={showMapEditor}
+        onToggleMapEditor={() => setShowMapEditor(!showMapEditor)}
+        disabled={loadingAudio}
+        title={projectName || "Untitled"}
       />
       {/* Action Sub-Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 bg-white dark:bg-[#1A1A1E] border-b border-black/50 px-3 sm:px-6 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 shrink-0 w-full overflow-hidden">
@@ -1535,7 +1570,7 @@ export function EditorShell({
 
         <div className="flex-1 flex items-center justify-end gap-3 shrink-0">
           {projectId && <ProjectActionsMenu projectId={projectId} />}
-          
+
           {/* Unified Tooling Navigation (Desktop & Mobile) */}
           <div className="flex items-center gap-2">
             {isOwner && (
@@ -1565,16 +1600,16 @@ export function EditorShell({
               <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-300 p-1 z-[150] shadow-xl">
                 {projectId && (
                   <DropdownMenuItem asChild className="cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 py-2.5 text-xs transition-colors">
-                     <Link href={`/play/${projectId}`} className="flex w-full items-center gap-2 text-blue-600 dark:text-blue-400">
-                       <PlaySquare className="w-3.5 h-3.5" /> Play Mode
-                     </Link>
+                    <Link href={`/play/${projectId}`} className="flex w-full items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <PlaySquare className="w-3.5 h-3.5" /> Play Mode
+                    </Link>
                   </DropdownMenuItem>
                 )}
-                
+
                 <DropdownMenuItem onClick={handleShareToFeed} className="cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-2.5 text-xs transition-colors flex items-center gap-2">
                   <Share className="w-3.5 h-3.5" /> Share to Feed
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-2.5 text-xs transition-colors flex items-center gap-2 mb-1">
                   <Activity className="w-3.5 h-3.5" /> {shareCopied ? "Copied Link!" : "Copy Link"}
                 </DropdownMenuItem>
@@ -1588,8 +1623,8 @@ export function EditorShell({
                           <ImageIcon className="w-3.5 h-3.5" />
                           {uploadingCover ? "Uploading..." : "Upload Cover Art"}
                           <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                             onUploadCover(e);
-                             // Let user close menu manually or auto-close if we had access to trigger state.
+                            onUploadCover(e);
+                            // Let user close menu manually or auto-close if we had access to trigger state.
                           }} disabled={uploadingCover} />
                         </label>
                       </DropdownMenuItem>
@@ -1603,7 +1638,7 @@ export function EditorShell({
                         </label>
                       </DropdownMenuItem>
                     )}
-                    
+
                     {/* Expose Save/Publish internally on Mobile */}
                     <DropdownMenuItem onClick={onSave} disabled={saving} className="sm:hidden cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 py-2.5 mt-1 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-white transition-colors">
                       {saving ? "Saving..." : "Save Project"}
