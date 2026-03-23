@@ -102,7 +102,7 @@ Backing & Score được xây dựng theo nguyên tắc **Client-Heavy Architect
 │  Tương lai: cân nhắc chuyển media sang Cloudflare R2 (zero egress) │
 └─────────────────────────────────────────────────────────────────────┘
 
-* /wiki = Tính năng dự kiến (Music Encyclopedia)
+* /wiki = Bách Khoa Toàn Thư Âm Nhạc (đã triển khai)
 ```
 
 ---
@@ -226,10 +226,14 @@ Backing & Score được xây dựng theo nguyên tắc **Client-Heavy Architect
 | `coverUrl` | string | URL ảnh bìa |
 | `description` | string | Mô tả dự án |
 | `creatorEmail` | string | Email tác giả |
-| `tags[]` | string[] | Thẻ phân loại (thể loại, nhạc cụ) |
-| `instruments[]` | string[] | Danh sách nhạc cụ sử dụng |
+| `tags[]` | string[] | Thẻ phân loại (độ khó) |
+| `instruments[]` | string[] | Danh sách nhạc cụ sử dụng (legacy) |
 | `difficulty` | integer | Mức độ khó (1-5) |
 | `durationSec` | integer | Thời lượng (giây) |
+| `wikiGenreId` | string | ID thể loại wiki (single) |
+| `wikiInstrumentIds[]` | string[] | ID nhạc cụ wiki (multi) |
+| `wikiCompositionId` | string | ID tác phẩm wiki (single) |
+| `wikiComposerIds[]` | string[] | ID nhà soạn nhạc wiki (multi) |
 
 **Quyền truy cập:** Document-level permissions  
 - Bản nháp: chỉ owner đọc/sửa/xóa  
@@ -717,7 +721,7 @@ Middleware: src/middleware.ts → redirect / locale detection
 
 ## 16. Thiết Kế Mở Rộng — Bách Khoa Toàn Thư
 
-> **Trạng thái:** Đã triển khai Phase 1-3 ✅ | Content Localization: Đang thiết kế
+> **Trạng thái:** Đã triển khai Phase 2.5, 3, 6, 8 ✅ | Content Localization: Đang thiết kế
 
 ### 16.1 Collections Hiện Tại
 
@@ -764,10 +768,14 @@ wiki_translations  → Collection mới (chưa triển khai)
 
 | Route | Mô tả | SEO |
 |---|---|---|
-| `/wiki` | Hub + search | — |
-| `/wiki/artists/[slug]` | Chi tiết nghệ sỹ | `generateMetadata` + JSON-LD `Person` |
+| `/wiki` | Hub + search + clickable category cards | — |
+| `/wiki/artists` | Listing page: search + nationality/role filters | — |
+| `/wiki/instruments` | Listing page: search + family chip filters | — |
+| `/wiki/compositions` | Listing page: search + genre/period/difficulty filters | — |
+| `/wiki/genres` | Listing page: tree view + era chips | — |
+| `/wiki/artists/[slug]` | Chi tiết nghệ sỹ + PracticeCard | `generateMetadata` + JSON-LD `Person` |
 | `/wiki/instruments/[slug]` | Chi tiết nhạc cụ | `generateMetadata` |
-| `/wiki/compositions/[slug]` | Chi tiết tác phẩm | `generateMetadata` + JSON-LD `MusicComposition` |
+| `/wiki/compositions/[slug]` | Chi tiết tác phẩm + PracticeCard | `generateMetadata` + JSON-LD `MusicComposition` |
 | `/wiki/genres/[slug]` | Thể loại | `generateMetadata` |
 | `/wiki-sitemap.ts` | Dynamic sitemap | 4 entity types × 9 locales |
 

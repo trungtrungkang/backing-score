@@ -59,6 +59,11 @@ Backing & Score is a multi-layered interactive music platform built on a client-
 | `comments` | Post comments |
 | `reactions` | Likes/emoji reactions on posts, comments, projects |
 | `follows` | User follow relationships |
+| `wiki_artists` | Musician/composer encyclopedia entries |
+| `wiki_instruments` | Musical instrument encyclopedia entries |
+| `wiki_compositions` | Musical composition encyclopedia entries |
+| `wiki_genres` | Music genre encyclopedia entries |
+| `wiki_translations` | Per-field translations for wiki content |
 
 ---
 
@@ -335,7 +340,7 @@ Wait Mode implements the **Deliberate Practice** model:
 
 ## 14. Music Encyclopedia ✅
 
-> **Status:** Implemented (Phase 1-3) | Content Localization: In Design
+> **Status:** Implemented (Phase 2.5, 3, 6, 8) | Content Localization: In Design
 
 ### 14.1 Data Entities (Appwrite Collections)
 
@@ -346,32 +351,86 @@ Wait Mode implements the **Deliberate Practice** model:
 | `wiki_compositions` | title, year, period, keySignature, tempo, difficulty, genreId, description (rich text), slug |
 | `wiki_genres` | name, description (rich text), parentGenreId, era, slug |
 
-### 14.2 User-facing Pages
-- `/wiki` — Encyclopedia hub with category cards, search, and "Manage Content" link for editors
-- `/wiki/artists/[slug]` — Artist biography + linked projects for practice
-- `/wiki/instruments/[slug]` — Instrument profile + filtered practice sheets
-- `/wiki/compositions/[slug]` — Composition detail + "Practice Now" button
-- `/wiki/genres/[slug]` — Genre overview + sub-genres + related compositions
+### 14.2 Project ↔ Wiki Entity Links
 
-### 14.3 Rich Text Editor (TipTap)
+Projects have direct wiki entity relationships stored as document fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `wikiGenreId` | string | Single genre ID |
+| `wikiInstrumentIds` | string[] | Multiple instrument IDs |
+| `wikiCompositionId` | string | Single composition ID |
+| `wikiComposerIds` | string[] | Multiple composer/artist IDs |
+
+These fields replace the legacy free-text tag system for genre/instrument classification, while `tags[]` still handles difficulty levels.
+
+### 14.3 Tags Picker (Editor)
+
+The project editor (`EditorShell`) features a tabbed tag picker with 5 categories:
+
+| Tab | Emoji | Selection | Search |
+|---|---|---|---|
+| Instruments | 🎹 | Multi-select | ✅ |
+| Genre | 🎵 | Single-select | — |
+| Composition | 📄 | Single-select | ✅ |
+| Composer | 👤 | Multi-select | ✅ |
+| Difficulty | 📊 | Single-select | — |
+
+Each tab shows a count badge and uses a distinct accent color (amber, emerald, sky, violet, blue).
+
+### 14.4 User-facing Pages
+
+**Wiki Hub** (`/wiki`):
+- Category cards linking to listing pages
+- Global search across artists and compositions
+- "Manage Content" link for wiki editors
+
+**Detail Pages** (premium layouts with hero sections and sidebars):
+- `/wiki/artists/[slug]` — Violet theme, Quick Facts sidebar, PracticeCard
+- `/wiki/instruments/[slug]` — Amber theme, Specifications sidebar
+- `/wiki/compositions/[slug]` — Sky theme, Metadata sidebar, PracticeCard
+- `/wiki/genres/[slug]` — Emerald theme, Sub-genres sidebar
+
+**Listing Pages** (search + filters + grid):
+- `/wiki/artists` — Filter by nationality, role
+- `/wiki/instruments` — Filter by family (chip pills)
+- `/wiki/compositions` — Filter by genre, period, difficulty
+- `/wiki/genres` — Tree view (parent → children) + era chips
+
+### 14.5 Practice Integration
+
+`PracticeCard` component connects wiki content with playable projects:
+- Displays published practice tracks linked to a composition or artist
+- Featured CTA with gradient card for the primary project
+- Compact list for additional tracks
+- Configurable accent colors (sky, violet, amber, emerald, gold)
+- Links directly to `/play/[projectId]`
+
+API helpers:
+- `listProjectsByComposition(compositionId, limit)` — query published projects by composition
+- `listProjectsByArtist(artistId, limit)` — query published projects by composer
+
+> **Note:** Only published projects appear in PracticeCard. Draft projects are hidden.
+
+### 14.6 Rich Text Editor (TipTap)
 - Full WYSIWYG editor for bio/description fields in Admin CMS
 - Toolbar: headings, formatting, alignment, lists, blockquote, code blocks, links, images, YouTube embeds
 - **Wiki Link Picker** (📖 button) — inline search to link to other wiki entities
 - `RichTextRenderer` — locale-aware HTML renderer with internal link interception
 
-### 14.4 Admin CMS (`/admin/wiki`)
+### 14.7 Admin CMS (`/admin/wiki`)
 - Tabbed interface for all 4 entity types
 - Inline create/edit forms with auto-slug generation
 - CRUD via server actions with `requireWikiEditor()` auth guard
 - Accessible by `admin` and `wiki_editor` roles
 
-### 14.5 SEO
+### 14.8 SEO
 - `generateMetadata` on all detail pages
 - JSON-LD structured data (`Person`, `MusicComposition`)
 - Dynamic sitemap (`wiki-sitemap.ts`) across all locales
 - Unified Search Dialog in Header navigation
 
-### 14.6 Content Localization (Planned)
+### 14.9 Content Localization (Planned)
 
 **Architecture: Translation Overlay**
 
@@ -383,7 +442,7 @@ Wait Mode implements the **Deliberate Practice** model:
 | CMS integration | Locale selector tab in Admin CMS for creating/editing translations |
 | Future | AI-assisted translation with human review |
 
-### 14.7 User Roles
+### 14.10 User Roles
 
 | Role | Capabilities |
 |---|---|
