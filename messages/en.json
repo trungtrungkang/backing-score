@@ -35,7 +35,10 @@
     "footerCopy": "© 2026 Backing & Score. Interactive sheet music for musicians.",
     "trackRhythmDrums": "Rhythm Drums",
     "trackLeadGuitar": "Lead Guitar",
-    "trackBass": "Bass"
+    "trackBass": "Bass",
+    "f4Title": "Interactive Music Encyclopedia.",
+    "f4Desc": "Explore musicians, instruments, genres, and compositions. Backing & Score connects rich encyclopedic knowledge directly to playable tracks and practice sheets.",
+    "f4Link": "Explore the Wiki"
   },
   "Discover": {
     "searchPlaceholder": "Search for songs, composers, styles...",

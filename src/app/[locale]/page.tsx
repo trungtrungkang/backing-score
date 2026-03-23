@@ -1,6 +1,6 @@
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { Music4, Mic2, Layers, PlaySquare, ArrowRight, Play, SlidersHorizontal, AudioWaveform, Sparkles, Moon, Smartphone, Pause, GraduationCap } from "lucide-react";
+import { Music4, Mic2, Layers, PlaySquare, ArrowRight, Play, SlidersHorizontal, AudioWaveform, Sparkles, Moon, Smartphone, Pause, GraduationCap, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -228,6 +228,55 @@ export default function Home() {
               <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8">
                 {t('f3Desc')}
               </p>
+            </div>
+          </div>
+
+          {/* Feature 4: Music Encyclopedia (New) */}
+          <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
+            <div className="w-full md:w-1/2 flex flex-col items-start text-left">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-200 dark:border-emerald-500/20">
+                <BookOpen className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h2 className="text-3xl md:text-5xl font-black mb-6 text-zinc-900 dark:text-white">{t('f4Title')}</h2>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8">
+                {t('f4Desc')}
+              </p>
+              <Link href="/wiki" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1">
+                {t('f4Link')} <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="w-full md:w-1/2">
+              <div className="aspect-square bg-gradient-to-br from-zinc-200 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 rounded-3xl p-8 relative overflow-hidden flex items-center justify-center border border-zinc-200 dark:border-white/5 shadow-2xl shadow-black/5 dark:shadow-none transition-transform hover:-translate-y-2 duration-500">
+                <div className="absolute inset-0 opacity-20 dark:opacity-40 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-500/30 to-transparent"></div>
+                
+                {/* Abstract Wiki Hub Mockup */}
+                <div className="w-full h-[90%] bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col relative z-10 p-6">
+                   <div className="flex justify-between items-center mb-6">
+                      <div className="w-1/2 h-8 bg-zinc-100 dark:bg-zinc-900 rounded-lg"></div>
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                         <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
+                      </div>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                     {[1,2,3,4].map(i => (
+                       <div key={i} className={`h-24 rounded-xl border-2 flex flex-col p-3 justify-end ${i===1 ? 'border-emerald-500/50 bg-emerald-50 dark:bg-emerald-950/20' : 'border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50'}`}>
+                         <div className={`w-3/4 h-2 rounded-full mb-2 ${i===1 ? 'bg-emerald-400' : 'bg-zinc-200 dark:bg-zinc-700'}`}></div>
+                         <div className={`w-1/2 h-2 rounded-full ${i===1 ? 'bg-emerald-300' : 'bg-zinc-100 dark:bg-zinc-800'}`}></div>
+                       </div>
+                     ))}
+                   </div>
+                   {/* Gamification/Info Badge Overlay */}
+                   <div className="absolute bottom-8 right-1/2 translate-x-1/2 w-3/4 h-16 bg-zinc-900 dark:bg-zinc-800 rounded-xl shadow-2xl flex items-center px-4 gap-4 border border-zinc-700">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-400 to-sky-400 flex items-center justify-center shadow-lg">
+                        <Play className="w-4 h-4 text-white ml-0.5" />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="w-3/4 h-1.5 bg-zinc-600 rounded-full"></div>
+                        <div className="w-1/2 h-1.5 bg-zinc-700 rounded-full"></div>
+                      </div>
+                   </div>
+                </div>
+              </div>
             </div>
           </div>
 

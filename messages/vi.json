@@ -35,7 +35,10 @@
     "footerCopy": "© 2026 Backing & Score. Sheet nhạc tương tác cho người yêu âm nhạc.",
     "trackRhythmDrums": "Trống Nhịp",
     "trackLeadGuitar": "Guitar Solo",
-    "trackBass": "Bass"
+    "trackBass": "Bass",
+    "f4Title": "Bách khoa toàn thư âm nhạc.",
+    "f4Desc": "Khám phá nghệ sĩ, nhạc cụ, thể loại và tác phẩm. Backing & Score kết nối kiến thức bách khoa phong phú trực tiếp với các bản nhạc và sheet thực hành có thể chơi.",
+    "f4Link": "Khám phá Wiki"
   },
   "Discover": {
     "searchPlaceholder": "Tìm bài hát, nhạc sĩ, phong cách...",
