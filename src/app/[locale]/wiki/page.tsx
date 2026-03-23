@@ -110,14 +110,15 @@ export default function WikiPage() {
             {/* Category Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-14">
               {categoryCards.map((cat) => (
-                <div
+                <Link
                   key={cat.key}
-                  className={`bg-gradient-to-br ${cat.color} border border-zinc-200 dark:border-white/5 rounded-2xl p-6 text-center hover:scale-[1.02] transition-transform cursor-default`}
+                  href={cat.href}
+                  className={`bg-gradient-to-br ${cat.color} border border-zinc-200 dark:border-white/5 rounded-2xl p-6 text-center hover:scale-[1.02] transition-transform block`}
                 >
                   <cat.icon className={`w-8 h-8 mx-auto mb-3 ${cat.iconColor}`} />
                   <h3 className="font-bold text-lg mb-1">{t(cat.key)}</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">{cat.count} entries</p>
-                </div>
+                </Link>
               ))}
             </div>
 
