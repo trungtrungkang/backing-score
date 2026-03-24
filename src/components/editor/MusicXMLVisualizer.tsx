@@ -9,6 +9,8 @@ import { Loader2, ZoomIn, ZoomOut } from "lucide-react";
 export interface MusicXMLVisualizerProps {
   scoreFileId?: string;
   positionMs?: number;
+  /** External ref for live position updates without re-renders (from EditorShell RAF loop) */
+  externalPositionMsRef?: React.RefObject<number>;
   isPlaying?: boolean;
   timemap?: TimemapEntry[];
   measureMap?: Record<number, number>;
@@ -27,12 +29,16 @@ import type { TimemapEntry } from "@/lib/daw/types";
 import { injectMidiInstruments } from "@/lib/score/midi-instruments";
 
 export function MusicXMLVisualizer({
-  scoreFileId, positionMs = 0, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
+  scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
   isWaitMode = false, isWaiting = false, practiceTrackIds, className, defaultScale
 }: MusicXMLVisualizerProps) {
   // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
-  const positionMsRef = useRef(positionMs);
-  positionMsRef.current = positionMs;
+  // If externalPositionMsRef is provided, use it directly (zero-rerender path from EditorShell)
+  const internalPositionMsRef = useRef(positionMs);
+  if (!externalPositionMsRef) {
+    internalPositionMsRef.current = positionMs;
+  }
+  const positionMsRef = externalPositionMsRef ?? internalPositionMsRef;
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [renderVersion, setRenderVersion] = useState(0); // increments when SVG is updated

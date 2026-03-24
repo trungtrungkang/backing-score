@@ -3,6 +3,7 @@
 import { Play, Pause, Square, Repeat, Activity, Clock, RefreshCw, Minus, Plus, Grid, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useRef, useState, useEffect } from "react";
 
 export interface LoopState {
   enabled: boolean;
@@ -25,8 +26,10 @@ export interface TransportBarProps {
   onTimeSignatureChange?: (sig: string) => void;
   keySignature?: string;
   onKeySignatureChange?: (key: string) => void;
-  /** Current position in ms (for display). */
+  /** Current position in ms (for display when not playing). */
   positionMs?: number;
+  /** Live position ref — read by internal RAF for zero-rerender playback display */
+  positionMsRef?: React.RefObject<number>;
   /** Total duration in ms (for display). */
   durationMs?: number;
   /** Playback state for button labels / disabled. */
@@ -155,6 +158,7 @@ export function TransportBar({
   keySignature = "C Maj",
   onKeySignatureChange,
   positionMs = 0,
+  positionMsRef,
   durationMs = 0,
   isPlaying = false,
   loop = DEFAULT_LOOP,
@@ -173,6 +177,29 @@ export function TransportBar({
   className,
   title = "Untitled",
 }: TransportBarProps) {
+  // During playback, read from positionMsRef via internal RAF to avoid parent re-renders
+  const [displayMs, setDisplayMs] = useState(positionMs);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    if (isPlaying && positionMsRef) {
+      let lastUpdate = 0;
+      const tick = () => {
+        const now = performance.now();
+        if (now - lastUpdate > 66) { // ~15fps is enough for measure:beat display
+          setDisplayMs(positionMsRef.current);
+          lastUpdate = now;
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(rafRef.current);
+    } else {
+      // Not playing or no ref — sync from prop
+      setDisplayMs(positionMs);
+    }
+  }, [isPlaying, positionMs, positionMsRef]);
+
   return (
     <div className={cn("flex flex-wrap items-center justify-center lg:justify-between w-full bg-zinc-50 dark:bg-[#1C1C1E] text-zinc-600 dark:text-zinc-300 px-4 py-2 border-b border-zinc-200 dark:border-black/50 transition-colors shadow-sm gap-3", className)}>
 
@@ -278,7 +305,7 @@ export function TransportBar({
         <div className="flex flex-col items-center justify-center min-w-[70px]">
           <span className="text-[9px] uppercase tracking-widest text-zinc-500 dark:text-[#5e5e6e] font-bold mb-0.5">Measure</span>
           <div className="text-xl font-mono tracking-wider text-blue-400 dark:text-[#00f0ff] font-bold dark:[text-shadow:0_0_8px_rgba(0,240,255,0.6)] leading-none mt-0.5">
-            {formatMeasure(positionMs, bpm, timeSignature, isElasticGrid ? timemap : undefined)}
+            {formatMeasure(displayMs, bpm, timeSignature, isElasticGrid ? timemap : undefined)}
           </div>
         </div>
 

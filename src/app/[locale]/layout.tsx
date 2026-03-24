@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { DialogProvider } from "@/components/ui/dialog-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { RouteChangeCleanup } from "@/components/providers/RouteChangeCleanup";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -52,6 +53,7 @@ export default async function RootLayout({
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <DialogProvider>
+                <RouteChangeCleanup />
                 <Header />
                 {children}
               </DialogProvider>

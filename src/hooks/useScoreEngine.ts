@@ -3,6 +3,7 @@ import { getFileViewUrl } from "@/lib/appwrite";
 import { Midi } from "@tonejs/midi";
 import type { DAWPayload, TimemapEntry } from "@/lib/daw/types";
 import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
+import { MidiPlayerSingleton } from "@/lib/audio/MidiPlayerSingleton";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { useMicInput } from "@/hooks/useMicInput";
 import { getPhysicalMeasure, evaluateWaitModeMatch } from "@/lib/score/math";
@@ -232,6 +233,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       audioManagerRef.current = new AudioManager();
       const tempo = payload.metadata?.tempo || 120;
       audioManagerRef.current.getMetronome()?.setTempoParams(tempo, payload.metadata?.timeSignature || "4/4", payload.metadata?.timeSignature || "4/4");
+      MidiPlayerSingleton.setAudioManager(audioManagerRef.current);
 
       const initialVols: Record<string, number> = {};
       payload.audioTracks.forEach(t => {
@@ -241,12 +243,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     }
 
     return () => {
-      // Stop MIDI player on unmount (critical: html-midi-player keeps playing after DOM removal)
-      try {
-        if (midiPlayerRef.current && typeof midiPlayerRef.current.stop === 'function') {
-          midiPlayerRef.current.stop();
-        }
-      } catch {}
+      MidiPlayerSingleton.cleanup();
       if (audioManagerRef.current) {
         audioManagerRef.current.stop();
         audioManagerRef.current = null;
@@ -256,21 +253,15 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     };
   }, [payload.metadata, payload.audioTracks]);
 
-  // Safety net: force-stop MIDI on any navigation (popstate covers browser back/forward)
+  // Safety net: force-stop all audio on browser back/forward or page unload
   useEffect(() => {
-    const stopMidi = () => {
-      try {
-        if (midiPlayerRef.current && typeof midiPlayerRef.current.stop === 'function') {
-          midiPlayerRef.current.stop();
-        }
-      } catch {}
-    };
-    window.addEventListener('popstate', stopMidi);
-    window.addEventListener('beforeunload', stopMidi);
+    const stopAll = () => MidiPlayerSingleton.stopAll();
+    window.addEventListener('popstate', stopAll);
+    window.addEventListener('beforeunload', stopAll);
     return () => {
-      stopMidi(); // Also stop on effect cleanup (covers React unmount)
-      window.removeEventListener('popstate', stopMidi);
-      window.removeEventListener('beforeunload', stopMidi);
+      stopAll();
+      window.removeEventListener('popstate', stopAll);
+      window.removeEventListener('beforeunload', stopAll);
     };
   }, []);
 
@@ -498,6 +489,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
 
   useEffect(() => {
     if (!midiPlayerRef.current) return;
+    MidiPlayerSingleton.setPlayer(midiPlayerRef.current);
     if (isPlaying) {
       if (isScoreSynthMutedRef.current) {
         midiPlayerRef.current.stop();

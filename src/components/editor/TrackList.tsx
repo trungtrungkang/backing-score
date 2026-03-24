@@ -23,6 +23,9 @@ export interface TrackListProps {
   onOffsetChange: (trackId: string, offsetMs: number) => void;
   audioManager: AudioManager | null; // Pass reference to fetch Data
   positionMs: number;
+  /** Live position ref for zero-rerender playback display */
+  positionMsRef?: React.RefObject<number>;
+  isPlaying?: boolean;
   durationMs: number;
   bpm?: number;
   timemap: TimemapEntry[];
@@ -57,6 +60,8 @@ export function TrackList({
   onOffsetChange,
   audioManager,
   positionMs,
+  positionMsRef,
+  isPlaying = false,
   durationMs,
   bpm = 120,
   timemap,
@@ -87,6 +92,47 @@ export function TrackList({
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const trackRafRef = useRef(0);
+
+  // During playback: update playhead CSS + auto-scroll directly via DOM (zero re-renders)
+  useEffect(() => {
+    if (isPlaying && positionMsRef) {
+      const tick = () => {
+        const pos = positionMsRef.current;
+        // Update playhead CSS directly
+        if (playheadRef.current && durationMs > 0) {
+          playheadRef.current.style.left = `calc(256px + (100% - 256px) * ${pos / durationMs})`;
+        }
+        // Auto-scroll
+        if (isAutoScrollEnabled && scrollContainerRef.current && durationMs > 0) {
+          const container = scrollContainerRef.current;
+          const trackControlsWidth = 256;
+          const totalCanvasWidth = container.scrollWidth - trackControlsWidth;
+          if (totalCanvasWidth > 0) {
+            const playheadAbsoluteX = trackControlsWidth + (pos / durationMs) * totalCanvasWidth;
+            const visibleRight = container.scrollLeft + container.clientWidth;
+            const visibleLeft = container.scrollLeft + trackControlsWidth;
+            if (playheadAbsoluteX > visibleRight - 40) {
+              container.scrollLeft = playheadAbsoluteX - trackControlsWidth - 40;
+            } else if (playheadAbsoluteX < visibleLeft) {
+              container.scrollLeft = Math.max(0, playheadAbsoluteX - trackControlsWidth - 40);
+            }
+          }
+        }
+        trackRafRef.current = requestAnimationFrame(tick);
+      };
+      trackRafRef.current = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(trackRafRef.current);
+    }
+  }, [isPlaying, positionMsRef, durationMs, isAutoScrollEnabled]);
+
+  // When not playing, sync playhead from prop on pause/seek/stop
+  useEffect(() => {
+    if (!isPlaying && playheadRef.current && durationMs > 0) {
+      playheadRef.current.style.left = `calc(256px + (100% - 256px) * ${positionMs / durationMs})`;
+    }
+  }, [isPlaying, positionMs, durationMs]);
 
   const handlePlayheadPointerDown = (e: React.PointerEvent) => {
     setIsDraggingPlayhead(true);
@@ -113,32 +159,6 @@ export function TrackList({
     setIsDraggingPlayhead(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
-
-  // Auto-scroll logic (Page Scroll technique)
-  useEffect(() => {
-    if (!isAutoScrollEnabled || durationMs === 0 || !scrollContainerRef.current) return;
-
-    const container = scrollContainerRef.current;
-    const trackControlsWidth = 256;
-    const totalCanvasWidth = container.scrollWidth - trackControlsWidth;
-
-    if (totalCanvasWidth <= 0) return;
-
-    // Calculate exact pixel position of playhead
-    const playheadCanvasX = (positionMs / durationMs) * totalCanvasWidth;
-    const playheadAbsoluteX = trackControlsWidth + playheadCanvasX;
-
-    // Calculate viewable area boundaries
-    const visibleLeft = container.scrollLeft + trackControlsWidth;
-    const visibleRight = container.scrollLeft + container.clientWidth;
-
-    // Trigger page flip if playhead leaves the boundaries
-    if (playheadAbsoluteX > visibleRight - 40) {
-      container.scrollLeft = playheadAbsoluteX - trackControlsWidth - 40;
-    } else if (playheadAbsoluteX < visibleLeft) {
-      container.scrollLeft = Math.max(0, playheadAbsoluteX - trackControlsWidth - 40);
-    }
-  }, [positionMs, durationMs, isAutoScrollEnabled]);
 
   return (
     <div className={cn("dark flex flex-col h-full bg-[#1e1e24] text-zinc-300 font-sans border-t border-zinc-800 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] z-20 overflow-hidden transition-colors", className)}>
@@ -214,6 +234,7 @@ export function TrackList({
 
           {/* Global HTML Playhead */}
           <div
+            ref={playheadRef}
             className="absolute top-0 bottom-0 w-[16px] -ml-[8px] flex justify-center cursor-ew-resize z-50 group outline-none"
             style={{
               left: durationMs > 0 ? `calc(256px + (100% - 256px) * ${positionMs / durationMs})` : "256px",

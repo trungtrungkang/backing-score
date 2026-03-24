@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import type { DAWPayload, AudioTrack, TimemapEntry } from "@/lib/daw/types";
 import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
+import { MidiPlayerSingleton } from "@/lib/audio/MidiPlayerSingleton";
 import { Midi } from "@tonejs/midi";
 import { cn } from "@/lib/utils";
 
@@ -115,7 +116,13 @@ export function EditorShell({
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
   const positionMsRef = useRef(0);
-  positionMsRef.current = positionMs;
+  // positionMsRef is updated directly by RAF loop during playback (no re-renders).
+  // setPositionMs is only called on stop/pause/seek/end to sync React state.
+  /** Sync both ref and React state — use for stop/pause/seek/end */
+  const syncPositionMs = useCallback((ms: number) => {
+    positionMsRef.current = ms;
+    setPositionMs(ms);
+  }, []);
   const [durationMs, setDurationMs] = useState(0);
   const requestRef = useRef<number>(0);
   const prevFilesRef = useRef<string | null>(null);
@@ -376,13 +383,12 @@ export function EditorShell({
       audioManagerRef.current = new AudioManager();
       const tempo = payload.metadata?.tempo || 120;
       audioManagerRef.current.getMetronome()?.setTempoParams(tempo, timeSignature, payload.metadata?.timeSignature || "4/4");
+      MidiPlayerSingleton.setAudioManager(audioManagerRef.current);
     }
 
     // Cleanup on unmount
     return () => {
-      if (midiPlayerRef.current) {
-        midiPlayerRef.current.stop();
-      }
+      MidiPlayerSingleton.cleanup();
       if (audioManagerRef.current) {
         audioManagerRef.current.stop();
         audioManagerRef.current = null;
@@ -390,8 +396,6 @@ export function EditorShell({
       if (requestRef.current) {
         cancelAnimationFrame(requestRef.current);
       }
-      // Reset the file hash so if the component remounts (e.g. React StrictMode),
-      // the load effect will correctly detect a change and reload tracks.
       prevFilesRef.current = null;
     };
   }, []);
@@ -533,17 +537,12 @@ export function EditorShell({
       if (audioManagerRef.current) {
         audioManagerRef.current.stop();
       }
-      setPositionMs(0);
+      syncPositionMs(0);
       return;
     }
 
-    setPositionMs(prev => {
-      const roundedPos = Math.round(currentPos);
-      // Throttle React re-renders to ~20fps (50ms) instead of ~60fps (16ms)
-      // RAF loop still runs at native framerate for accurate internal clock
-      if (Math.abs(prev - roundedPos) < 50) return prev;
-      return roundedPos;
-    });
+    // Update ref only — no setPositionMs() to avoid triggering React re-renders
+    positionMsRef.current = Math.round(currentPos);
 
     requestRef.current = requestAnimationFrame(updatePosition);
   }, [payload.audioTracks.length, totalSongDurationMs]);
@@ -702,6 +701,7 @@ export function EditorShell({
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
 
     if (midiPlayerRef.current && stretchedMidiBase64 && !isScoreSynthMuted) {
+      MidiPlayerSingleton.setPlayer(midiPlayerRef.current);
       const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
       const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000;
 
@@ -745,9 +745,9 @@ export function EditorShell({
     isPlayingRef.current = false;
 
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
-      setPositionMs(audioManagerRef.current.getCurrentPositionMs()); // force update
+      syncPositionMs(audioManagerRef.current.getCurrentPositionMs()); // force update
     } else if (midiPlayerRef.current) {
-      setPositionMs(Math.max(0, midiPlayerRef.current.currentTime * 1000 - midiStartOffsetMs));
+      syncPositionMs(Math.max(0, midiPlayerRef.current.currentTime * 1000 - midiStartOffsetMs));
     }
   }, [payload.audioTracks.length, midiStartOffsetMs]);
 
@@ -825,7 +825,7 @@ export function EditorShell({
       audioManagerRef.current.stop();
     }
     setIsPlaying(false);
-    setPositionMs(0);
+    syncPositionMs(0);
   }, [payload.audioTracks.length]);
 
   const handleSeek = useCallback((ms: number) => {
@@ -854,7 +854,7 @@ export function EditorShell({
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
       audioManagerRef.current.seek(ms);
     }
-    setPositionMs(ms);
+    syncPositionMs(ms);
 
     // Sync continuous MIDI telemetry stopwatch
     if (payload.audioTracks.length === 0) {
@@ -1336,6 +1336,7 @@ export function EditorShell({
         keySignature={payload.metadata?.keySignature || "C Maj"}
         onKeySignatureChange={onPayloadChange ? handleKeySignatureChange : undefined}
         positionMs={positionMs}
+        positionMsRef={positionMsRef}
         durationMs={totalSongDurationMs}
         isPlaying={isPlaying}
         loop={loopState}
@@ -1755,6 +1756,7 @@ export function EditorShell({
             <MusicXMLVisualizer
               scoreFileId={scoreFileId}
               positionMs={positionMs}
+              externalPositionMsRef={positionMsRef}
               isPlaying={isPlaying}
               timemap={correctedTimemapRef.current || payload.notationData?.timemap || EMPTY_TIMEMAP}
               measureMap={payload.notationData?.measureMap}
@@ -1817,6 +1819,8 @@ export function EditorShell({
               onOffsetChange={handleVirtualOffsetChange}
               audioManager={audioManagerRef.current}
               positionMs={positionMs}
+              positionMsRef={positionMsRef}
+              isPlaying={isPlaying}
               durationMs={totalSongDurationMs}
               bpm={payload.metadata?.tempo || 120}
               timemap={correctedTimemapRef.current || payload.notationData?.timemap || EMPTY_TIMEMAP}
