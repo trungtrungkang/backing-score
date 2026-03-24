@@ -51,6 +51,9 @@ export interface NotationData {
   fileId?: string;
   /** Mapping of audio time (ms) to MusicXML measure numbers */
   timemap: TimemapEntry[];
+  /** Whether timemap was created manually by user ('manual') or auto-generated ('auto').
+   *  When 'manual', timeMs values are authoritative and should not be overridden. */
+  timemapSource?: "auto" | "manual";
   /** Optional mapping from latent playback measure index to physical printed measure index */
   measureMap?: Record<number, number>;
 }

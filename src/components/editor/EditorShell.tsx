@@ -266,9 +266,12 @@ export function EditorShell({
       }));
 
       // Recalculate timemap timeMs from Verovio's MIDI tempo events.
-      // This ensures perfect sync between MIDI audio and playhead.
+      // Priority: 'manual' → skip (user timeMs authoritative), 'auto' → override,
+      // undefined (legacy) → fallback to MIDI-only heuristic (no audio tracks).
+      const tmSource = payload.notationData?.timemapSource;
+      const shouldCorrectTimemap = tmSource === 'auto' || (tmSource === undefined && payload.audioTracks.length === 0);
       const timemap = payload.notationData?.timemap;
-      if (timemap && timemap.length > 0) {
+      if (shouldCorrectTimemap && timemap && timemap.length > 0) {
         // Convert ticks to wall-clock ms using MIDI tempo events (already scaled by playbackRate)
         const scaledTempos = midi.header.tempos.sort((a, b) => a.ticks - b.ticks);
         
@@ -592,6 +595,7 @@ export function EditorShell({
       notationData: {
         ...(payload.notationData || { type: "music-xml" }),
         timemap: recordedTimemap,
+        timemapSource: "manual" as const,
       } as any,
     };
     onPayloadChange(newPayload);
