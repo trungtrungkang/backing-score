@@ -405,11 +405,15 @@ export function EditorShell({
     if (audioManagerRef.current) {
       const metronome = audioManagerRef.current.getMetronome();
       if (metronome) {
-        metronome.setTimemap(payload.notationData?.timemap || []);
-        metronome.setSyncToTimemap(!!payload.metadata?.syncToTimemap);
+        // Use MIDI-corrected timemap when available for accurate timing
+        const effectiveTimemap = correctedTimemapRef.current || payload.notationData?.timemap || [];
+        metronome.setTimemap(effectiveTimemap);
+        // Always sync metronome to timemap when one exists — the metronome must follow
+        // per-measure tempo from the timemap, regardless of the UI 'Elastic Grid' setting.
+        metronome.setSyncToTimemap(effectiveTimemap.length > 0);
       }
     }
-  }, [payload.notationData?.timemap, payload.metadata?.syncToTimemap]);
+  }, [payload.notationData?.timemap, payload.metadata?.syncToTimemap, stretchedMidiBase64]);
 
   // TrackList Resizer Logic
   useEffect(() => {
@@ -718,7 +722,11 @@ export function EditorShell({
         }, delayMs);
       }
     }
-    if (audioManagerRef.current && payload.audioTracks.length > 0) {
+    if (audioManagerRef.current) {
+      // Sync AudioManager's internal offset with the editor's current position.
+      // Without this, the metronome would start from a stale position (e.g., 0)
+      // instead of where the user seeked (e.g., by clicking a measure).
+      audioManagerRef.current.seek(positionMsRef.current);
       playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e: any) => console.error(e)));
     }
 
@@ -738,7 +746,7 @@ export function EditorShell({
     if (midiPlayerRef.current) {
       midiPlayerRef.current.stop(); // html-midi-player doesn't have pause(), stop() pauses it.
     }
-    if (audioManagerRef.current && payload.audioTracks.length > 0) {
+    if (audioManagerRef.current) {
       audioManagerRef.current.pause();
     }
     setIsPlaying(false);
@@ -821,7 +829,7 @@ export function EditorShell({
       midiPlayerRef.current.stop();
       midiPlayerRef.current.currentTime = 0;
     }
-    if (audioManagerRef.current && payload.audioTracks.length > 0) {
+    if (audioManagerRef.current) {
       audioManagerRef.current.stop();
     }
     setIsPlaying(false);

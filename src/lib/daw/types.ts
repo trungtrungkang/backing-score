@@ -43,6 +43,11 @@ export interface TimemapEntry {
   timeSignature?: string; // Optional dynamic meter override (e.g. "6/8")
   tempo?: number; // Optional dynamic tempo override (BPM) at this measure
   durationInQuarters?: number; // Actual duration of this measure in quarter notes (for pickups/anacrusis)
+  /** Per-beat tempo changes within this measure for accurate per-beat timing */
+  tempoAtBeat?: {beatPos: number, tempo: number}[];
+  /** For partial measures: which beat position this measure starts on (0-indexed).
+   *  If > 0, beat 0 of this measure is NOT a strong beat. */
+  startsAtBeat?: number;
 }
 
 export interface NotationData {

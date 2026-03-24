@@ -58,17 +58,17 @@ export class AudioManager {
       if (typeof window !== "undefined") {
         this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
         this.metronome = new MetronomeEngine(this.context);
-        
+
         // Listen for OS-level interrupts (e.g. iOS screen lock or backgrounding)
         this.context.onstatechange = () => {
-           console.log("[AudioManager] OS AudioContext state change:", this.context?.state);
-           if (this.context?.state === 'suspended' || this.context?.state === 'interrupted') {
-               // If the OS forcibly paused the audio hardware, we must sync our logical state
-               if (this.isPlaying) {
-                   console.warn("[AudioManager] iOS suspended audio hardware. Forcing internal pause.");
-                   this.pause();
-               }
-           }
+          console.log("[AudioManager] OS AudioContext state change:", this.context?.state);
+          if (this.context?.state === 'suspended' || this.context?.state === 'interrupted') {
+            // If the OS forcibly paused the audio hardware, we must sync our logical state
+            if (this.isPlaying) {
+              console.warn("[AudioManager] iOS suspended audio hardware. Forcing internal pause.");
+              this.pause();
+            }
+          }
         };
       } else {
         throw new Error("AudioManager can only be initialized in the browser.");
@@ -218,8 +218,8 @@ export class AudioManager {
     // We only trigger pre-roll if isPreRollEnabled is true, and the playhead is exactly at 0.
     let preRollDelaySec = 0;
     if (this.isPreRollEnabled && this.offsetTime === 0 && this.metronome) {
-        preRollDelaySec = this.metronome.getBarDurationSec() / this.playbackRate;
-        console.log(`[AudioManager] PreRoll Active: Delaying audio tracks by ${preRollDelaySec.toFixed(3)}s`);
+      preRollDelaySec = this.metronome.getBarDurationSec() / this.playbackRate;
+      console.log(`[AudioManager] PreRoll Active: Delaying audio tracks by ${preRollDelaySec.toFixed(3)}s`);
     }
 
     const syncStartTime = this.context.currentTime + 0.05 + preRollDelaySec;
@@ -277,17 +277,21 @@ export class AudioManager {
 
       // Check if bufferOffset is beyond the buffer duration
       if (trackBufferOffset < trackNode.buffer.duration) {
-         source.start(trackStartWhen, trackBufferOffset);
-         trackNode.source = source;
+        source.start(trackStartWhen, trackBufferOffset);
+        trackNode.source = source;
       }
     });
 
     if (this.metronome && this.metronome.getEnabled()) {
-        // If there is a preRollDelaySec, we start the metronome ticking immediately (pre-emptively)
-        // by pushing the MetronomeEngine's "Song start time" into the future relative to its tick schedule.
-        // E.g. We tell the metronome the song actually started `preRollDelaySec` ago, so it ticks negative beats.
-        const metronomeStartOffsetMs = this.offsetTime * 1000 - (preRollDelaySec * 1000 * this.playbackRate);
-        this.metronome.start(metronomeStartOffsetMs, this.context.currentTime + 0.05);
+      // If there is a preRollDelaySec, we start the metronome ticking immediately (pre-emptively)
+      // by pushing the MetronomeEngine's "Song start time" into the future relative to its tick schedule.
+      // E.g. We tell the metronome the song actually started `preRollDelaySec` ago, so it ticks negative beats.
+      const metronomeStartOffsetMs = this.offsetTime * 1000 - (preRollDelaySec * 1000 * this.playbackRate);
+      // Compensate for SoundTouch worklet processing latency (~30ms).
+      // Audio tracks go through the worklet (adding buffer delay), but the metronome
+      // oscillator goes directly to output — without compensation, clicks arrive early.
+      const workletLatencyCompSec = this.workletLoaded ? 0.060 : 0;
+      this.metronome.start(metronomeStartOffsetMs, this.context.currentTime + 0.05 + workletLatencyCompSec);
     }
 
     this.updateMuteSoloVolumes();
@@ -297,7 +301,7 @@ export class AudioManager {
 
   public pause() {
     if (!this.context) return;
-    
+
     // Always defensively stop the metronome when paused/stopped
     if (this.metronome) this.metronome.stop();
 
@@ -310,7 +314,7 @@ export class AudioManager {
     this.pauseTime = this.context.currentTime;
     this.offsetTime = truePosMs / 1000;
     this.manageLoopCheck();
-    
+
     if (this.metronome) this.metronome.stop();
 
     this.tracks.forEach((trackNode) => {
@@ -339,12 +343,12 @@ export class AudioManager {
       return this.offsetTime * 1000;
     }
     const now = this.context.currentTime;
-    
+
     // We must account for the preRoll delay in the UI time calculation
     // When playing, context.currentTime moves forward immediately, but audio hasn't started yet.
     let preRollOffsetSec = 0;
     if (this.isPreRollEnabled && this.offsetTime === 0 && this.metronome) {
-        preRollOffsetSec = this.metronome.getBarDurationSec() / this.playbackRate;
+      preRollOffsetSec = this.metronome.getBarDurationSec() / this.playbackRate;
     }
 
     const unscaledElapsedSec = (now - this.startTime) - preRollOffsetSec;
@@ -368,7 +372,13 @@ export class AudioManager {
       this.pause();
     }
 
-    this.offsetTime = Math.max(0, Math.min(timeMs / 1000, this.durationMs / 1000));
+    // For MIDI-only projects (no audio tracks), durationMs is 0.
+    // Don't clamp to it — the timemap defines the actual duration.
+    if (this.tracks.size > 0 && this.durationMs > 0) {
+      this.offsetTime = Math.max(0, Math.min(timeMs / 1000, this.durationMs / 1000));
+    } else {
+      this.offsetTime = Math.max(0, timeMs / 1000);
+    }
 
     if (wasPlaying) {
       await this.play();
@@ -403,7 +413,7 @@ export class AudioManager {
     const track = this.tracks.get(trackId);
     if (track) {
       track.params.offsetMs = offsetMs;
-      
+
       let maxDuration = 0;
       this.tracks.forEach(t => {
         const d = (t.buffer.duration * 1000) + (t.params.offsetMs || 0);
@@ -476,7 +486,8 @@ export class AudioManager {
 
       if (this.metronome && this.metronome.getEnabled()) {
         this.metronome.setPlaybackRate(rate);
-        this.metronome.start(this.offsetTime * 1000, this.context!.currentTime);
+        const workletLatencyCompSec = this.workletLoaded ? 0.080 : 0;
+        this.metronome.start(this.offsetTime * 1000, this.context!.currentTime + workletLatencyCompSec);
       }
     } else {
       if (this.metronome) {
@@ -555,27 +566,28 @@ export class AudioManager {
 
   // --- Phase 8.1 Metronome ---
   public getMetronome(): MetronomeEngine | null {
-      if (!this.metronome) {
-          try { this.initContext(); } catch(e) {}
-      }
-      return this.metronome;
+    if (!this.metronome) {
+      try { this.initContext(); } catch (e) { }
+    }
+    return this.metronome;
   }
-  
+
   public setGlobalMute(muted: boolean) {
     this.globalMuted = muted;
     if (muted) {
-       this.pause();
+      this.pause();
     }
   }
 
   public setMetronomeEnabled(enabled: boolean) {
     if (!this.metronome) {
-        try { this.initContext(); } catch(e) {}
+      try { this.initContext(); } catch (e) { }
     }
     if (!this.metronome) return;
     this.metronome.setEnabled(enabled);
     if (enabled && this.isPlaying && this.context) {
-      this.metronome.start(this.getCurrentPositionMs(), this.context.currentTime);
+      const workletLatencyCompSec = this.workletLoaded ? 0.080 : 0;
+      this.metronome.start(this.getCurrentPositionMs(), this.context.currentTime + workletLatencyCompSec);
     } else {
       this.metronome.stop();
     }

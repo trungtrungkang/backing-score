@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import type { DAWPayload, TrackBase } from "@/lib/daw/types";
-import { Play, Pause, Square, Mic, Piano, Maximize, Minimize, Settings2, Terminal, Music, Maximize2, Minimize2, Keyboard, SlidersHorizontal } from "lucide-react";
+import { Play, Pause, Square, Mic, Piano, Maximize, Minimize, Settings2, Terminal, Music, Maximize2, Minimize2, Keyboard, SlidersHorizontal, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useGamification } from "@/components/editor/GamificationProvider";
@@ -454,6 +454,15 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               </PopoverContent>
             </Popover>
           ))}
+
+          {/* Metronome Toggle */}
+          <button
+            onClick={() => actions.handleMetronomeToggle(!state.isMetronomeEnabled)}
+            className={`p-2 rounded-md transition-all ${state.isMetronomeEnabled ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"}`}
+            title={state.isMetronomeEnabled ? "Disable Metronome" : "Enable Metronome"}
+          >
+            <Bell className="w-4 h-4" />
+          </button>
 
           {/* Mixer Popover */}
           <Popover>

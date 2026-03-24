@@ -36,6 +36,8 @@ interface MeasureInfo {
   tempo?: number;
   /** First tempo change in this measure (for duration calculation) */
   firstTempo?: number;
+  /** Per-beat tempo changes within this measure: [{beatPos (in quarters from measure start), tempo}] */
+  tempoAtBeat?: {beatPos: number, tempo: number}[];
   /** Beat duration sum in quarter-note units */
   durationInQuarters: number;
   /** Repeat forward barline */
@@ -179,79 +181,96 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
       }
     }
 
-    // ── Partial measure detection: compute actual note duration ──
-    // If a measure has fewer note divisions than expected, use the actual duration.
-    // Applies to pickups (anacrusis), section boundaries, and mid-piece partial measures.
+    // ── Single pass through measure children in DOM order ──
+    // Process notes and directions together to track cumulative beat position
+    // at each tempo change point within the measure.
     {
       const expectedDurationInDivisions = info.durationInQuarters * currentDivisions;
-      const notes = measure.getElementsByTagName("note");
-      // Sum durations per voice, taking the voice with the most content
       const voiceDurations: Record<string, number> = {};
-      for (let n = 0; n < notes.length; n++) {
-        const note = notes[n];
-        // Skip chord notes (they overlap with the previous note, not additive)
-        if (note.getElementsByTagName("chord").length > 0) continue;
-        // Skip grace notes (no duration)
-        if (note.getElementsByTagName("grace").length > 0) continue;
-        const durEl = note.getElementsByTagName("duration")[0];
-        if (!durEl || !durEl.textContent) continue;
-        const dur = parseInt(durEl.textContent) || 0;
-        const voice = getTextContent(note, "voice") || "1";
-        voiceDurations[voice] = (voiceDurations[voice] || 0) + dur;
+      // Track cumulative duration in voice "1" for beat position of tempo changes
+      let cumulativeDurVoice1 = 0;
+
+      const children = measure.childNodes;
+      for (let c = 0; c < children.length; c++) {
+        const child = children[c] as Element;
+        if (!child.tagName) continue;
+
+        if (child.tagName === "note") {
+          // Skip chord notes (they overlap with the previous note)
+          if (child.getElementsByTagName("chord").length > 0) continue;
+          // Skip grace notes (no duration)
+          if (child.getElementsByTagName("grace").length > 0) continue;
+          const durEl = child.getElementsByTagName("duration")[0];
+          if (!durEl || !durEl.textContent) continue;
+          const dur = parseInt(durEl.textContent) || 0;
+          const voice = getTextContent(child, "voice") || "1";
+          voiceDurations[voice] = (voiceDurations[voice] || 0) + dur;
+          if (voice === "1") cumulativeDurVoice1 += dur;
+        } else if (child.tagName === "backup") {
+          const durEl = child.getElementsByTagName("duration")[0];
+          if (durEl && durEl.textContent) {
+            const dur = parseInt(durEl.textContent) || 0;
+            // backup rewinds voice durations — don't affect voice1 cumulative for tempo tracking
+          }
+        } else if (child.tagName === "forward") {
+          const durEl = child.getElementsByTagName("duration")[0];
+          if (durEl && durEl.textContent) {
+            const dur = parseInt(durEl.textContent) || 0;
+            cumulativeDurVoice1 += dur;
+          }
+        } else if (child.tagName === "direction") {
+          const sounds = child.getElementsByTagName("sound");
+          for (let s = 0; s < sounds.length; s++) {
+            const sound = sounds[s];
+            const tempo = sound.getAttribute("tempo");
+            if (tempo) {
+              const bpm = parseFloat(tempo);
+              if (info.firstTempo === undefined) info.firstTempo = bpm;
+              info.tempo = bpm;
+              // Track beat position of this tempo change
+              const currentBeatPos = cumulativeDurVoice1 / currentDivisions;
+              if (!info.tempoAtBeat) info.tempoAtBeat = [];
+              info.tempoAtBeat.push({beatPos: currentBeatPos, tempo: bpm});
+              if (m > 0 || tempoChanges.length === 0 || tempoChanges[tempoChanges.length - 1][1] !== bpm) {
+                tempoChanges.push([physNum, bpm]);
+              }
+            }
+            if (sound.getAttribute("dacapo") === "yes") info.dacapo = true;
+            if (sound.getAttribute("dalsegno")) info.dalsegno = sound.getAttribute("dalsegno")!;
+            if (sound.getAttribute("segno")) info.segno = sound.getAttribute("segno")!;
+            if (sound.getAttribute("coda")) info.coda = sound.getAttribute("coda")!;
+            if (sound.getAttribute("tocoda")) info.tocoda = sound.getAttribute("tocoda")!;
+            if (sound.getAttribute("fine") === "yes") info.fine = true;
+          }
+        } else if (child.tagName === "barline") {
+          // Barlines — handle repeats and endings
+          const repeatEl = child.getElementsByTagName("repeat")[0];
+          if (repeatEl) {
+            const dir = repeatEl.getAttribute("direction");
+            if (dir === "forward") info.repeatForward = true;
+            if (dir === "backward") {
+              const times = parseInt(repeatEl.getAttribute("times") || "2");
+              info.repeatBackward = times;
+            }
+          }
+          const endingEl = child.getElementsByTagName("ending")[0];
+          if (endingEl) {
+            const endingType = endingEl.getAttribute("type");
+            const endingNum = parseInt(endingEl.getAttribute("number") || "1");
+            if (endingType === "start") info.endingStart = endingNum;
+            if (endingType === "stop" || endingType === "discontinue") info.endingStop = true;
+          }
+        }
       }
+
+      // Partial measure detection
       const maxVoiceDuration = Math.max(0, ...Object.values(voiceDurations));
       if (maxVoiceDuration > 0 && maxVoiceDuration < expectedDurationInDivisions) {
         info.durationInQuarters = maxVoiceDuration / currentDivisions;
       }
     }
 
-    // Sound elements (tempo, navigation)
-    const directions = measure.getElementsByTagName("direction");
-    for (let d = 0; d < directions.length; d++) {
-      const sounds = directions[d].getElementsByTagName("sound");
-      for (let s = 0; s < sounds.length; s++) {
-        const sound = sounds[s];
-        const tempo = sound.getAttribute("tempo");
-        if (tempo) {
-          const bpm = parseFloat(tempo);
-          if (info.firstTempo === undefined) info.firstTempo = bpm;
-          info.tempo = bpm;
-          if (m > 0 || tempoChanges.length === 0 || tempoChanges[tempoChanges.length - 1][1] !== bpm) {
-            tempoChanges.push([physNum, bpm]);
-          }
-        }
-        if (sound.getAttribute("dacapo") === "yes") info.dacapo = true;
-        if (sound.getAttribute("dalsegno")) info.dalsegno = sound.getAttribute("dalsegno")!;
-        if (sound.getAttribute("segno")) info.segno = sound.getAttribute("segno")!;
-        if (sound.getAttribute("coda")) info.coda = sound.getAttribute("coda")!;
-        if (sound.getAttribute("tocoda")) info.tocoda = sound.getAttribute("tocoda")!;
-        if (sound.getAttribute("fine") === "yes") info.fine = true;
-      }
-    }
 
-    // Barlines: repeats and endings
-    const barlines = measure.getElementsByTagName("barline");
-    for (let b = 0; b < barlines.length; b++) {
-      const barline = barlines[b];
-      const repeatEl = barline.getElementsByTagName("repeat")[0];
-      if (repeatEl) {
-        const dir = repeatEl.getAttribute("direction");
-        if (dir === "forward") info.repeatForward = true;
-        if (dir === "backward") {
-          info.repeatBackward = parseInt(repeatEl.getAttribute("times") || "2", 10);
-        }
-      }
-      const endingEl = barline.getElementsByTagName("ending")[0];
-      if (endingEl) {
-        const endType = endingEl.getAttribute("type") || "start";
-        const endNum = parseInt(endingEl.getAttribute("number") || "1", 10);
-        if (endType === "start") {
-          info.endingStart = endNum;
-        } else {
-          info.endingStop = true;
-        }
-      }
-    }
 
     measureInfos.push(info);
   }
@@ -373,14 +392,34 @@ function unrollMeasures(
       continue;
     }
 
-    // Calculate duration using firstTempo if available (the tempo at measure start),
-    // otherwise use the incoming tempo from the previous measure.
-    // For rit. (200→190→170→140), firstTempo = 190 → use 190 for duration, exit at 140.
-    // For a single tempo (Più mosso = 200), firstTempo = 200 → use 200 for duration.
+    // Calculate measure duration accounting for mid-measure tempo changes.
+    // If the measure has per-beat tempo data, compute weighted duration by summing
+    // each segment at its respective tempo. Otherwise fall back to firstTempo.
     if (m.timeSignature) currentTimeSig = m.timeSignature;
-    const tempoForDuration = m.firstTempo ?? currentTempo;
-    const msPerQuarterNote = 60000 / tempoForDuration;
-    const measureDurationMs = m.durationInQuarters * msPerQuarterNote;
+    let measureDurationMs: number;
+    if (m.tempoAtBeat && m.tempoAtBeat.length > 1) {
+      // Weighted duration: sum each segment between tempo changes
+      const totalQuarters = m.durationInQuarters;
+      const incomingTempo = currentTempo;
+      measureDurationMs = 0;
+      for (let t = 0; t < m.tempoAtBeat.length; t++) {
+        const segStart = m.tempoAtBeat[t].beatPos;
+        const segTempo = m.tempoAtBeat[t].tempo;
+        const segEnd = (t + 1 < m.tempoAtBeat.length) ? m.tempoAtBeat[t + 1].beatPos : totalQuarters;
+        const segQuarters = segEnd - segStart;
+        measureDurationMs += segQuarters * (60000 / segTempo);
+      }
+      // If the first tempo change doesn't start at beat 0, add the initial segment
+      // using the incoming tempo (from the previous measure)
+      if (m.tempoAtBeat[0].beatPos > 0) {
+        const initialQuarters = m.tempoAtBeat[0].beatPos;
+        measureDurationMs += initialQuarters * (60000 / incomingTempo);
+      }
+    } else {
+      const tempoForDuration = m.firstTempo ?? currentTempo;
+      const msPerQuarterNote = 60000 / tempoForDuration;
+      measureDurationMs = m.durationInQuarters * msPerQuarterNote;
+    }
 
     // Update currentTempo to last tempo in this measure (outgoing for next measure)
     if (m.tempo !== undefined) currentTempo = m.tempo;
@@ -405,6 +444,25 @@ function unrollMeasures(
       entry.tempo = initialTempo;
     }
     if (m.tempo !== undefined) entry.tempo = m.tempo;
+    if (m.tempoAtBeat && m.tempoAtBeat.length > 1) entry.tempoAtBeat = m.tempoAtBeat;
+
+    // Detect partial measures: if this measure has fewer beats than the time signature,
+    // check if the previous timemap entry was also partial. If so, this measure is a
+    // continuation and starts at a beat position > 0 (not a strong beat).
+    const tsig = currentTimeSig || "4/4";
+    const [tBeats, tType] = tsig.split("/").map(Number);
+    const fullQuartersPerBar = tBeats * (4 / tType);
+    if (m.durationInQuarters < fullQuartersPerBar && timemap.length > 0) {
+      const prevEntry = timemap[timemap.length - 1];
+      const prevDurQ = prevEntry.durationInQuarters ?? fullQuartersPerBar;
+      if (prevDurQ < fullQuartersPerBar) {
+        // Previous measure was also partial — this one continues at the beat where it left off
+        const prevStartBeat = prevEntry.startsAtBeat ?? 0;
+        const prevBeats = Math.round(prevDurQ * (tType / 4));
+        entry.startsAtBeat = prevStartBeat + prevBeats;
+      }
+    }
+
     timemap.push(entry);
 
     // Map latent → physical: only emit ANCHOR points where offset changes

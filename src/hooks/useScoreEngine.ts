@@ -396,12 +396,13 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     if (audioManagerRef.current) {
       const metronome = audioManagerRef.current.getMetronome();
       if (metronome) {
-        const timemapArr = payload.notationData?.timemap || [];
+        // Use MIDI-corrected timemap when available for accurate timing
+        const timemapArr = correctedTimemapRef.current || payload.notationData?.timemap || [];
         metronome.setTimemap(timemapArr);
         metronome.setSyncToTimemap(timemapArr.length > 0);
       }
     }
-  }, [payload.notationData?.timemap, payload.metadata?.syncToTimemap]);
+  }, [payload.notationData?.timemap, payload.metadata?.syncToTimemap, stretchedMidiBase64]);
 
   const handlePlay = useCallback(async () => {
     try {
@@ -435,7 +436,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
         }, delayMs);
       }
     }
-    if (audioManagerRef.current && payload.audioTracks.length > 0) {
+    if (audioManagerRef.current) {
       playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.log(e)));
     }
     
@@ -547,7 +548,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
 
     try {
         if (midiPlayerRef.current) midiPlayerRef.current.stop();
-        if (audioManagerRef.current && payload.audioTracks.length > 0) audioManagerRef.current.pause();
+        if (audioManagerRef.current) audioManagerRef.current.pause();
     } catch (e) { console.error(e); }
 
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
@@ -675,7 +676,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
             if (isWaitingRef.current) {
                 isWaitingRef.current = false;
                 if (midiPlayerRef.current && !isScoreSynthMutedRef.current) Promise.resolve(midiPlayerRef.current.start()).catch((e) => {});
-                if (audioManagerRef.current && payload.audioTracks.length > 0) Promise.resolve(audioManagerRef.current.play()).catch(e => {});
+                if (audioManagerRef.current) Promise.resolve(audioManagerRef.current.play()).catch(e => {});
             }
         } else {
             if (!isWaitingRef.current) {
