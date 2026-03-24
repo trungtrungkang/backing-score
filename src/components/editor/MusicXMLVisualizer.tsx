@@ -10,7 +10,7 @@ export interface MusicXMLVisualizerProps {
   scoreFileId?: string;
   positionMs?: number;
   isPlaying?: boolean;
-  timemap?: { measure: number; timeMs: number }[];
+  timemap?: TimemapEntry[];
   measureMap?: Record<number, number>;
   onSeek?: (positionMs: number) => void;
   onMidiExtracted?: (midiBase64: string) => void;
@@ -23,6 +23,7 @@ export interface MusicXMLVisualizerProps {
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
+import type { TimemapEntry } from "@/lib/daw/types";
 import { injectMidiInstruments } from "@/lib/score/midi-instruments";
 
 export function MusicXMLVisualizer({
@@ -38,7 +39,7 @@ export function MusicXMLVisualizer({
   const svgContentRef = useRef<string | null>(null); // holds raw SVG string
   const svgContainerRef = useRef<HTMLDivElement | null>(null); // DOM node for SVG
   const workerProxyRef = useRef<IVerovioWorkerProxy | null>(null);
-  
+
   const [processedXml, setProcessedXml] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [debouncedWidth, setDebouncedWidth] = useState<number>(0);
@@ -52,13 +53,13 @@ export function MusicXMLVisualizer({
   // Load saved zoom level for this score
   useEffect(() => {
     if (!scoreFileId) return;
-    
+
     // Explicit override for embedded environments (e.g. Tiptap Snippet)
     if (defaultScale !== undefined) {
       setScale(defaultScale);
       return;
     }
-    
+
     // System default for full-page `/c/[courseId]/[lessonId]` View
     if (window.innerWidth >= 768) {
       setScale(70);
@@ -92,19 +93,19 @@ export function MusicXMLVisualizer({
   useEffect(() => {
     if (!svgContainerRef.current) return;
     const observer = new ResizeObserver((entries) => {
-       for (const entry of entries) {
-           if (entry.contentRect.width > 0) {
-               setContainerWidth(Math.round(entry.contentRect.width));
-           }
-       }
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setContainerWidth(Math.round(entry.contentRect.width));
+        }
+      }
     });
     observer.observe(svgContainerRef.current);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-     const timer = setTimeout(() => setDebouncedWidth(containerWidth), 300);
-     return () => clearTimeout(timer);
+    const timer = setTimeout(() => setDebouncedWidth(containerWidth), 300);
+    return () => clearTimeout(timer);
   }, [containerWidth]);
 
   // --- EFFECT A: DATA FETCH, XML SANITIZATION & MIDI GENERATION (RUNS ONCE PER SCORE) ---
@@ -153,55 +154,55 @@ export function MusicXMLVisualizer({
         for (let i = directions.length - 1; i >= 0; i--) {
           const dir = directions[i];
           if (dir.getElementsByTagName('pedal').length > 0) {
-             dir.parentNode?.removeChild(dir);
+            dir.parentNode?.removeChild(dir);
           }
         }
-        
+
         // 3. Purge infinite <tie> anomalies specifically isolating unclosed boundaries circumventing VLV overflows while retaining valid sustains natively
         const openTies: Record<string, Element[]> = {};
         const baseMeasures = baseXmlDoc.getElementsByTagName('measure');
         // Sequentially validate tied note pairs across all boundaries natively
         for (let i = 0; i < baseMeasures.length; i++) {
-            const measure = baseMeasures[i];
-            const mNotes = measure.getElementsByTagName('note');
-            for (let j = 0; j < mNotes.length; j++) {
-                const note = mNotes[j];
-                const pitch = note.getElementsByTagName('pitch')[0];
-                if (!pitch) continue;
-                
-                const step = pitch.getElementsByTagName('step')[0]?.textContent || '';
-                const alter = pitch.getElementsByTagName('alter')[0]?.textContent || '';
-                const octave = pitch.getElementsByTagName('octave')[0]?.textContent || '';
-                const key = `${step}${alter}${octave}`;
-                
-                const noteTies = note.getElementsByTagName('tie');
-                for (let k = noteTies.length - 1; k >= 0; k--) {
-                    const tie = noteTies[k];
-                    const tieType = tie.getAttribute('type');
-                    if (tieType === 'start') {
-                        if (!openTies[key]) openTies[key] = [];
-                        openTies[key].push(tie);
-                    } else if (tieType === 'stop') {
-                        if (openTies[key] && openTies[key].length > 0) {
-                            openTies[key].pop(); // Successfully closed
-                        } else {
-                            tie.parentNode?.removeChild(tie); // Malformed stop without start natively
-                        }
-                    }
+          const measure = baseMeasures[i];
+          const mNotes = measure.getElementsByTagName('note');
+          for (let j = 0; j < mNotes.length; j++) {
+            const note = mNotes[j];
+            const pitch = note.getElementsByTagName('pitch')[0];
+            if (!pitch) continue;
+
+            const step = pitch.getElementsByTagName('step')[0]?.textContent || '';
+            const alter = pitch.getElementsByTagName('alter')[0]?.textContent || '';
+            const octave = pitch.getElementsByTagName('octave')[0]?.textContent || '';
+            const key = `${step}${alter}${octave}`;
+
+            const noteTies = note.getElementsByTagName('tie');
+            for (let k = noteTies.length - 1; k >= 0; k--) {
+              const tie = noteTies[k];
+              const tieType = tie.getAttribute('type');
+              if (tieType === 'start') {
+                if (!openTies[key]) openTies[key] = [];
+                openTies[key].push(tie);
+              } else if (tieType === 'stop') {
+                if (openTies[key] && openTies[key].length > 0) {
+                  openTies[key].pop(); // Successfully closed
+                } else {
+                  tie.parentNode?.removeChild(tie); // Malformed stop without start natively
                 }
+              }
             }
+          }
         }
-        
+
         // Final Sweep: Purge any trailing unclosed 'start' ties triggering infinite VLV extrapolations globally!
         for (const key of Object.keys(openTies)) {
-            for (const tie of openTies[key]) {
-                tie.parentNode?.removeChild(tie);
-            }
+          for (const tie of openTies[key]) {
+            tie.parentNode?.removeChild(tie);
+          }
         }
 
         const serializer = new XMLSerializer();
         const safeSvgText = serializer.serializeToString(baseXmlDoc);
-        
+
         // Output the finalized clean document to absolute state for fast Render passes
         setProcessedXml(safeSvgText);
 
@@ -214,7 +215,7 @@ export function MusicXMLVisualizer({
         const midiProxy = new VerovioWorkerProxy(midiWorker) as unknown as IVerovioWorkerProxy;
         await midiProxy.onRuntimeInitialized();
         if (canceled) return;
-        
+
         // Clone the globally cleansed core document for explicit accidental modulation strictly for MIDI engine overrides natively
         const midiXmlDoc = parser.parseFromString(safeSvgText, 'text/xml');
 
@@ -228,11 +229,11 @@ export function MusicXMLVisualizer({
             const alter = pitch.getElementsByTagName('alter')[0];
             let accType = 'natural';
             if (alter) {
-               const val = alter.textContent;
-               if (val === '-1') accType = 'flat';
-               else if (val === '1') accType = 'sharp';
-               else if (val === '-2') accType = 'flat-flat';
-               else if (val === '2') accType = 'double-sharp';
+              const val = alter.textContent;
+              if (val === '-1') accType = 'flat';
+              else if (val === '1') accType = 'sharp';
+              else if (val === '-2') accType = 'flat-flat';
+              else if (val === '2') accType = 'double-sharp';
             }
             const accNode = midiXmlDoc.createElement('accidental');
             accNode.textContent = accType;
@@ -251,32 +252,32 @@ export function MusicXMLVisualizer({
             noteNode.insertBefore(accNode, anchor);
           }
         }
-        
+
         const safeMidiText = serializer.serializeToString(midiXmlDoc);
         // Inject MIDI instrument program changes for proper instrument sounds
         const enrichedMidiText = injectMidiInstruments(safeMidiText);
         await midiProxy.loadData(enrichedMidiText);
-        
+
         let midiStr = '';
         if (!canceled) {
           midiStr = await midiProxy.renderToMIDI();
           if (!midiStr || midiStr.trim() === '') {
-             console.error("[MusicXML] FATAL: DOMParser compilation generated an illegal XSD layout!");
-             await midiProxy.loadData(safeSvgText);
-             midiStr = await midiProxy.renderToMIDI();
+            console.error("[MusicXML] FATAL: DOMParser compilation generated an illegal XSD layout!");
+            await midiProxy.loadData(safeSvgText);
+            midiStr = await midiProxy.renderToMIDI();
           }
           if (midiStr) {
-             onMidiExtracted?.('data:audio/midi;base64,' + midiStr);
+            onMidiExtracted?.('data:audio/midi;base64,' + midiStr);
           }
         }
-        midiWorker.terminate(); 
+        midiWorker.terminate();
 
         if (canceled) return;
 
       } catch (e: any) {
         if (!canceled) {
-           setError(e.message ?? "Unknown error loading score");
-           setLoading(false); // Only toggle loading off if error natively
+          setError(e.message ?? "Unknown error loading score");
+          setLoading(false); // Only toggle loading off if error natively
         }
       }
     };
@@ -289,49 +290,49 @@ export function MusicXMLVisualizer({
 
   // --- EFFECT B: LIGHTWEIGHT WEBASSEMBLY VIEWPORT RENDER (RUNS ON SCALE / WIDTH CHANGES) ---
   useEffect(() => {
-     if (!processedXml || !workerProxyRef.current || debouncedWidth === 0) return;
-     let canceled = false;
-     
-     const renderLayout = async () => {
-        setLoading(true);
-        try {
-           const proxy = workerProxyRef.current;
-           if (!proxy) return;
+    if (!processedXml || !workerProxyRef.current || debouncedWidth === 0) return;
+    let canceled = false;
 
-           await proxy.setOptions({
-              pageHeight: 60000,
-              pageWidth: Math.round(debouncedWidth * (100 / scale)),
-              pageMarginLeft: 50,
-              pageMarginRight: 50,
-              pageMarginTop: 50,
-              pageMarginBottom: 50,
-              scale: scale,
-              spacingLinear: 0.25,
-              spacingNonLinear: 0.6,
-              adjustPageHeight: true,
-              breaks: "auto"
-           });
-           if (canceled) return;
+    const renderLayout = async () => {
+      setLoading(true);
+      try {
+        const proxy = workerProxyRef.current;
+        if (!proxy) return;
 
-           await proxy.loadData(processedXml);
-           if (canceled) return;
+        await proxy.setOptions({
+          pageHeight: 60000,
+          pageWidth: Math.round(debouncedWidth * (100 / scale)),
+          pageMarginLeft: 50,
+          pageMarginRight: 50,
+          pageMarginTop: 50,
+          pageMarginBottom: 50,
+          scale: scale,
+          spacingLinear: 0.25,
+          spacingNonLinear: 0.6,
+          adjustPageHeight: true,
+          breaks: "auto"
+        });
+        if (canceled) return;
 
-           const svg = await proxy.renderToSVG(1);
-           if (canceled) return;
+        await proxy.loadData(processedXml);
+        if (canceled) return;
 
-           svgContentRef.current = svg;
-           setRenderVersion(v => v + 1);
-        } catch(e) {
-           console.error("Verovio Render Layout failed:", e);
-        } finally {
-           if (!canceled) setLoading(false);
-        }
-     };
+        const svg = await proxy.renderToSVG(1);
+        if (canceled) return;
 
-     renderLayout();
-     return () => {
-        canceled = true;
-     };
+        svgContentRef.current = svg;
+        setRenderVersion(v => v + 1);
+      } catch (e) {
+        console.error("Verovio Render Layout failed:", e);
+      } finally {
+        if (!canceled) setLoading(false);
+      }
+    };
+
+    renderLayout();
+    return () => {
+      canceled = true;
+    };
   }, [processedXml, scale, debouncedWidth]);
 
   // Write SVG string directly to DOM via ref (bypasses React reconciliation)
@@ -443,15 +444,15 @@ export function MusicXMLVisualizer({
 
     const updatePlayhead = () => {
       const currentPosMs = positionMsRef.current;
-      // Skip if position hasn't changed enough (throttle SVG queries)
-      if (Math.abs(currentPosMs - lastPlayheadMsRef.current) < 30) {
+      // Skip if position hasn't changed enough (throttle SVG queries during playback only)
+      if (isPlaying && Math.abs(currentPosMs - lastPlayheadMsRef.current) < 30) {
         playheadRafRef.current = requestAnimationFrame(updatePlayhead);
         return;
       }
       lastPlayheadMsRef.current = currentPosMs;
 
-      let currentEvent: { measure: number, timeMs: number } | null = null;
-      let nextEvent: { measure: number, timeMs: number } | null = null;
+      let currentEvent: typeof timemap[0] | null = null;
+      let nextEvent: typeof timemap[0] | null = null;
 
       for (let i = 0; i < timemap.length; i++) {
         if (currentPosMs >= timemap[i].timeMs) {
@@ -471,6 +472,14 @@ export function MusicXMLVisualizer({
           const duration = nextEvent.timeMs - currentEvent.timeMs;
           if (duration > 0) {
             progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
+          }
+        } else {
+          // Last measure: estimate duration from durationInQuarters or fallback
+          const lastTempo = currentEvent.tempo || 120;
+          const lastDurationQ = currentEvent.durationInQuarters || 3;
+          const estimatedDurationMs = lastDurationQ * (60000 / lastTempo);
+          if (estimatedDurationMs > 0) {
+            progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / estimatedDurationMs));
           }
         }
 
@@ -558,6 +567,46 @@ export function MusicXMLVisualizer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, timemap, measureMap, renderVersion, isWaitMode]);
+
+  // Dedicated stop-reset: when playback stops and position is 0, force playhead/highlight to measure 1
+  useEffect(() => {
+    if (!isPlaying && positionMs === 0 && measuresCacheRef.current && timemap.length > 0) {
+      // Clear any existing highlight
+      svgContainerRef.current?.querySelectorAll('.active-measure').forEach(el => el.classList.remove('active-measure'));
+      // Highlight first measure
+      const firstMeasure = timemap[0];
+      const physicalIndex = getPhysicalMeasure(firstMeasure.measure, measureMap);
+      const measureEl = measuresCacheRef.current[physicalIndex - 1] as SVGGElement | undefined;
+      if (measureEl && !isWaitMode) {
+        measureEl.classList.add('active-measure');
+      }
+      // Reset playhead to first measure position
+      if (playheadRef.current && measureEl) {
+        const bbox = measureEl.getBBox();
+        const ctm = measureEl.getScreenCTM();
+        if (ctm) {
+          const scrollContainerNode = containerRef.current;
+          if (scrollContainerNode) {
+            const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+            const scrollLeft = scrollContainerNode.scrollLeft || 0;
+            const scrollTop = scrollContainerNode.scrollTop || 0;
+            const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+            const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+            const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
+            const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+            const screenHeight = bbox.height * ctm.d;
+            playheadRef.current.style.transform = `translate(${startX}px, ${absoluteY}px)`;
+            playheadRef.current.style.height = `${screenHeight}px`;
+            playheadRef.current.style.opacity = '1';
+            // Scroll back to top
+            scrollContainerNode.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }
+      }
+      activeMeasureRef.current = firstMeasure.measure;
+      lastPlayheadMsRef.current = -1;
+    }
+  }, [isPlaying, positionMs, timemap, measureMap, isWaitMode]);
 
   // Handle clicking on measures to seek
   const handleSvgClick = (e: React.MouseEvent<HTMLDivElement>) => {

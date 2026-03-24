@@ -32,8 +32,10 @@ interface MeasureInfo {
   index: number;
   /** Time signature if changed at this measure */
   timeSignature?: string;
-  /** Tempo if changed at or within this measure */
+  /** Last tempo if changed at or within this measure (outgoing tempo for next measure) */
   tempo?: number;
+  /** First tempo change in this measure (for duration calculation) */
+  firstTempo?: number;
   /** Beat duration sum in quarter-note units */
   durationInQuarters: number;
   /** Repeat forward barline */
@@ -177,9 +179,10 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
       }
     }
 
-    // ── Anacrusis detection: compute actual duration for first measure ──
-    // If the first measure has fewer note divisions than expected, it's a pickup.
-    if (m === 0) {
+    // ── Partial measure detection: compute actual note duration ──
+    // If a measure has fewer note divisions than expected, use the actual duration.
+    // Applies to pickups (anacrusis), section boundaries, and mid-piece partial measures.
+    {
       const expectedDurationInDivisions = info.durationInQuarters * currentDivisions;
       const notes = measure.getElementsByTagName("note");
       // Sum durations per voice, taking the voice with the most content
@@ -211,6 +214,7 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
         const tempo = sound.getAttribute("tempo");
         if (tempo) {
           const bpm = parseFloat(tempo);
+          if (info.firstTempo === undefined) info.firstTempo = bpm;
           info.tempo = bpm;
           if (m > 0 || tempoChanges.length === 0 || tempoChanges[tempoChanges.length - 1][1] !== bpm) {
             tempoChanges.push([physNum, bpm]);
@@ -274,10 +278,10 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
     measureInfos, endingRegions, initialTempo, initialTimeSig
   );
 
-  const uniqueTempoChanges = tempoChanges.filter((tc, i) => {
-    if (i === 0) return true;
-    return tc[1] !== tempoChanges[i - 1][1] || tc[0] !== tempoChanges[i - 1][0];
-  });
+  // Derive tempoChanges from timemap (uses correct latent numbering aligned with sheet music)
+  const derivedTempoChanges: [number, number][] = timemap
+    .filter(t => t.tempo !== undefined)
+    .map(t => [t.measure, t.tempo!] as [number, number]);
 
   return {
     tempo: initialTempo,
@@ -287,7 +291,7 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
     measureMap,
     totalMeasures: physicalCounter,
     totalPlaybackMeasures: timemap.length,
-    tempoChanges: uniqueTempoChanges,
+    tempoChanges: derivedTempoChanges,
     repeatDescriptions,
   };
 }
@@ -330,7 +334,15 @@ function unrollMeasures(
   let currentTempo = initialTempo;
   let currentTimeSig = initialTimeSig;
   let accumulatedTimeMs = 0;
-  let latentMeasure = 1;
+
+  // Detect if first measure is a pickup (anacrusis):
+  // its actual duration is shorter than a full measure per the time signature
+  const firstMeasureFullDuration = parseInt(initialTimeSig.split("/")[0]) * (4 / parseInt(initialTimeSig.split("/")[1]));
+  const hasPickup = measures.length > 0 && measures[0].durationInQuarters < firstMeasureFullDuration;
+
+  // If pickup: latent starts at 0 (pickup = measure 0, first full measure = 1)
+  // This aligns latent numbers with the sheet music measure numbering.
+  let latentMeasure = hasPickup ? 0 : 1;
 
   let repeatStartIdx = 0;
   const repeatCounts = new Map<number, number>();
@@ -338,8 +350,12 @@ function unrollMeasures(
   let jumped = false;
 
   // Sparse anchor tracking: only emit measureMap entries when offset changes
-  let lastAnchorLatent = 1;
+  let lastAnchorLatent = hasPickup ? 0 : 1;
   let lastAnchorPhysical = 1;
+  // Pickup anchor: latent 0 → physical 1 (first SVG element)
+  if (hasPickup) {
+    measureMap[0] = 1;
+  }
 
   let i = 0;
   const maxIterations = measures.length * 10;
@@ -357,28 +373,34 @@ function unrollMeasures(
       continue;
     }
 
-    // Update tempo/time sig
-    if (m.tempo !== undefined) currentTempo = m.tempo;
+    // Calculate duration using firstTempo if available (the tempo at measure start),
+    // otherwise use the incoming tempo from the previous measure.
+    // For rit. (200→190→170→140), firstTempo = 190 → use 190 for duration, exit at 140.
+    // For a single tempo (Più mosso = 200), firstTempo = 200 → use 200 for duration.
     if (m.timeSignature) currentTimeSig = m.timeSignature;
+    const tempoForDuration = m.firstTempo ?? currentTempo;
+    const msPerQuarterNote = 60000 / tempoForDuration;
+    const measureDurationMs = m.durationInQuarters * msPerQuarterNote;
+
+    // Update currentTempo to last tempo in this measure (outgoing for next measure)
+    if (m.tempo !== undefined) currentTempo = m.tempo;
 
     // Track repeat forward position
     if (m.repeatForward) {
-      // Only update the start index, but DON'T reset currentPass here.
-      // currentPass is managed by the repeat backward handler.
-      // Resetting here would break volta skipping on pass 2+.
       repeatStartIdx = i;
     }
 
-    // Calculate duration
-    const msPerQuarterNote = 60000 / currentTempo;
-    const measureDurationMs = m.durationInQuarters * msPerQuarterNote;
-
     // Build timemap entry
-    const entry: TimemapEntry = { measure: latentMeasure, timeMs: accumulatedTimeMs };
-    if (m.timeSignature || (latentMeasure === 1 && currentTimeSig !== "4/4")) {
+    const isFirstEntry = timemap.length === 0;
+    const entry: TimemapEntry = {
+      measure: latentMeasure,
+      timeMs: accumulatedTimeMs,
+      durationInQuarters: m.durationInQuarters,
+    };
+    if (m.timeSignature || (isFirstEntry && currentTimeSig !== "4/4")) {
       entry.timeSignature = m.timeSignature || currentTimeSig;
     }
-    if (latentMeasure === 1) {
+    if (isFirstEntry) {
       entry.timeSignature = entry.timeSignature || currentTimeSig;
       entry.tempo = initialTempo;
     }

@@ -211,6 +211,19 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
           </div>
         )}
 
+        {timemap.filter(t => t.tempo !== undefined).length > 0 && (
+          <div className="mb-4 space-y-2">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tempo Changes</h4>
+            {timemap.filter(t => t.tempo !== undefined).map(t => (
+              <div key={`tempo-${t.measure}`} className="flex items-center gap-2 bg-red-500/10 p-1.5 rounded border border-red-500/20">
+                <div className="flex-1 text-center font-mono bg-background border border-border rounded py-1 text-red-600">M{t.measure}</div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex-1 text-center font-mono font-bold bg-background border border-border rounded py-1 text-red-600">♩={t.tempo}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {timemap.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recorded Timeline</h4>

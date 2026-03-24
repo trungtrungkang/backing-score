@@ -226,10 +226,40 @@ describe("analyzeMusicXML – anacrusis (pickup measure)", () => {
     expect(result.timeSignature).toBe("3/4");
     expect(result.tempo).toBe(120);
 
-    // Measure 1 should be a pickup: only 1 quarter note
-    // At 120 BPM, 1 quarter = 500ms, not 1500ms (full 3/4 measure)
+    // Pickup = latent measure 0 (not counted in sheet numbering)
+    expect(result.timemap[0].measure).toBe(0);
     expect(result.timemap[0].timeMs).toBe(0);
-    expect(result.timemap[1].timeMs).toBe(500); // pickup = 1 quarter = 500ms
+    // M1 = latent 1, starts after pickup (1 quarter at 120bpm = 500ms)
+    expect(result.timemap[1].measure).toBe(1);
+    expect(result.timemap[1].timeMs).toBe(500);
+  });
+
+  it("Waltz Op 64 No 2: pickup + Più mosso at measure 33", () => {
+    const fixturePath = path.resolve(
+      __dirname,
+      "../../../../musicxml-library/miscellaneous/Waltz_Opus_64_No._2_in_C_Minor.musicxml"
+    );
+    const xml = fs.readFileSync(fixturePath, "utf8");
+    const result = analyzeMusicXML(xml);
+
+    expect(result.timeSignature).toBe("3/4");
+    expect(result.tempo).toBe(120);
+
+    // First entry should be pickup (latent 0)
+    expect(result.timemap[0].measure).toBe(0);
+    expect(result.timemap[0].timeMs).toBe(0);
+
+    // M1 = latent 1
+    expect(result.timemap[1].measure).toBe(1);
+
+    // Più mosso (tempo=200) should be at latent measure 33 (matching sheet music)
+    const piuMosso = result.timemap.find(t => t.tempo === 200);
+    expect(piuMosso).toBeDefined();
+    expect(piuMosso!.measure).toBe(33);
+
+    // Physical mapping: latent 33 → physical 34 (because pickup is physical 1)
+    const phys = getPhysicalMeasure(33, result.measureMap);
+    expect(phys).toBe(34);
   });
 
   it("does not false-positive on full first measure", () => {

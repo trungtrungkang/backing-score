@@ -17,7 +17,7 @@ import { analyzeMusicXML, type MusicXMLAnalysis } from "@/lib/score/musicxml-ana
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { toast } from "sonner";
 import { useDialogs } from "@/components/ui/dialog-provider";
-import type { DAWPayload, AudioTrack } from "@/lib/daw/types";
+import type { DAWPayload, AudioTrack, TimemapEntry } from "@/lib/daw/types";
 import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
 import { Midi } from "@tonejs/midi";
 import { cn } from "@/lib/utils";
@@ -110,6 +110,7 @@ export function EditorShell({
   const [soloByTrackId, setSoloByTrackId] = useState<Record<string, boolean>>({});
 
   const audioManagerRef = useRef<AudioManager | null>(null);
+  const correctedTimemapRef = useRef<TimemapEntry[] | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
@@ -250,36 +251,63 @@ export function EditorShell({
       const midi = new Midi(bytes.buffer);
       const tempoTarget = payload.metadata?.tempo || 120;
 
-      // Multi-tempo support: if timemap has per-measure tempo entries, preserve them
-      // and scale by playbackRate. Otherwise fall back to single tempo.
+      // Read Verovio's original MIDI tempos (before scaling)
+      const originalTempos = midi.header.tempos.length > 0
+        ? [...midi.header.tempos]
+        : [{ ticks: 0, bpm: tempoTarget }];
+      const ppq = midi.header.ppq || 480;
+
+      // Preserve Verovio's original MIDI tempo events (which include intra-measure
+      // rit./accel.) and just scale by playbackRate. This avoids cumulative drift
+      // from simplified per-measure tempo approximations.
+      midi.header.tempos = originalTempos.map(t => ({
+        ticks: t.ticks,
+        bpm: t.bpm * playbackRate,
+      }));
+
+      // Recalculate timemap timeMs from Verovio's MIDI tempo events.
+      // This ensures perfect sync between MIDI audio and playhead.
       const timemap = payload.notationData?.timemap;
-      const tempoEntries = timemap?.filter(t => t.tempo !== undefined) || [];
-      
-      if (tempoEntries.length > 1) {
-        const ticksPerBeat = midi.header.ppq || 480;
-        const newTempos: { ticks: number; bpm: number }[] = [];
-        let accTicks = 0;
+      if (timemap && timemap.length > 0) {
+        // Convert ticks to wall-clock ms using MIDI tempo events (already scaled by playbackRate)
+        const scaledTempos = midi.header.tempos.sort((a, b) => a.ticks - b.ticks);
         
-        if (timemap) {
-          for (let i = 0; i < timemap.length; i++) {
-            const entry = timemap[i];
-            const ts = entry.timeSignature || payload.metadata?.timeSignature || "4/4";
-            const [num, den] = ts.split("/").map(Number);
-            const beatsInMeasure = (num || 4) * (4 / (den || 4));
-            
-            if (entry.tempo !== undefined) {
-              newTempos.push({ ticks: accTicks, bpm: entry.tempo * playbackRate });
-            }
-            
-            accTicks += beatsInMeasure * ticksPerBeat;
+        const ticksToMs = (targetTick: number): number => {
+          let ms = 0;
+          let lastTick = 0;
+          let currentBpm = scaledTempos[0]?.bpm || tempoTarget * playbackRate;
+          
+          for (const t of scaledTempos) {
+            if (t.ticks >= targetTick) break;
+            // Accumulate time from lastTick to this tempo change
+            const tickDelta = t.ticks - lastTick;
+            ms += (tickDelta / ppq) * (60000 / currentBpm);
+            lastTick = t.ticks;
+            currentBpm = t.bpm;
           }
-        }
-        
-        midi.header.tempos = newTempos.length > 0
-          ? newTempos
-          : [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+          // Remaining ticks after the last tempo change
+          const remaining = targetTick - lastTick;
+          ms += (remaining / ppq) * (60000 / currentBpm);
+          return ms;
+        };
+
+        let accTicks = 0;
+        const correctedTimemap = timemap.map(entry => {
+          const correctedTimeMs = ticksToMs(accTicks);
+          const durationQuarters = entry.durationInQuarters ?? 
+            (() => {
+              const ts = entry.timeSignature || payload.metadata?.timeSignature || "4/4";
+              const [num, den] = ts.split("/").map(Number);
+              return (num || 4) * (4 / (den || 4));
+            })();
+          accTicks += durationQuarters * ppq;
+          return { ...entry, timeMs: correctedTimeMs };
+        });
+
+        // Store corrected timemap in ref for playhead sync
+        correctedTimemapRef.current = correctedTimemap;
       } else {
-        midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
+        correctedTimemapRef.current = null;
       }
 
 
@@ -1724,7 +1752,7 @@ export function EditorShell({
               scoreFileId={scoreFileId}
               positionMs={positionMs}
               isPlaying={isPlaying}
-              timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
+              timemap={correctedTimemapRef.current || payload.notationData?.timemap || EMPTY_TIMEMAP}
               measureMap={payload.notationData?.measureMap}
               onSeek={handleSeek}
               onMidiExtracted={handleMidiExtracted}
@@ -1787,7 +1815,7 @@ export function EditorShell({
               positionMs={positionMs}
               durationMs={totalSongDurationMs}
               bpm={payload.metadata?.tempo || 120}
-              timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
+              timemap={correctedTimemapRef.current || payload.notationData?.timemap || EMPTY_TIMEMAP}
               timeSignature={{
                 numerator: parseInt((payload.metadata?.timeSignature || "4/4").split("/")[0], 10) || 4,
                 denominator: parseInt((payload.metadata?.timeSignature || "4/4").split("/")[1], 10) || 4

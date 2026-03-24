@@ -42,6 +42,7 @@ export interface TimemapEntry {
   measure: number;
   timeSignature?: string; // Optional dynamic meter override (e.g. "6/8")
   tempo?: number; // Optional dynamic tempo override (BPM) at this measure
+  durationInQuarters?: number; // Actual duration of this measure in quarter notes (for pickups/anacrusis)
 }
 
 export interface NotationData {
