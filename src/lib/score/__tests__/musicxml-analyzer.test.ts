@@ -21,6 +21,7 @@ function buildMusicXML(opts: {
   keySig?: { fifths: number; mode?: string };
 }): string {
   const keySig = opts.keySig || { fifths: 0, mode: "major" };
+  let prevTimeSig = "4/4";
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="4.0">
   <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
@@ -35,6 +36,7 @@ function buildMusicXML(opts: {
     if (idx === 0 || m.timeSig) {
       xml += `<attributes>`;
       if (idx === 0) {
+        xml += `<divisions>1</divisions>`;
         xml += `<key><fifths>${keySig.fifths}</fifths><mode>${keySig.mode || "major"}</mode></key>`;
       }
       if (m.timeSig) {
@@ -59,8 +61,14 @@ function buildMusicXML(opts: {
       xml += `<direction><sound tempo="${m.tempo}"/></direction>`;
     }
 
-    // A note (quarter note to have content)
-    xml += `<note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>`;
+    // Compute full measure duration: divisions=1, so duration = beats * (4/beatType)
+    const curTimeSig = m.timeSig || (idx === 0 ? "4/4" : prevTimeSig);
+    const [cb, cbt] = curTimeSig.split("/").map(Number);
+    const fullDuration = (cb || 4) * (4 / (cbt || 4));  // in divisions (= quarter notes when divisions=1)
+    prevTimeSig = curTimeSig;
+
+    // A note filling the full measure (prevents false anacrusis detection)
+    xml += `<note><pitch><step>C</step><octave>4</octave></pitch><duration>${fullDuration}</duration><voice>1</voice><type>quarter</type></note>`;
 
     // Right barline (repeat backward, ending stop/discontinue)
     if (m.repeatBack || m.endingStop || m.endingDiscontinue) {
@@ -203,6 +211,38 @@ describe("analyzeMusicXML – tempo changes", () => {
     expect(result.timemap[0].timeMs).toBe(0);
     expect(result.timemap[1].timeMs).toBe(2000); // after M1
     expect(result.timemap[2].timeMs).toBe(6000); // after M1 + M2
+  });
+});
+
+describe("analyzeMusicXML – anacrusis (pickup measure)", () => {
+  it("detects pickup measure in Chopin Waltz (3/4, first measure = 1 quarter)", () => {
+    const fixturePath = path.resolve(
+      __dirname,
+      "../../../../musicxml-library/chopin/Waltz_in_A_MinorChopin.musicxml"
+    );
+    const xml = fs.readFileSync(fixturePath, "utf8");
+    const result = analyzeMusicXML(xml);
+
+    expect(result.timeSignature).toBe("3/4");
+    expect(result.tempo).toBe(120);
+
+    // Measure 1 should be a pickup: only 1 quarter note
+    // At 120 BPM, 1 quarter = 500ms, not 1500ms (full 3/4 measure)
+    expect(result.timemap[0].timeMs).toBe(0);
+    expect(result.timemap[1].timeMs).toBe(500); // pickup = 1 quarter = 500ms
+  });
+
+  it("does not false-positive on full first measure", () => {
+    // Normal 4/4, first measure is full → should remain 4 quarters
+    const xml = buildMusicXML({
+      measures: [
+        { tempo: 120 },
+        {},
+      ],
+    });
+    const result = analyzeMusicXML(xml);
+    // 4 beats at 120bpm = 2000ms
+    expect(result.timemap[1].timeMs).toBe(2000);
   });
 });
 

@@ -139,6 +139,7 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
   const measureInfos: MeasureInfo[] = [];
   let currentBeats = parseInt(initialTimeSig.split("/")[0]) || 4;
   let currentBeatType = parseInt(initialTimeSig.split("/")[1]) || 4;
+  let currentDivisions = 1; // divisions per quarter note
   const tempoChanges: [number, number][] = [[1, initialTempo]];
   let physicalCounter = 0;
 
@@ -156,9 +157,13 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
       durationInQuarters: currentBeats * (4 / currentBeatType),
     };
 
-    // Time signature changes
+    // Time signature and divisions changes
     const attrs = measure.getElementsByTagName("attributes");
     for (let a = 0; a < attrs.length; a++) {
+      const divEl = attrs[a].getElementsByTagName("divisions")[0];
+      if (divEl && divEl.textContent) {
+        currentDivisions = parseInt(divEl.textContent) || 1;
+      }
       const timeEl = attrs[a].getElementsByTagName("time")[0];
       if (timeEl) {
         const beats = getTextContent(timeEl, "beats");
@@ -169,6 +174,31 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
           info.timeSignature = `${beats}/${beatType}`;
           info.durationInQuarters = currentBeats * (4 / currentBeatType);
         }
+      }
+    }
+
+    // ── Anacrusis detection: compute actual duration for first measure ──
+    // If the first measure has fewer note divisions than expected, it's a pickup.
+    if (m === 0) {
+      const expectedDurationInDivisions = info.durationInQuarters * currentDivisions;
+      const notes = measure.getElementsByTagName("note");
+      // Sum durations per voice, taking the voice with the most content
+      const voiceDurations: Record<string, number> = {};
+      for (let n = 0; n < notes.length; n++) {
+        const note = notes[n];
+        // Skip chord notes (they overlap with the previous note, not additive)
+        if (note.getElementsByTagName("chord").length > 0) continue;
+        // Skip grace notes (no duration)
+        if (note.getElementsByTagName("grace").length > 0) continue;
+        const durEl = note.getElementsByTagName("duration")[0];
+        if (!durEl || !durEl.textContent) continue;
+        const dur = parseInt(durEl.textContent) || 0;
+        const voice = getTextContent(note, "voice") || "1";
+        voiceDurations[voice] = (voiceDurations[voice] || 0) + dur;
+      }
+      const maxVoiceDuration = Math.max(0, ...Object.values(voiceDurations));
+      if (maxVoiceDuration > 0 && maxVoiceDuration < expectedDurationInDivisions) {
+        info.durationInQuarters = maxVoiceDuration / currentDivisions;
       }
     }
 
