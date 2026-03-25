@@ -16,6 +16,8 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isPremium: boolean;
+  subscriptionStatus: string | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -27,6 +29,7 @@ interface AuthContextValue extends AuthState {
   getJWT: () => Promise<string>;
   logout: () => Promise<void>;
   clearError: () => void;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,17 +38,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+
+  const checkSubscription = useCallback(async (userId: string) => {
+    try {
+      const res = await fetch(`/api/subscription?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsPremium(data.isPremium);
+        setSubscriptionStatus(data.status || null);
+      } else {
+        setIsPremium(false);
+        setSubscriptionStatus(null);
+      }
+    } catch {
+      setIsPremium(false);
+      setSubscriptionStatus(null);
+    }
+  }, []);
 
   const loadSession = useCallback(async () => {
     try {
       const u = await account.get();
       setUser(u);
+      await checkSubscription(u.$id);
     } catch {
       setUser(null);
+      setIsPremium(false);
+      setSubscriptionStatus(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkSubscription]);
+
+  const refreshSubscription = useCallback(async () => {
+    if (user) await checkSubscription(user.$id);
+  }, [user, checkSubscription]);
 
   useEffect(() => {
     loadSession();
@@ -166,6 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     error,
+    isPremium,
+    subscriptionStatus,
     login,
     signup,
     loginWithOAuth,
@@ -174,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getJWT,
     logout,
     clearError,
+    refreshSubscription,
   };
 
   return (
