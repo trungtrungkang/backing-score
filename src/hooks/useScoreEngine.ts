@@ -971,9 +971,30 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   }, [payload.audioTracks.length, handlePause, playbackRate, midiStartOffsetMs, positionMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handlePitchShiftChange = useCallback((semitones: number) => {
+    const wasPlaying = isPlayingRef.current;
+
+    // Capture position before stopping
+    let capturedSongTimeMs = positionMs;
+    if (wasPlaying && payload.audioTracks.length === 0 && midiPlayerRef.current) {
+      const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
+      capturedSongTimeMs = Math.max(0, (midiPlayerRef.current.currentTime * playbackRate * 1000) - midiStartOffsetMs + offsetMs);
+    } else if (wasPlaying && audioManagerRef.current) {
+      capturedSongTimeMs = audioManagerRef.current.getCurrentPositionMs();
+    }
+
+    if (wasPlaying) {
+      handlePause();
+    }
+
+    setPositionMs(capturedSongTimeMs);
+
+    if (wasPlaying) {
+      pendingResumeAfterRateChangeRef.current = true;
+    }
+
     setPitchShift(semitones);
     if (audioManagerRef.current) audioManagerRef.current.setPitchShift(semitones);
-  }, []);
+  }, [payload.audioTracks.length, handlePause, playbackRate, midiStartOffsetMs, positionMs, payload.metadata?.scoreSynthOffsetMs]);
 
   const handleMetronomeToggle = useCallback((enabled: boolean) => {
     setIsMetronomeEnabled(enabled);
