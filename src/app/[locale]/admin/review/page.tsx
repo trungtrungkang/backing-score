@@ -452,7 +452,7 @@ export default function AdminReviewPage() {
                     </button>
 
                     {/* Preview */}
-                    <a href={`/editor/project/${project.$id}`} target="_blank" rel="noopener noreferrer"
+                    <a href={`/play/${project.$id}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors">
                       <Eye className="w-3.5 h-3.5" /> Preview
                     </a>
