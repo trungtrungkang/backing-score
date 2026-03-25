@@ -319,5 +319,22 @@
     "subGenres": "Sous-genres",
     "noResults": "Aucun résultat.",
     "loading": "Chargement..."
+  },
+  "Subscription": {
+    "title": "Abonnement",
+    "freePlan": "Gratuit",
+    "premiumPlan": "Premium",
+    "activeStatus": "Actif",
+    "cancelledStatus": "Annulation en cours",
+    "cancelledNote": "Votre accès continue jusqu'à la fin de la période de facturation",
+    "manageBilling": "Gérer la facturation"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "Limite quotidienne de lectures atteinte",
+    "playLimitDesc": "Les comptes gratuits peuvent lire jusqu'à 3 pièces par jour. Passez à Premium pour des lectures illimitées, le mode pratique et plus encore.",
+    "waitModeTitle": "Le mode pratique est Premium",
+    "waitModeDesc": "Le mode pratique met la lecture en pause et attend que vous jouiez les bonnes notes — l'outil de pratique ultime. Passez à Premium pour le débloquer.",
+    "upgradeNow": "Passer à Premium",
+    "maybeLater": "Peut-être plus tard"
   }
 }

@@ -319,5 +319,22 @@
     "subGenres": "子流派",
     "noResults": "未找到結果。",
     "loading": "載入中..."
+  },
+  "Subscription": {
+    "title": "訂閱",
+    "freePlan": "免費",
+    "premiumPlan": "進階版",
+    "activeStatus": "已啟用",
+    "cancelledStatus": "取消中",
+    "cancelledNote": "您的存取權限將持續到計費週期結束",
+    "manageBilling": "管理帳單"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "已達每日播放上限",
+    "playLimitDesc": "免費帳戶每天最多播放3首曲目。升級到進階版即可享有無限播放、練習模式等功能。",
+    "waitModeTitle": "練習模式為進階功能",
+    "waitModeDesc": "練習模式會暫停播放並等待您彈奏正確的音符——終極練習工具。升級以解鎖。",
+    "upgradeNow": "升級到進階版",
+    "maybeLater": "以後再說"
   }
 }

@@ -319,5 +319,22 @@
     "subGenres": "Untergenres",
     "noResults": "Keine Ergebnisse gefunden.",
     "loading": "Laden..."
+  },
+  "Subscription": {
+    "title": "Abonnement",
+    "freePlan": "Kostenlos",
+    "premiumPlan": "Premium",
+    "activeStatus": "Aktiv",
+    "cancelledStatus": "Wird gekündigt",
+    "cancelledNote": "Der Zugang bleibt bis zum Ende des Abrechnungszeitraums bestehen",
+    "manageBilling": "Abrechnung verwalten"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "Tägliches Wiedergabelimit erreicht",
+    "playLimitDesc": "Kostenlose Konten können bis zu 3 Stücke pro Tag abspielen. Upgraden Sie auf Premium für unbegrenzte Wiedergabe, Übungsmodus und mehr.",
+    "waitModeTitle": "Übungsmodus ist Premium",
+    "waitModeDesc": "Der Übungsmodus pausiert die Wiedergabe und wartet, bis Sie die richtigen Noten spielen — das ultimative Übungswerkzeug. Upgraden Sie zum Freischalten.",
+    "upgradeNow": "Auf Premium upgraden",
+    "maybeLater": "Vielleicht später"
   }
 }

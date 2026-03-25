@@ -319,5 +319,22 @@
     "subGenres": "子流派",
     "noResults": "未找到结果。",
     "loading": "加载中..."
+  },
+  "Subscription": {
+    "title": "订阅",
+    "freePlan": "免费",
+    "premiumPlan": "高级版",
+    "activeStatus": "已激活",
+    "cancelledStatus": "取消中",
+    "cancelledNote": "您的访问权限将持续到计费周期结束",
+    "manageBilling": "管理账单"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "已达到每日播放限制",
+    "playLimitDesc": "免费账户每天最多播放3首曲目。升级到高级版即可享受无限播放、练习模式等。",
+    "waitModeTitle": "练习模式为高级功能",
+    "waitModeDesc": "练习模式会暂停播放并等待您弹奏正确的音符——终极练习工具。升级以解锁。",
+    "upgradeNow": "升级到高级版",
+    "maybeLater": "以后再说"
   }
 }

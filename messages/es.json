@@ -319,5 +319,22 @@
     "subGenres": "Subgéneros",
     "noResults": "No se encontraron resultados.",
     "loading": "Cargando..."
+  },
+  "Subscription": {
+    "title": "Suscripción",
+    "freePlan": "Gratis",
+    "premiumPlan": "Premium",
+    "activeStatus": "Activa",
+    "cancelledStatus": "Cancelando",
+    "cancelledNote": "Tu acceso continúa hasta el final del período de facturación",
+    "manageBilling": "Gestionar facturación"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "Límite diario de reproducciones alcanzado",
+    "playLimitDesc": "Las cuentas gratuitas pueden reproducir hasta 3 piezas al día. Mejora a Premium para reproducciones ilimitadas, modo de práctica y más.",
+    "waitModeTitle": "El modo de práctica es Premium",
+    "waitModeDesc": "El modo de práctica pausa la reproducción y espera a que toques las notas correctas — la herramienta de práctica definitiva. Mejora para desbloquearlo.",
+    "upgradeNow": "Mejorar a Premium",
+    "maybeLater": "Quizás después"
   }
 }
