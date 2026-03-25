@@ -16,12 +16,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const project = await getProject(projectId);
     const ogImage = project.coverUrl || 'https://backingscore.com/apple-icon.png';
+    const description = `Play along with "${project.name}" — interactive sheet music with real-time score following.`;
     return {
-      title: `${project.name} | Backing & Score`,
-      description: `Bản nhạc: ${project.name} (${project.difficulty || 'Normal'}) - Backing & Score`,
+      title: `${project.name}`,
+      description,
       openGraph: {
         title: `${project.name} | Backing & Score`,
-        description: `Bản nhạc: ${project.name} (${project.difficulty || 'Normal'})`,
+        description,
         type: "website",
         images: [
           {
@@ -35,11 +36,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       twitter: {
         card: "summary_large_image",
         title: `${project.name} | Backing & Score`,
-        description: `Bản nhạc: ${project.name} (${project.difficulty || 'Normal'})`,
+        description,
         images: [ogImage]
-      }
+      },
+      other: {
+        "script:ld+json": JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "MusicComposition",
+          name: project.name,
+          ...(project.description && { description: project.description }),
+          ...(project.publishedAt && { datePublished: project.publishedAt }),
+          url: `https://backingscore.com/en/play/${projectId}`,
+        }),
+      },
     };
   } catch (e) {
+
     return {
       title: "Play | Backing & Score"
     };

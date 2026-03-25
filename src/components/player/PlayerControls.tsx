@@ -171,8 +171,8 @@ export function PlayerControls({
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[120] w-full max-w-4xl px-4 pointer-events-none mt-6 pb-[env(safe-area-inset-bottom)] md:pb-0">
-      <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-4 flex flex-col gap-3 pointer-events-auto relative">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[120] w-full max-w-4xl px-2 sm:px-4 pointer-events-none mt-6 pb-[env(safe-area-inset-bottom)] md:pb-0">
+      <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 pointer-events-auto relative">
         <button
           onClick={() => onCollapseToggle?.(true)}
           className="absolute -top-[23px] left-1/2 -translate-x-1/2 w-12 h-6 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-lg flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors z-[-1]"
@@ -257,14 +257,14 @@ export function PlayerControls({
             )}
           </div>
 
-          <div className="flex flex-row items-center justify-between w-full pt-3 gap-2 sm:gap-4 border-t border-zinc-200 dark:border-zinc-800/50">
+          <div className="flex flex-row items-center justify-between w-full pt-2 sm:pt-3 gap-1.5 sm:gap-4 border-t border-zinc-200 dark:border-zinc-800/50">
             {/* Left */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
 
               {playlistId && (
                 <button
                   onClick={() => onAutoplayToggle?.(!isAutoplayEnabled)}
-                  className={cn("h-8 flex shrink-0 whitespace-nowrap items-center gap-2 px-3 rounded-md border text-xs font-bold transition-all", isAutoplayEnabled ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.15)]" : "bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+                  className={cn("h-8 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 px-2 sm:px-3 rounded-md border text-xs font-bold transition-all", isAutoplayEnabled ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.15)]" : "bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                   title="Auto-Play Next Track"
                 >
                   <PlaySquare className="w-4 h-4" />
@@ -277,7 +277,7 @@ export function PlayerControls({
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
-                      className={cn("h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+                      className={cn("h-8 px-2 sm:px-3 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                       title="Practice Mode Settings"
                     >
                       <Keyboard className="w-4 h-4" /><span className="hidden sm:inline"> Practice</span>
@@ -440,7 +440,7 @@ export function PlayerControls({
               <Popover>
                 <PopoverTrigger asChild>
                   <button
-                    className={cn("h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", loopState.enabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
+                    className={cn("h-8 px-2 sm:px-3 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", loopState.enabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                     title="Edit Loop Range"
                   >
                     <Repeat className="w-4 h-4" /> A-B

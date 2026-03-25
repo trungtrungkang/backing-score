@@ -25,8 +25,65 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Backing & Score",
-  description: "Web DAW + Live — play along, arrange, perform.",
+  metadataBase: new URL("https://backingscore.com"),
+  title: {
+    default: "Backing & Score — Interactive Sheet Music & Play-Along",
+    template: "%s | Backing & Score",
+  },
+  description:
+    "A play-along library with interactive sheet music, real-time pitch detection, and practice mode. The ultimate tool for musicians who want to practice at their own pace.",
+  keywords: [
+    "sheet music",
+    "play along",
+    "backing track",
+    "practice mode",
+    "interactive music",
+    "pitch detection",
+    "music score",
+    "MIDI",
+  ],
+  authors: [{ name: "Backing & Score" }],
+  creator: "Backing & Score",
+  openGraph: {
+    type: "website",
+    siteName: "Backing & Score",
+    title: "Backing & Score — Interactive Sheet Music & Play-Along",
+    description:
+      "A play-along library with interactive sheet music, real-time pitch detection, and practice mode.",
+    url: "https://backingscore.com",
+    images: [
+      {
+        url: "/apple-icon.png",
+        width: 512,
+        height: 512,
+        alt: "Backing & Score",
+      },
+    ],
+    locale: "en",
+    alternateLocale: ["vi", "zh-CN", "zh-TW", "es", "fr", "de", "ja", "ko"],
+  },
+  twitter: {
+    card: "summary",
+    title: "Backing & Score — Interactive Sheet Music & Play-Along",
+    description:
+      "Play along with interactive sheet music, real-time pitch detection, and practice mode.",
+    images: ["/apple-icon.png"],
+  },
+  alternates: {
+    canonical: "https://backingscore.com/en",
+    languages: {
+      en: "https://backingscore.com/en",
+      vi: "https://backingscore.com/vi",
+      "zh-CN": "https://backingscore.com/zh-CN",
+      "zh-TW": "https://backingscore.com/zh-TW",
+      es: "https://backingscore.com/es",
+      fr: "https://backingscore.com/fr",
+      de: "https://backingscore.com/de",
+      ja: "https://backingscore.com/ja",
+      ko: "https://backingscore.com/ko",
+      "x-default": "https://backingscore.com/en",
+    },
+  },
 };
 
 export default async function RootLayout({
