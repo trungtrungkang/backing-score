@@ -45,7 +45,7 @@ const TAG_GROUPS = {
 export default function DashboardPage() {
   const router = useRouter();
   const t = useTranslations("Dashboard");
-  const { user, loading: authLoading, sendVerification } = useAuth();
+  const { user, loading: authLoading, sendVerification, getJWT, refreshSubscription } = useAuth();
   const [projects, setProjects] = useState<ProjectDocument[]>([]);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,14 +55,29 @@ export default function DashboardPage() {
   const { confirm } = useDialogs();
   const searchParams = useSearchParams();
 
-  // Show success toast after checkout redirect
+  // After checkout success: sync subscription from LS and refresh premium status
   useEffect(() => {
-    if (searchParams.get("checkout") === "success") {
+    if (searchParams.get("checkout") === "success" && user) {
       toast.success("🎉 Welcome to Premium! Your subscription is now active.");
       // Clean up URL
       window.history.replaceState({}, "", window.location.pathname);
+
+      // Sync subscription from LemonSqueezy (in case webhook hasn't fired yet)
+      (async () => {
+        try {
+          const jwt = await getJWT();
+          await fetch("/api/subscription/sync", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${jwt}` },
+          });
+          // Refresh premium status in AuthContext
+          await refreshSubscription();
+        } catch (err) {
+          console.error("[Dashboard] Subscription sync failed:", err);
+        }
+      })();
     }
-  }, [searchParams]);
+  }, [searchParams, user, getJWT, refreshSubscription]);
 
   useEffect(() => {
     if (!authLoading && !user) {
