@@ -24,6 +24,7 @@ export default function PlayProjectPage() {
   const playlistId = searchParams.get("list");
 
   const [project, setProject] = useState<ProjectDocument | null>(null);
+  const [composerName, setComposerName] = useState<string>("Loading...");
   const [payload, setPayload] = useState<DAWPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,19 @@ export default function PlayProjectPage() {
     try {
       const doc = await getProject(projectId);
       setProject(doc);
+      
+      let resolvedComposerName = doc.creatorEmail ? doc.creatorEmail.split('@')[0] : "Community Composer";
+      if (doc.wikiComposerIds?.length) {
+        try {
+          const { getArtistNamesByIds } = await import("@/lib/appwrite/artists");
+          const nameMap = await getArtistNamesByIds(doc.wikiComposerIds);
+          const names = doc.wikiComposerIds.map(id => nameMap.get(id)).filter(Boolean);
+          if (names.length) resolvedComposerName = names.join(", ");
+        } catch (err) {
+          console.warn("Failed to resolve composer names", err);
+        }
+      }
+      setComposerName(resolvedComposerName);
       
       if (playlistId) {
          try {
@@ -105,7 +119,7 @@ export default function PlayProjectPage() {
       <PlayShell
         projectId={projectId}
         projectName={project.name}
-        composer={project.creatorEmail || "Unknown Composer"}
+        composer={composerName}
         payload={payload}
         difficulty={project.difficulty}
         playlistId={playlistId}

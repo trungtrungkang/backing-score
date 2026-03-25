@@ -134,6 +134,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   const [isMetronomeEnabled, setIsMetronomeEnabled] = useState(false);
   const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(true);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
+  const [partNames, setPartNames] = useState<string[]>([]);
   const [loopState, setLoopState] = useState<{enabled: boolean; startBar: number; endBar: number}>({ 
     enabled: false, startBar: 1, endBar: 4 
   });
@@ -841,7 +842,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       activeNotes,
       isMidiInitialized, isMicInitialized: isMicInitializedState,
       midiNotes, micNotes,
-      loopState,
+      loopState, partNames,
       correctedTimemap: correctedTimemapRef.current
     },
     refs: {
@@ -852,6 +853,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       handlePlaybackRateChange, handlePitchShiftChange,
       handleMetronomeToggle, handleMuteToggle, handleSoloToggle, handleVolumeChange,
       handleCollapseToggle, handleLoopStateChange, handleMidiExtracted,
+      handlePartNamesExtracted: setPartNames,
       setIsWaitMode, setIsWaitModeLenient, setPracticeTrackIds, setShowWaitModeMonitor, setIsAutoplayEnabled,
       initializeMidi, disconnectMidi, initializeMic, disconnectMic
     }

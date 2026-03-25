@@ -20,6 +20,7 @@ export interface MusicXMLVisualizerProps {
   isWaitMode?: boolean;
   isWaiting?: boolean;
   practiceTrackIds?: number[];
+  onPartNamesExtracted?: (names: string[]) => void;
   className?: string;
   defaultScale?: number;
 }
@@ -29,7 +30,7 @@ import type { TimemapEntry } from "@/lib/daw/types";
 import { injectMidiInstruments } from "@/lib/score/midi-instruments";
 
 export function MusicXMLVisualizer({
-  scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, isDarkMode = false,
+  scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, onPartNamesExtracted, isDarkMode = false,
   isWaitMode = false, isWaiting = false, practiceTrackIds, className, defaultScale
 }: MusicXMLVisualizerProps) {
   // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
@@ -139,6 +140,17 @@ export function MusicXMLVisualizer({
         // Fix Sibelius 2/4 Whole Rest export bug via Strict DOM Traversal
         const parser = new DOMParser();
         const baseXmlDoc = parser.parseFromString(text, 'text/xml');
+
+        // Extract native part-names for superior Practice UX (fallback to P1, P2)
+        const extractedPartNames: string[] = [];
+        const scoreParts = baseXmlDoc.getElementsByTagName('score-part');
+        for (let i = 0; i < scoreParts.length; i++) {
+          const pNameNode = scoreParts[i].getElementsByTagName('part-name')[0];
+          extractedPartNames.push(pNameNode && pNameNode.textContent ? pNameNode.textContent.trim() : scoreParts[i].getAttribute('id') || `Part ${i + 1}`);
+        }
+        if (onPartNamesExtracted && !canceled) {
+          onPartNamesExtracted(extractedPartNames);
+        }
 
         // Apply the Whole Rest Fix GLOBALLY so BOTH Visual and MIDI Timemaps synchronize exactly to 3-beat measures natively!
         const baseNotes = baseXmlDoc.getElementsByTagName('note');

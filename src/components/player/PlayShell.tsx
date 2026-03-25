@@ -178,7 +178,7 @@ export function PlayShell({
         onWaitModeLenientToggle={actions.setIsWaitModeLenient}
         isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
         onSynthMuteToggle={() => {}}
-        midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: t.name || `Instrument ${i+1}` })) : []}
+        midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: state.partNames?.[i] || t.name || `Instrument ${i+1}` })) : []}
         practiceTrackIds={state.practiceTrackIds}
         onPracticeTrackChange={actions.setPracticeTrackIds}
         showWaitModeMonitor={state.showWaitModeMonitor}

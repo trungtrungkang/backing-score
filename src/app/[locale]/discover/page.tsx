@@ -159,6 +159,12 @@ export default function DiscoverPage() {
     }
   };
 
+  // Helper: remove diacritics for accent-insensitive search
+  const removeDiacritics = (str: string) => {
+    if (!str) return "";
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
+
   // Helper: get composer display name for a project
   const getComposerName = (p: ProjectDocument) => {
     if (p.wikiComposerIds?.length) {
@@ -170,13 +176,16 @@ export default function DiscoverPage() {
 
   const filteredProjects = projects.filter((p) => {
     if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const composerName = getComposerName(p).toLowerCase();
+    const q = removeDiacritics(searchQuery);
+    const composerName = removeDiacritics(getComposerName(p));
+    const pName = removeDiacritics(p.name);
+    const pDesc = p.description ? removeDiacritics(p.description) : "";
+    
     return (
-      p.name.toLowerCase().includes(q) ||
+      pName.includes(q) ||
       composerName.includes(q) ||
-      (p.description && p.description.toLowerCase().includes(q)) ||
-      (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
+      pDesc.includes(q) ||
+      (p.tags && p.tags.some((t) => removeDiacritics(t).includes(q)))
     );
   }).sort((a, b) => {
     switch (sortBy) {
