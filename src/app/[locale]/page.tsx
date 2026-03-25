@@ -80,10 +80,10 @@ export default function Home() {
                <div className="flex-1 p-6 md:p-10 relative bg-white dark:bg-[#151515] flex flex-col justify-center items-center gap-12 overflow-hidden">
                  {/* Fake playhead */}
                  <div className="absolute top-0 bottom-0 left-1/3 w-0.5 bg-[#C8A856] shadow-[0_0_10px_#C8A856] z-10 hidden sm:block"></div>
-                 {/* Fake Wait Mode Interruption */}
+                 {/* Fake Practice Mode Interruption */}
                  <div className="absolute top-1/2 left-1/3 -translate-y-1/2 -translate-x-1/2 z-30 p-4 bg-red-500/10 border border-red-500 rounded-xl backdrop-blur-sm animate-pulse flex items-center gap-2">
                     <Pause className="w-5 h-5 text-red-500"/>
-                    <span className="text-red-500 font-bold text-sm">WAIT MODE</span>
+                    <span className="text-red-500 font-bold text-sm">PRACTICE MODE</span>
                  </div>
                  
                  {/* Fake staves */}
@@ -306,12 +306,18 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="w-full border-t border-zinc-200 dark:border-white/5 py-12 text-center text-zinc-500 dark:text-zinc-600 text-sm bg-zinc-50 dark:bg-transparent relative z-20">
+      <footer className="w-full border-t border-zinc-200 dark:border-white/5 py-12 text-zinc-500 dark:text-zinc-600 text-sm bg-zinc-50 dark:bg-transparent relative z-20">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between px-6 gap-6">
           <p className="font-bold flex items-center gap-2">
             <Music4 className="w-4 h-4 text-[#C8A856]" />
             Backing & Score
           </p>
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <Link href="/discover" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Discover</Link>
+            <Link href="/academy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Academy</Link>
+            <Link href="/wiki" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Wiki</Link>
+            <Link href="/user-guide" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Guide</Link>
+          </nav>
           <p>{t('footerCopy')}</p>
         </div>
       </footer>

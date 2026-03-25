@@ -40,3 +40,21 @@ export async function searchArtists(term: string, limit = 20): Promise<ArtistDoc
     return [];
   }
 }
+
+/** Batch-fetch artists by their IDs. Returns a Map of id → name. */
+export async function getArtistNamesByIds(ids: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!ids.length) return map;
+  try {
+    const unique = [...new Set(ids)];
+    // Appwrite Query.equal supports array of values
+    const { documents } = await databases.listDocuments(DB, COLL, [
+      Query.equal("$id", unique),
+      Query.limit(unique.length),
+    ]);
+    for (const doc of documents) {
+      map.set(doc.$id, (doc as unknown as ArtistDocument).name);
+    }
+  } catch {}
+  return map;
+}

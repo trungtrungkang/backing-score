@@ -9,9 +9,10 @@ import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorit
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
 import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
-import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic } from "lucide-react";
+import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
+import { getArtistNamesByIds } from "@/lib/appwrite/artists";
 
 function formatDate(iso: string | undefined) {
   if (!iso) return "";
@@ -46,6 +47,8 @@ export default function DiscoverPage() {
   const [activeInstrumentIds, setActiveInstrumentIds] = useState<string[]>([]);
   const [activeGenreId, setActiveGenreId] = useState<string | undefined>();
   const [activeDifficulty, setActiveDifficulty] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"newest" | "az" | "oldest">("newest");
+  const [composerNames, setComposerNames] = useState<Map<string, string>>(new Map());
 
   const handleCopyToMine = async (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
@@ -87,6 +90,12 @@ export default function DiscoverPage() {
           const favSet = new Set<string>();
           myFavs.forEach(f => favSet.add(f.targetId));
           setFavoritedIds(favSet);
+          
+          // Batch-resolve composer names from wiki
+          const allComposerIds = publishedList.flatMap(p => p.wikiComposerIds || []);
+          if (allComposerIds.length > 0) {
+            getArtistNamesByIds(allComposerIds).then(setComposerNames).catch(() => {});
+          }
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Failed to load published projects");
@@ -149,14 +158,36 @@ export default function DiscoverPage() {
     }
   };
 
+  // Helper: get composer display name for a project
+  const getComposerName = (p: ProjectDocument) => {
+    if (p.wikiComposerIds?.length) {
+      const names = p.wikiComposerIds.map(id => composerNames.get(id)).filter(Boolean);
+      if (names.length) return names.join(", ");
+    }
+    return p.creatorEmail ? p.creatorEmail.split('@')[0] : t('communityComposer');
+  };
+
   const filteredProjects = projects.filter((p) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    const composerName = getComposerName(p).toLowerCase();
     return (
       p.name.toLowerCase().includes(q) ||
-      (p.creatorEmail && p.creatorEmail.toLowerCase().includes(q)) ||
+      composerName.includes(q) ||
+      (p.description && p.description.toLowerCase().includes(q)) ||
       (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
     );
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case "newest":
+        return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+      case "oldest":
+        return new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime();
+      case "az":
+        return a.name.localeCompare(b.name);
+      default:
+        return 0;
+    }
   });
 
   return (
@@ -332,6 +363,18 @@ export default function DiscoverPage() {
             {t("interactiveScores")}
             {!loading && <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500 ml-2">({filteredProjects.length})</span>}
           </h2>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="w-4 h-4 text-zinc-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-sm font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer focus:outline-none appearance-none pr-1"
+            >
+              <option value="newest">Newest</option>
+              <option value="az">A → Z</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
@@ -396,7 +439,7 @@ export default function DiscoverPage() {
                     {p.name}
                   </h2>
                   <p className="text-[14px] text-zinc-400 line-clamp-1 mb-4">
-                    {p.creatorEmail ? p.creatorEmail.split('@')[0] : t('communityComposer')}
+                    {getComposerName(p)}
                   </p>
                   
                   {/* Instruments & Badge */}
