@@ -135,9 +135,15 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(true);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
   const [partNames, setPartNames] = useState<string[]>([]);
-  const [loopState, setLoopState] = useState<{enabled: boolean; startBar: number; endBar: number}>({ 
-    enabled: false, startBar: 1, endBar: 4 
+  const [loopState, setLoopState] = useState<{
+    enabled: boolean; startBar: number; endBar: number;
+    tempoRamp: boolean; tempoRampStep: number; tempoRampTarget: number;
+  }>({
+    enabled: false, startBar: 1, endBar: 4,
+    tempoRamp: false, tempoRampStep: 0.05, tempoRampTarget: 1.0,
   });
+  const loopIterationRef = useRef(0);
+  const prevLoopPosRef = useRef(0);
 
   const isPlayingRef = useRef(isPlaying);
   useEffect(() => {
@@ -211,10 +217,23 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     } catch {}
   }, []);
 
-  const handleLoopStateChange = useCallback((state: {enabled: boolean; startBar: number; endBar: number}) => {
-    setLoopState(state);
+  const handleLoopStateChange = useCallback((state: {
+    enabled: boolean; startBar: number; endBar: number;
+    tempoRamp?: boolean; tempoRampStep?: number; tempoRampTarget?: number;
+  }) => {
+    const merged = {
+      ...loopState,
+      ...state,
+      tempoRamp: state.tempoRamp ?? loopState.tempoRamp,
+      tempoRampStep: state.tempoRampStep ?? loopState.tempoRampStep,
+      tempoRampTarget: state.tempoRampTarget ?? loopState.tempoRampTarget,
+    };
+    setLoopState(merged);
+    // Reset loop iteration counter when loop changes
+    loopIterationRef.current = 0;
+    prevLoopPosRef.current = 0;
     if (audioManagerRef.current) {
-      audioManagerRef.current.setLooping(state.enabled);
+      audioManagerRef.current.setLooping(merged.enabled);
       const bpm = payload.metadata?.tempo || 120;
       const ts = payload.metadata?.timeSignature || "4/4";
       const [numStr, denStr] = ts.split("/");
@@ -223,11 +242,11 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       const quarterNoteMs = (60 * 1000) / bpm;
       const beatMs = quarterNoteMs * (4 / noteValue);
       const measureMs = beatsPerMeasure * beatMs;
-      const startMs = (state.startBar - 1) * measureMs;
-      const endMs = state.endBar * measureMs;
+      const startMs = (merged.startBar - 1) * measureMs;
+      const endMs = merged.endBar * measureMs;
       audioManagerRef.current.setLoopPoints(startMs, endMs);
     }
-  }, [payload.metadata]);
+  }, [payload.metadata, loopState]);
 
   useEffect(() => {
     if (!audioManagerRef.current) {
@@ -732,6 +751,33 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     setPositionMs(prev => {
       const roundedPos = Math.round(currentPos);
       if (Math.abs(prev - roundedPos) < 16) return prev;
+
+      // Detect loop iteration: position wrapped back to near startBar
+      if (loopState.enabled && loopState.tempoRamp && !isWaitModeRef.current) {
+        const bpm = payload.metadata?.tempo || 120;
+        const ts = payload.metadata?.timeSignature || "4/4";
+        const [numStr, denStr] = ts.split("/");
+        const beatsPerMeasure = parseInt(numStr, 10) || 4;
+        const noteValue = parseInt(denStr, 10) || 4;
+        const measureMs = ((60 * 1000) / bpm) * (4 / noteValue) * beatsPerMeasure;
+        const loopStartMs = (loopState.startBar - 1) * measureMs;
+        const loopEndMs = loopState.endBar * measureMs;
+        const midPoint = (loopStartMs + loopEndMs) / 2;
+
+        // Detect wrap: previous position was past midpoint, current is near start
+        if (prevLoopPosRef.current > midPoint && roundedPos < midPoint && roundedPos >= loopStartMs - 200) {
+          loopIterationRef.current++;
+          const newRate = Math.min(
+            loopState.tempoRampTarget,
+            playbackRate + loopState.tempoRampStep
+          );
+          if (newRate !== playbackRate) {
+            handlePlaybackRateChange(newRate);
+          }
+        }
+        prevLoopPosRef.current = roundedPos;
+      }
+
       return roundedPos;
     });
 

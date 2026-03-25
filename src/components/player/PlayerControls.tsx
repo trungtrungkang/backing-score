@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -33,8 +33,8 @@ interface PlayerControlsProps {
   onPitchShiftChange: (pitch: number) => void;
   isMetronomeEnabled: boolean;
   onMetronomeToggle: (enabled: boolean) => void;
-  loopState: { enabled: boolean; startBar: number; endBar: number };
-  onLoopStateChange: (state: { enabled: boolean; startBar: number; endBar: number }) => void;
+  loopState: { enabled: boolean; startBar: number; endBar: number; tempoRamp: boolean; tempoRampStep: number; tempoRampTarget: number };
+  onLoopStateChange: (state: { enabled: boolean; startBar: number; endBar: number; tempoRamp?: boolean; tempoRampStep?: number; tempoRampTarget?: number }) => void;
   tracks: AudioTrack[];
   volumes: Record<string, number>;
   muteByTrackId: Record<string, boolean>;
@@ -446,7 +446,7 @@ export function PlayerControls({
                     <Repeat className="w-4 h-4" /> A-B
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="z-[200] w-48 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-3 shadow-xl" sideOffset={8}>
+                <PopoverContent className="z-[200] w-52 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-3 shadow-xl" sideOffset={8}>
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Loop Range</span>
@@ -489,6 +489,58 @@ export function PlayerControls({
                           className="w-16 bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-amber-500/50 rounded px-2 py-1 text-sm text-center font-mono outline-none"
                         />
                       </div>
+                    </div>
+
+                    {/* Tempo Ramp */}
+                    <div className="border-t border-zinc-200 dark:border-zinc-700/50 pt-2 mt-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" /> Tempo Ramp
+                        </span>
+                        <button
+                          onClick={() => onLoopStateChange({ ...loopState, tempoRamp: !loopState.tempoRamp })}
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
+                            loopState.tempoRamp
+                              ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/50"
+                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          {loopState.tempoRamp ? "On" : "Off"}
+                        </button>
+                      </div>
+                      {loopState.tempoRamp && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1 flex-1">
+                            <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Step</span>
+                            <select
+                              value={loopState.tempoRampStep}
+                              onChange={(e) => onLoopStateChange({ ...loopState, tempoRampStep: parseFloat(e.target.value) })}
+                              className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-emerald-500/50 rounded px-1.5 py-1 text-xs font-mono outline-none cursor-pointer appearance-none text-center"
+                            >
+                              <option value="0.05">+5%</option>
+                              <option value="0.1">+10%</option>
+                              <option value="0.15">+15%</option>
+                              <option value="0.2">+20%</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1 flex-1">
+                            <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Target</span>
+                            <select
+                              value={loopState.tempoRampTarget}
+                              onChange={(e) => onLoopStateChange({ ...loopState, tempoRampTarget: parseFloat(e.target.value) })}
+                              className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-emerald-500/50 rounded px-1.5 py-1 text-xs font-mono outline-none cursor-pointer appearance-none text-center"
+                            >
+                              <option value="0.75">75%</option>
+                              <option value="0.8">80%</option>
+                              <option value="0.9">90%</option>
+                              <option value="1">100%</option>
+                              <option value="1.1">110%</option>
+                              <option value="1.2">120%</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </PopoverContent>
