@@ -339,34 +339,74 @@ Hệ thống sử dụng **Document-level Permissions** của Appwrite thay vì 
 
 ## 6. Audio Engine — Thiết Kế Xử Lý Tín Hiệu
 
-### 6.1 Pipeline Xử Lý
+### 6.1 Pipeline Xử Lý Tổng Thể
 
 ```
-┌───────────────────┐     ┌──────────────────┐     ┌────────────────┐
-│  Input Source      │     │  Processing      │     │  Output        │
-│                   │     │                  │     │                │
-│  Microphone ──────┼────►│  AnalyserNode    │     │  Pitch (Hz)    │
-│  (getUserMedia)   │     │  FFT (2048)      │────►│  Note Name     │
-│                   │     │  Autocorrelation │     │  Confidence %  │
-│  MIDI Keyboard ──►│     │  (pitchfinder)   │     │                │
-│  (WebMIDI API)    │     │                  │     │  → ScoreEngine │
-└───────────────────┘     └──────────────────┘     └────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        AUDIO PIPELINE                                │
+│                                                                      │
+│  MusicXML file ──► Verovio WASM ──► SVG (Sheet music)               │
+│                         │                                            │
+│                         └──► MIDI Base64                             │
+│                               │                                      │
+│                     Tone.js stretch/transpose                        │
+│                               │                                      │
+│              ┌────────────────┼──────────────────────┐               │
+│              │                │                      │               │
+│   stretchedMidiBase64    correctedTimemap      correctedTimemap      │
+│              │          (MIDI tempo events)    (MIDI tempo events)   │
+│              ▼                │                      │               │
+│   html-midi-player       SoundFont           MetronomeEngine        │
+│   (Score Synth)               │               (lookahead scheduler) │
+│              │                │                      │               │
+│              └────────────────┴──────────────────────┘               │
+│                               │                                      │
+│                         Web Audio API                                │
+│                               │                                      │
+│  AudioManager ────────────────┘                                      │
+│  (Audio Stems: drums/bass/piano tracks)                              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Thư Viện Xử Lý
+### 6.2 Hai Nguồn Âm Thanh
+
+| Nguồn | Thành phần | Timing source |
+|---|---|---|
+| **Audio Stems** | `AudioManager` | Wall clock (WebAudio `currentTime`) |
+| **Score Synth** | `html-midi-player` (SoundFont) | MIDI file timeline |
+| **Metronome** | `MetronomeEngine` (oscillator) | `correctedTimemap` từ MIDI ticks |
+
+### 6.3 Thư Viện Xử Lý
 
 | Thành phần | Công nghệ | Vai trò |
 |---|---|---|
 | Thu âm | `navigator.mediaDevices.getUserMedia` | Capture audio stream |
 | Phân tích tần số | Web Audio `AnalyserNode` + `pitchfinder` | Chuyển đổi sóng âm → tần số Hz |
-| MIDI parsing | WebMIDI API + `@tonejs/midi` | Note-On/Off events |
+| MIDI parsing | WebMIDI API + `@tonejs/midi` | Note-On/Off events + tempo events |
 | Time-stretching | `@soundtouchjs/audio-worklet` | Thay đổi nhịp độ không đổi cao độ |
-| Ký hiệu nhạc | `verovio` + `@xmldom/xmldom` | MusicXML → SVG rendering |
+| Ký hiệu nhạc | `verovio` + `@xmldom/xmldom` | MusicXML → SVG + MIDI |
+| Score Synth | `html-midi-player` | MIDI → SoundFont → Audio |
+| Metronome | Thuần Web Audio API oscillators | Lookahead scheduling, sample-accurate |
 
-### 6.3 Ràng Buộc Thiết Kế
+### 6.4 Corrected Timemap — Đồng bộ Metronome với MIDI
+
+Sau khi Verovio xuất MIDI, hệ thống extract tempo events từ MIDI file (qua `@tonejs/midi`) để xây dựng `correctedTimemap` — bảng thời gian chính xác theo ms cho từng ô nhịp. Metronome dùng `correctedTimemap` này thay vì raw timemap từ MusicXML Analyzer, tránh drift tích lũy khi có tempo changes.
+
+```
+Verovio MIDI → @tonejs/midi (parse tempos) → ticksToMs() → correctedTimemap
+                                                                    ↓
+                                                           MetronomeEngine.setTimemap()
+```
+
+### 6.5 Ràng Buộc Thiết Kế
+
 - **Không gửi audio lên server** — toàn bộ xử lý client-side
 - **Độ trễ mục tiêu:** < 20ms (analyser → pitch detection → UI feedback)
 - **Fallback:** Nếu không có Mic/MIDI, người dùng vẫn dùng được Player ở chế độ phát lại thông thường
+- **Mute isolation:** `Tone.Destination.mute` chỉ dành cho Wait Mode — mute MIDI track phải ở SoundFont level để không ảnh hưởng metronome
+- **SoundTouch latency:** Worklet xử lý thêm ~60ms. Metronome bù ~60ms để đồng bộ với âm thanh thực phát ra.
+
+> 📖 Xem chi tiết kỹ thuật: [midi_audio_guide.md](midi_audio_guide.md) | [audio_algorithms.md](audio_algorithms.md)
 
 ---
 

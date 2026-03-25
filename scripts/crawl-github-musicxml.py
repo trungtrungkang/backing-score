@@ -263,6 +263,144 @@ def crawl_musetrainer(output_dir: Path, existing_files: set):
     return results
 
 
+def crawl_github_musicxml_dir(repo: str, path: str, output_dir: Path, existing_files: set,
+                               composer_key: str, composer_full: str, source_label: str,
+                               license_label: str = "CC BY 4.0",
+                               max_files: int = 200) -> list:
+    """
+    Generic recursive crawler for any GitHub repo that stores .musicxml / .xml files
+    in a directory structure. Supports nested subdirectories.
+    """
+    results = []
+    exported = 0
+    skipped = 0
+    errors = 0
+
+    def crawl_dir(dir_path: str):
+        nonlocal exported, skipped, errors
+        if exported >= max_files:
+            return
+        items = fetch_github_contents(repo, dir_path)
+        for item in items:
+            if exported >= max_files:
+                break
+            if item["type"] == "dir":
+                crawl_dir(item["path"])
+            elif item["type"] == "file" and item["name"].lower().endswith((".musicxml", ".xml", ".mxl")):
+                filename = item["name"]
+                download_url = item["download_url"]
+                if not download_url:
+                    continue
+
+                stem = sanitize_filename(Path(filename).stem)
+                out_path = f"{composer_key}/{stem}.musicxml"
+                full_path = output_dir / out_path
+
+                if out_path in existing_files or full_path.exists():
+                    print(f"  ⏭ already exists: {stem}")
+                    skipped += 1
+                    continue
+
+                print(f"  ⬇ {filename}...", end=" ", flush=True)
+                data = download_file(download_url)
+                if not data:
+                    errors += 1
+                    continue
+
+                # Handle .mxl (compressed)
+                if filename.lower().endswith(".mxl"):
+                    xml_content = extract_musicxml_from_mxl(data)
+                    if not xml_content:
+                        print("❌ (bad MXL)")
+                        errors += 1
+                        continue
+                else:
+                    try:
+                        xml_content = data.decode("utf-8")
+                    except UnicodeDecodeError:
+                        xml_content = data.decode("latin-1", errors="replace")
+
+                title, parts, measures, key = get_musicxml_metadata(xml_content)
+                if not title:
+                    title = extract_title_from_filename(filename)
+
+                display_name = f"{composer_full} - {title}" if composer_full else title
+
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                full_path.write_text(xml_content, encoding="utf-8")
+                print(f"✓ {display_name} ({parts}p, {measures}m)")
+
+                results.append({
+                    "file": out_path,
+                    "composer": composer_full,
+                    "composer_key": composer_key,
+                    "title": title or stem,
+                    "displayName": display_name,
+                    "parts": parts or 1,
+                    "measures": measures or 0,
+                    "key": key,
+                    "source": source_label,
+                    "license": license_label,
+                })
+                exported += 1
+                time.sleep(0.3)
+
+    crawl_dir(path)
+    print(f"  ✅ {source_label}: {exported} exported, {skipped} skipped, {errors} errors")
+    return results
+
+
+def crawl_openscore_lieder(output_dir: Path, existing_files: set) -> list:
+    """Crawl OpenScore/LiederCorpus — Schubert, Schumann Lieder (CC BY 4.0)."""
+    print("\n🎵 OpenScore/LiederCorpus (Schubert & Schumann Lieder)")
+    print("=" * 60)
+    # The repo organises scores under sub-composer folders
+    all_results = []
+    # cuthbertLab/music21 GitHub corpus: confirmed paths with MXL files
+    MUSIC21_REPO = "cuthbertLab/music21"
+    CORPUS_BASE  = "music21/corpus"
+
+    sources = [
+        # (sub-path,             composer_key,    composer_full,        max)
+        ("bach",                 "bach",          "Johann Sebastian Bach", 80),
+        ("monteverdi",           "monteverdi",    "Claudio Monteverdi",    40),
+        ("beethoven",            "beethoven",     "Ludwig van Beethoven",  30),
+        ("haydn/opus1no1",       "haydn",         "Joseph Haydn",          15),
+        ("haydn/opus74no1",      "haydn",         "Joseph Haydn",          15),
+        ("mozart/k155",          "mozart",        "Wolfgang A. Mozart",     10),
+        ("mozart/k156",          "mozart",        "Wolfgang A. Mozart",     10),
+        ("mozart/k458",          "mozart",        "Wolfgang A. Mozart",     10),
+        ("mozart/k545",          "mozart",        "Wolfgang A. Mozart",     10),
+        ("schubert",             "schubert",      "Franz Schubert",          5),
+        ("corelli/opus3no1",     "corelli",       "Arcangelo Corelli",      10),
+    ]
+
+    for sub_path, comp_key, comp_full, max_f in sources:
+        full_path = f"{CORPUS_BASE}/{sub_path}"
+        print(f"  → {comp_full} ({full_path})")
+        res = crawl_github_musicxml_dir(
+            repo=MUSIC21_REPO,
+            path=full_path,
+            output_dir=output_dir,
+            existing_files=existing_files,
+            composer_key=comp_key,
+            composer_full=comp_full,
+            source_label="cuthbertLab/music21",
+            license_label="Public Domain",
+            max_files=max_f,
+        )
+        all_results.extend(res)
+        time.sleep(0.5)
+    return all_results
+
+
+def crawl_music21_extra(output_dir: Path, existing_files: set) -> list:
+    """Dummy — merged into crawl_music21_github for simplicity."""
+    return []
+
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="Download MusicXML from GitHub repos")
     parser.add_argument("--output", default="./musicxml-library",
@@ -296,6 +434,7 @@ def main():
     # Crawl sources
     new_entries = []
     new_entries.extend(crawl_musetrainer(output_dir, existing_files))
+    new_entries.extend(crawl_openscore_lieder(output_dir, existing_files))  # now crawls music21 GitHub
     
     # Merge into manifest
     if new_entries:
