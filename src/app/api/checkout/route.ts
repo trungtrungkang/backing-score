@@ -3,8 +3,9 @@
  *
  * POST /api/checkout
  * Body: { variantId: string }
+ * Header: Authorization: Bearer <JWT>
  *
- * Requires authenticated user session (reads Appwrite JWT from cookie).
+ * Requires authenticated user (Appwrite JWT token).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,18 +13,16 @@ import { createCheckout } from "@/lib/lemonsqueezy/client";
 import { Client, Account } from "node-appwrite";
 
 async function getAuthUser(req: NextRequest) {
-  // Get Appwrite session from cookie or Authorization header
-  const sessionCookie =
-    req.cookies.get("a_session_backing-score")?.value ||
-    req.cookies.get("a_session_backing_score")?.value || "";
+  const authHeader = req.headers.get("Authorization") || "";
+  const jwt = authHeader.replace("Bearer ", "");
 
-  if (!sessionCookie) return null;
+  if (!jwt) return null;
 
   try {
     const client = new Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-    client.setSession(sessionCookie);
+    client.setJWT(jwt);
     const account = new Account(client);
     return await account.get();
   } catch {

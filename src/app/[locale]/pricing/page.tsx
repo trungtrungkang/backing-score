@@ -8,7 +8,7 @@ import Link from "next/link";
 
 export default function PricingPage() {
   const t = useTranslations("Pricing");
-  const { user, isPremium, subscriptionStatus } = useAuth();
+  const { user, isPremium, subscriptionStatus, getJWT } = useAuth();
   const [isYearly, setIsYearly] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -25,9 +25,13 @@ export default function PricingPage() {
     setLoading(true);
     try {
       const variantId = isYearly ? YEARLY_VARIANT_ID : MONTHLY_VARIANT_ID;
+      const jwt = await getJWT();
       const res = await fetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${jwt}`,
+        },
         body: JSON.stringify({ variantId }),
       });
 
@@ -42,7 +46,7 @@ export default function PricingPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, isYearly, MONTHLY_VARIANT_ID, YEARLY_VARIANT_ID]);
+  }, [user, isYearly, MONTHLY_VARIANT_ID, YEARLY_VARIANT_ID, getJWT]);
 
   const freeFeatures = [
     { icon: Music, text: t("freeFeature1") },
