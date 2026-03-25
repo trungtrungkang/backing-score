@@ -9,7 +9,7 @@ import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorit
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
 import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
-import { Play, Bookmark, Music4, Search, SlidersHorizontal, ChevronRight, Pencil, Heart, ListMusic, LayoutGrid, Globe } from "lucide-react";
+import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 
@@ -165,8 +165,7 @@ export default function DiscoverPage() {
         
         {/* Search Bar Area */}
         <header className="mb-12 flex justify-center w-full">
-          <div className="flex items-center gap-4 w-full max-w-2xl">
-            <div className="relative w-full">
+          <div className="relative w-full max-w-2xl">
               <Input 
                 placeholder={t("searchPlaceholder")} 
                 className="w-full h-[52px] pl-6 pr-14 bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 focus-visible:ring-[#C8A856]/50 rounded-full text-[15px] text-zinc-900 dark:text-white placeholder:text-zinc-500 shadow-inner shadow-black/5 dark:shadow-black/20"
@@ -176,11 +175,6 @@ export default function DiscoverPage() {
               <button className="absolute right-2 top-1/2 -translate-y-1/2 w-[36px] h-[36px] bg-[#C8A856] hover:bg-[#d4b566] transition-colors rounded-full flex items-center justify-center text-black shadow-md focus:outline-none">
                 <Search className="w-[18px] h-[18px]" />
               </button>
-            </div>
-            
-            <button className="w-[52px] h-[52px] shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-200 dark:border-white/5 flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors focus:outline-none">
-              <SlidersHorizontal className="w-[20px] h-[20px]" />
-            </button>
           </div>
         </header>
 
@@ -288,18 +282,18 @@ export default function DiscoverPage() {
         )}
 
 
-        {/* Featured Collections Section */}
+        {/* Collections Section */}
         {(!loading && playlists.length > 0 && !searchQuery) && (
            <div className="mb-12">
              <div className="w-full flex items-center justify-between mb-6">
-                <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">Featured Collections</h2>
-                <button className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1">
-                  See All <ChevronRight className="w-4 h-4" />
-                </button>
+                <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">
+                  Collections
+                  <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500 ml-2">({playlists.length})</span>
+                </h2>
              </div>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-               {playlists.slice(0, 3).map((pl) => (
+               {playlists.map((pl) => (
                   <Link href={`/collection/${pl.$id}`} key={pl.$id} className="block group">
                      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 hover:border-zinc-300 dark:hover:border-white/20 transition-all duration-300 transform-gpu isolate">
                         <div className="h-40 relative overflow-hidden rounded-t-[15px] flex items-center justify-center border-b border-zinc-200 dark:border-white/5 z-0"
@@ -316,19 +310,13 @@ export default function DiscoverPage() {
                              </div>
                            )}
                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 pointer-events-none mix-blend-overlay"></div>
-                           <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider text-white flex items-center gap-1.5 border border-white/10 shadow-lg">
-                              <Globe className="w-3 h-3 text-blue-400" /> {t("publicBadge")}
-                           </div>
                         </div>
                         <div className="p-5">
-                           <div className="flex items-center gap-2 text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2">
-                             <ListMusic className="w-3.5 h-3.5" /> {t("curatedPlaylist")}
-                           </div>
                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 leading-tight group-hover:text-blue-500 transition-colors truncate">
                               {pl.name}
                            </h3>
                            <p className="text-xs text-zinc-500 font-medium">
-                              By User {pl.ownerId.substring(0,6)} • {pl.projectIds?.length || 0} Tracks
+                              {pl.projectIds?.length || 0} Tracks
                            </p>
                         </div>
                      </div>
@@ -338,12 +326,12 @@ export default function DiscoverPage() {
            </div>
         )}
 
-        {/* Featured Section Header */}
+        {/* All Scores Header */}
         <div className="w-full flex items-center justify-between mb-6 mt-4">
-          <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">{t("interactiveScores")}</h2>
-          <button className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors flex items-center gap-1">
-            {t("seeAll")} <ChevronRight className="w-4 h-4" />
-          </button>
+          <h2 className="text-[22px] font-bold text-zinc-900 dark:text-white tracking-tight">
+            {t("interactiveScores")}
+            {!loading && <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500 ml-2">({filteredProjects.length})</span>}
+          </h2>
         </div>
 
         {loading ? (
