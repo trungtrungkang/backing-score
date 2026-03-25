@@ -16,6 +16,38 @@ import {
   APPWRITE_PROJECTS_COLLECTION_ID,
 } from "./constants";
 import type { ProjectDocument, ProjectPayload } from "./types";
+import { getArtistNamesByIds } from "./artists";
+
+function removeDiacritics(str: string): string {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+}
+
+async function buildSearchString(
+  name: string,
+  description?: string,
+  tags?: string[],
+  creatorEmail?: string,
+  wikiComposerIds?: string[]
+): Promise<string> {
+  let composerNamesStr = "";
+  if (wikiComposerIds && wikiComposerIds.length > 0) {
+    try {
+      const nameMap = await getArtistNamesByIds(wikiComposerIds);
+      composerNamesStr = Array.from(nameMap.values()).join(" ");
+    } catch (e) {
+      console.error("Failed to fetch composer names for search string", e);
+    }
+  }
+  const rawString = `${name || ""} ${description || ""} ${composerNamesStr} ${(tags || []).join(" ")} ${creatorEmail || ""}`;
+  return removeDiacritics(rawString);
+}
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_PROJECTS_COLLECTION_ID;
@@ -33,6 +65,14 @@ export async function createProject(params: {
   wikiComposerIds?: string[];
 }): Promise<ProjectDocument> {
   const user = await account.get();
+  const searchString = await buildSearchString(
+    params.name,
+    "",
+    params.tags,
+    user.email,
+    params.wikiComposerIds
+  );
+  
   const payloadStr = JSON.stringify(params.payload);
   const doc = await databases.createDocument(
     dbId,
@@ -47,6 +87,7 @@ export async function createProject(params: {
       published: false,
       creatorEmail: user.email,
       tags: params.tags || [],
+      searchString,
       ...(params.wikiGenreId && { wikiGenreId: params.wikiGenreId }),
       ...(params.wikiInstrumentIds?.length && { wikiInstrumentIds: params.wikiInstrumentIds }),
       ...(params.wikiCompositionId && { wikiCompositionId: params.wikiCompositionId }),
@@ -103,6 +144,18 @@ export async function updateProject(
   if (updates.wikiCompositionId !== undefined) body.wikiCompositionId = updates.wikiCompositionId;
   if (updates.wikiComposerIds !== undefined) body.wikiComposerIds = updates.wikiComposerIds;
 
+  const needsSearchUpdate = updates.name !== undefined || updates.description !== undefined || updates.tags !== undefined || updates.wikiComposerIds !== undefined;
+  if (needsSearchUpdate) {
+    const current = await getProject(projectId);
+    body.searchString = await buildSearchString(
+      updates.name ?? current.name,
+      updates.description ?? current.description,
+      updates.tags ?? current.tags,
+      current.creatorEmail,
+      updates.wikiComposerIds ?? current.wikiComposerIds
+    );
+  }
+
   const doc = await databases.updateDocument(dbId, collId, projectId, body, permissions);
   return doc as unknown as ProjectDocument;
 }
@@ -134,13 +187,17 @@ export async function listMyProjects(tagFilters?: string[]): Promise<ProjectDocu
 export async function listPublished(
   tagFilters?: string[],
   authorId?: string,
-  wikiFilters?: { genreId?: string; instrumentIds?: string[] }
+  wikiFilters?: { genreId?: string; instrumentIds?: string[] },
+  searchQuery?: string
 ): Promise<ProjectDocument[]> {
   const queries = [
     Query.equal("published", true),
     Query.orderDesc("publishedAt"),
     Query.limit(50),
   ];
+  if (searchQuery) {
+    queries.push(Query.search("searchString", removeDiacritics(searchQuery)));
+  }
   if (authorId) queries.push(Query.equal("userId", authorId));
   if (tagFilters && tagFilters.length > 0) {
     tagFilters.forEach(tag => {

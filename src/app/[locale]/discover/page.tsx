@@ -5,6 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
+import { useDebounce } from "@/hooks/useDebounce";
 import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorite, listMyFavorites, getFileViewUrl, type ProjectDocument, type PlaylistDocument } from "@/lib/appwrite";
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
@@ -35,6 +36,7 @@ export default function DiscoverPage() {
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export default function DiscoverPage() {
           ...(activeInstrumentIds.length ? { instrumentIds: activeInstrumentIds } : {}),
         };
         const [publishedList, publishedCollections, myFavs] = await Promise.all([
-          listPublished(activeDifficulty.length ? activeDifficulty : undefined, undefined, Object.keys(wikiFilters).length ? wikiFilters : undefined),
+          listPublished(activeDifficulty.length ? activeDifficulty : undefined, undefined, Object.keys(wikiFilters).length ? wikiFilters : undefined, debouncedSearchQuery),
           listPublishedPlaylists(),
           user ? listMyFavorites("project") : Promise.resolve([])
         ]);
@@ -110,7 +112,7 @@ export default function DiscoverPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeDifficulty, activeGenreId, activeInstrumentIds, user]);
+  }, [activeDifficulty, activeGenreId, activeInstrumentIds, user, debouncedSearchQuery]);
 
   // Load wiki data for filter pills
   useEffect(() => {
@@ -159,12 +161,6 @@ export default function DiscoverPage() {
     }
   };
 
-  // Helper: remove diacritics for accent-insensitive search
-  const removeDiacritics = (str: string) => {
-    if (!str) return "";
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  };
-
   // Helper: get composer display name for a project
   const getComposerName = (p: ProjectDocument) => {
     if (p.wikiComposerIds?.length) {
@@ -174,20 +170,7 @@ export default function DiscoverPage() {
     return p.creatorEmail ? p.creatorEmail.split('@')[0] : t('communityComposer');
   };
 
-  const filteredProjects = projects.filter((p) => {
-    if (!searchQuery) return true;
-    const q = removeDiacritics(searchQuery);
-    const composerName = removeDiacritics(getComposerName(p));
-    const pName = removeDiacritics(p.name);
-    const pDesc = p.description ? removeDiacritics(p.description) : "";
-    
-    return (
-      pName.includes(q) ||
-      composerName.includes(q) ||
-      pDesc.includes(q) ||
-      (p.tags && p.tags.some((t) => removeDiacritics(t).includes(q)))
-    );
-  }).sort((a, b) => {
+  const filteredProjects = [...projects].sort((a, b) => {
     switch (sortBy) {
       case "newest":
         return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
@@ -203,7 +186,7 @@ export default function DiscoverPage() {
   // Reset to first page when search/sort changes
   useEffect(() => {
     setVisibleCount(12);
-  }, [searchQuery, sortBy, activeDifficulty, activeGenreId, activeInstrumentIds]);
+  }, [debouncedSearchQuery, sortBy, activeDifficulty, activeGenreId, activeInstrumentIds]);
 
   return (
     <div className="min-h-screen bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white relative flex flex-col items-center pt-8 pb-32 px-6">
