@@ -30,7 +30,7 @@ export async function createCheckout(
 ): Promise<string> {
   const checkoutData: NewCheckout = {
     productOptions: {
-      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/en/dashboard?checkout=success`,
+      redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://backingscore.com"}/en/dashboard?checkout=success`,
     },
     checkoutData: {
       email: userEmail,
