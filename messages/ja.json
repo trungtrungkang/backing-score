@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "このプロジェクトを削除しますか？この操作は元に戻せません。",
     "deleteConfirm": "削除",
     "deleteCancel": "キャンセル",
-    "untagged": "タグなし"
+    "untagged": "タグなし",
+    "editProfile": "プロフィールを編集"
   },
   "Login": {
     "welcomeBack": "おかえりなさい",

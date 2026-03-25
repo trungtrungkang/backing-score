@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "이 프로젝트를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
     "deleteConfirm": "삭제",
     "deleteCancel": "취소",
-    "untagged": "태그 없음"
+    "untagged": "태그 없음",
+    "editProfile": "프로필 편집"
   },
   "Login": {
     "welcomeBack": "다시 오신 것을 환영합니다",

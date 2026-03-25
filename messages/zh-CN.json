@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "删除此项目？此操作无法撤销。",
     "deleteConfirm": "删除",
     "deleteCancel": "取消",
-    "untagged": "无标签"
+    "untagged": "无标签",
+    "editProfile": "编辑个人资料"
   },
   "Login": {
     "welcomeBack": "欢迎回来",

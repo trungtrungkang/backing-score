@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -195,6 +195,16 @@ export default function DashboardPage() {
             </div>
             
             <div className="flex items-center gap-4">
+              <Link href={`/u/${user.$id}`}>
+                <Button
+                  variant="outline"
+                  className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 shadow-sm"
+                >
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  {t("editProfile") || "Edit Profile"}
+                </Button>
+              </Link>
+              
               {(user.labels?.includes("admin") || user.labels?.includes("creator")) && (
                 <Button
                   onClick={handleNewProject}

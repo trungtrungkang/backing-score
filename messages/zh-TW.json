@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "刪除此項目？此操作無法撤銷。",
     "deleteConfirm": "刪除",
     "deleteCancel": "取消",
-    "untagged": "無標籤"
+    "untagged": "無標籤",
+    "editProfile": "編輯個人資料"
   },
   "Login": {
     "welcomeBack": "歡迎回來",

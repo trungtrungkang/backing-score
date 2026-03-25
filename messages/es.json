@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "¿Eliminar este proyecto? Esta acción no se puede deshacer.",
     "deleteConfirm": "Eliminar",
     "deleteCancel": "Cancelar",
-    "untagged": "Sin etiqueta"
+    "untagged": "Sin etiqueta",
+    "editProfile": "Editar perfil"
   },
   "Login": {
     "welcomeBack": "Bienvenido de nuevo",

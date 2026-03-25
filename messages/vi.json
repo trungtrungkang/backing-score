@@ -103,7 +103,8 @@
     "deleteConfirmDesc": "Xóa dự án này? Hành động này không thể hoàn tác.",
     "deleteConfirm": "Xóa",
     "deleteCancel": "Huỷ",
-    "untagged": "Chưa gắn thẻ"
+    "untagged": "Chưa gắn thẻ",
+    "editProfile": "Chỉnh sửa hồ sơ"
   },
   "Login": {
     "welcomeBack": "Chào mừng trở lại",

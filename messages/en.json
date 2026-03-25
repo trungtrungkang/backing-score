@@ -103,7 +103,8 @@
     "deleteConfirmDesc": "Delete this project? This cannot be undone.",
     "deleteConfirm": "Delete",
     "deleteCancel": "Cancel",
-    "untagged": "Untagged"
+    "untagged": "Untagged",
+    "editProfile": "Edit Profile"
   },
   "Login": {
     "welcomeBack": "Welcome back",

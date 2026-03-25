@@ -100,7 +100,8 @@
     "deleteConfirmDesc": "Supprimer ce projet ? Cette action est irréversible.",
     "deleteConfirm": "Supprimer",
     "deleteCancel": "Annuler",
-    "untagged": "Non étiqueté"
+    "untagged": "Non étiqueté",
+    "editProfile": "Modifier le profil"
   },
   "Login": {
     "welcomeBack": "Bon retour",
