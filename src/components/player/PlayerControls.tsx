@@ -288,74 +288,75 @@ export function PlayerControls({
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Practice Mode</span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="wait-mode-toggle-popup"
-                            checked={isWaitMode}
-                            onChange={(e) => {
-                              if (e.target.checked && !isPremium) {
-                                // Free user: trigger the upgrade prompt via the gated handler
-                                onWaitModeToggle?.(true);
-                                e.target.checked = false;
-                                return;
-                              }
-                              if (e.target.checked && !isMidiInitialized && !isMicInitialized && (onInitializeMidi || onInitializeMic)) {
-                                const pref = localStorage.getItem("bs_preferred_instrument");
-                                if (pref === "mic" && onInitializeMic) {
-                                  setIsInitializingMidi(true);
-                                  onInitializeMic().then(success => {
-                                    setIsInitializingMidi(false);
-                                    if (success) {
-                                      onWaitModeLenientToggle?.(true);
-                                      onWaitModeToggle(true);
-                                    }
-                                  });
-                                } else if (pref === "midi" && onInitializeMidi) {
-                                  setIsInitializingMidi(true);
-                                  onInitializeMidi().then(success => {
-                                    setIsInitializingMidi(false);
-                                    if (success) onWaitModeToggle(true);
-                                  });
-                                } else {
-                                  setShowMidiDialog(true);
-                                }
+                        <button
+                          onClick={() => {
+                            if (!isWaitMode && !isPremium) {
+                              onWaitModeToggle?.(true);
+                              return;
+                            }
+                            if (!isWaitMode && !isMidiInitialized && !isMicInitialized && (onInitializeMidi || onInitializeMic)) {
+                              const pref = localStorage.getItem("bs_preferred_instrument");
+                              if (pref === "mic" && onInitializeMic) {
+                                setIsInitializingMidi(true);
+                                onInitializeMic().then(success => {
+                                  setIsInitializingMidi(false);
+                                  if (success) {
+                                    onWaitModeLenientToggle?.(true);
+                                    onWaitModeToggle(true);
+                                  }
+                                });
+                              } else if (pref === "midi" && onInitializeMidi) {
+                                setIsInitializingMidi(true);
+                                onInitializeMidi().then(success => {
+                                  setIsInitializingMidi(false);
+                                  if (success) onWaitModeToggle(true);
+                                });
                               } else {
-                                onWaitModeToggle?.(e.target.checked);
+                                setShowMidiDialog(true);
                               }
-                            }}
-                            className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
-                          />
-                          <label htmlFor="wait-mode-toggle-popup" className="text-xs font-medium cursor-pointer">Enable</label>
-                        </div>
+                            } else {
+                              onWaitModeToggle?.(!isWaitMode);
+                            }
+                          }}
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
+                            isWaitMode
+                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
+                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          {isWaitMode ? "On" : "Off"}
+                        </button>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Lenient (1+ Note)</span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="lenient-mode-toggle-popup"
-                            checked={isWaitModeLenient}
-                            onChange={(e) => onWaitModeLenientToggle?.(e.target.checked)}
-                            className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
-                          />
-                          <label htmlFor="lenient-mode-toggle-popup" className="text-xs font-medium cursor-pointer">Enable</label>
-                        </div>
+                        <button
+                          onClick={() => onWaitModeLenientToggle?.(!isWaitModeLenient)}
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
+                            isWaitModeLenient
+                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
+                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          {isWaitModeLenient ? "On" : "Off"}
+                        </button>
                       </div>
 
                       <div className="flex items-center justify-between mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500/80 dark:text-blue-400/80">Diagnostic Monitor</span>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="monitor-toggle-popup"
-                            checked={showWaitModeMonitor}
-                            onChange={(e) => onWaitModeMonitorToggle?.(e.target.checked)}
-                            className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
-                          />
-                          <label htmlFor="monitor-toggle-popup" className="text-xs font-medium cursor-pointer">Show OSD</label>
-                        </div>
+                        <button
+                          onClick={() => onWaitModeMonitorToggle?.(!showWaitModeMonitor)}
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
+                            showWaitModeMonitor
+                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
+                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
+                          )}
+                        >
+                          {showWaitModeMonitor ? "On" : "Off"}
+                        </button>
                       </div>
 
                       <div className="flex flex-col gap-2 mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
