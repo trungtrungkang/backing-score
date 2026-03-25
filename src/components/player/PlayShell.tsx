@@ -127,13 +127,13 @@ export function PlayShell({
         )}
       </div>
 
-      {/* 4. Telemetry Monitor Overlay */}
+      {/* 4. Practice Mode Monitor Overlay */}
       {state.showWaitModeMonitor && (
         <div 
           ref={refs.waitModeMonitorRef}
           className="absolute top-20 left-4 z-[150] w-64 bg-[#18181b]/95 backdrop-blur-xl border border-blue-500/30 rounded-xl p-3 text-xs tracking-wider text-zinc-300 shadow-[0_0_20px_rgba(59,130,246,0.15)] select-none pointer-events-none"
         >
-          <div className="animate-pulse flex gap-2 items-center text-blue-400">Loading Telemetry...</div>
+          <div className="flex gap-2 items-center text-blue-400">Practice Mode Active</div>
         </div>
       )}
 

@@ -158,10 +158,11 @@ export function PlayerControls({
       <div className="absolute bottom-4 md:bottom-0 left-1/2 -translate-x-1/2 z-[120] pointer-events-none pb-[env(safe-area-inset-bottom)] md:pb-0">
         <button
           onClick={() => onCollapseToggle?.(false)}
-          className="w-16 h-6 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl md:rounded-b-none rounded-xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl pointer-events-auto"
-          title="Expand Controls"
+          className="w-24 h-8 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl md:rounded-b-none rounded-xl flex flex-col items-center justify-center gap-0.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl pointer-events-auto group"
+          title="Show Player Controls"
         >
-          <ChevronUp className="w-4 h-4 ml-px" />
+          <div className="w-8 h-1 rounded-full bg-zinc-400/50 group-hover:bg-zinc-500 transition-colors" />
+          <ChevronUp className="w-3 h-3" />
         </button>
       </div>
     );
@@ -172,10 +173,11 @@ export function PlayerControls({
       <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-4 flex flex-col gap-3 pointer-events-auto relative">
         <button
           onClick={() => onCollapseToggle?.(true)}
-          className="absolute -top-[23px] left-1/2 -translate-x-1/2 w-16 h-6 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl z-[-1]"
-          title="Collapse Controls"
+          className="absolute -top-[27px] left-1/2 -translate-x-1/2 w-24 h-8 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl flex flex-col items-center justify-center gap-0.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl z-[-1] group"
+          title="Hide Player Controls"
         >
-          <ChevronDown className="w-4 h-4" />
+          <ChevronDown className="w-3 h-3" />
+          <div className="w-8 h-1 rounded-full bg-zinc-400/50 group-hover:bg-zinc-500 transition-colors" />
         </button>
 
         <div className="flex flex-col w-full gap-2">
@@ -275,15 +277,15 @@ export function PlayerControls({
                   <PopoverTrigger asChild>
                     <button
                       className={cn("h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-                      title="Wait Mode Settings"
+                      title="Practice Mode Settings"
                     >
-                      <Keyboard className="w-4 h-4" /> Wait Mode
+                      <Keyboard className="w-4 h-4" /> Practice
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="z-[200] w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-4 shadow-xl" sideOffset={8}>
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Wait Mode</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Practice Mode</span>
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -369,12 +371,15 @@ export function PlayerControls({
                         )}
 
                         {isMicInitialized && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">🎙️ Mic</span>
-                            <button onClick={() => {
-                              localStorage.removeItem("bs_preferred_instrument");
-                              onDisconnectMic?.();
-                            }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">🎙️ Mic</span>
+                              <button onClick={() => {
+                                localStorage.removeItem("bs_preferred_instrument");
+                                onDisconnectMic?.();
+                              }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                            </div>
+                            <span className="text-[10px] text-amber-500/80 dark:text-amber-400/70 leading-tight">Best for C3–C6. MIDI keyboard recommended for full range.</span>
                           </div>
                         )}
                       </div>
@@ -609,10 +614,10 @@ export function PlayerControls({
               Connect Instrument
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 font-medium">
-              Wait Mode formally synchronizes the sheet music with your physical playing.
+              Practice Mode pauses playback and waits for you to play the correct notes on your instrument.
               Do you want to connect a Digital Piano via MIDI, or use your Microphone for acoustic instruments?
               <br /><br />
-              <span className="text-amber-500 dark:text-amber-400 italic">Note: Microphone Mode automatically forces "Lenient Mode" (1-note matching) to gracefully support complex Piano/Guitar chords natively.</span>
+              <span className="text-amber-500 dark:text-amber-400 italic">⚠️ Mic detection works best for notes C3–C6. For accurate chord detection, a MIDI keyboard is strongly recommended.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-between w-full">

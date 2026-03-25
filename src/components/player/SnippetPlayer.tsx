@@ -284,14 +284,14 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                   }
                 }}
                 className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
-                title={state.isWaitMode ? "Turn off Wait Mode" : "Please exit Fullscreen to configure Wait Mode"}
+                title={state.isWaitMode ? "Turn off Practice Mode" : "Please exit Fullscreen to configure Practice Mode"}
               >
-                <Keyboard className="w-4 h-4" /> Wait Mode
+                <Keyboard className="w-4 h-4" /> Practice
               </button>
 
               {showFullscreenWarning && !state.isWaitMode && (
                 <div className="absolute right-0 bottom-[calc(100%+8px)] w-max max-w-sm px-3 py-2.5 bg-zinc-950 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 z-[9999]">
-                  <span className="text-blue-400">ℹ️</span> Please exit Fullscreen to configure Wait Mode
+                  <span className="text-blue-400">ℹ️</span> Please exit Fullscreen to configure Practice Mode
                 </div>
               )}
             </div>
@@ -300,9 +300,9 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               <PopoverTrigger asChild>
                 <button
                   className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
-                  title="Wait Mode Settings"
+                  title="Practice Mode Settings"
                 >
-                  <Keyboard className="w-4 h-4" /> Wait Mode
+                  <Keyboard className="w-4 h-4" /> Practice
                 </button>
               </PopoverTrigger>
               <PopoverContent
@@ -311,7 +311,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Wait Mode</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Practice Mode</span>
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -397,12 +397,15 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                     )}
 
                     {state.isMicInitialized && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5"><Mic className="w-3 h-3" /> Mic</span>
-                        <button onClick={() => {
-                          localStorage.removeItem("bs_preferred_instrument");
-                          actions.disconnectMic();
-                        }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5"><Mic className="w-3 h-3" /> Mic</span>
+                          <button onClick={() => {
+                            localStorage.removeItem("bs_preferred_instrument");
+                            actions.disconnectMic();
+                          }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                        </div>
+                        <span className="text-[10px] text-amber-500/80 dark:text-amber-400/70 leading-tight">Best for C3–C6. MIDI keyboard recommended for full range.</span>
                       </div>
                     )}
                   </div>
@@ -614,10 +617,10 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               Connect Instrument
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 font-medium">
-              Wait Mode formally synchronizes the sheet music with your physical playing.
+              Practice Mode pauses playback and waits for you to play the correct notes on your instrument.
               Do you want to connect a Digital Piano via MIDI, or use your Microphone for acoustic instruments?
               <br /><br />
-              <span className="text-amber-500 dark:text-amber-400 italic">Note: Microphone Mode automatically forces "Lenient Mode" (1-note matching) to gracefully support complex Piano/Guitar chords natively.</span>
+              <span className="text-amber-500 dark:text-amber-400 italic">⚠️ Mic detection works best for notes C3–C6. For accurate chord detection, a MIDI keyboard is strongly recommended.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-between w-full">
