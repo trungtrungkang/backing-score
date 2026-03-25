@@ -191,7 +191,7 @@ export default function DiscoverPage() {
             <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
               {t("filters")}
             </span>
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
               <button
                 onClick={() => { setActiveTags([]); setActiveInstrumentIds([]); setActiveGenreId(undefined); setActiveDifficulty([]); }}
                 className={`px-5 py-2 whitespace-nowrap rounded-full text-[13px] font-bold transition-all duration-300 flex items-center gap-2 ${
@@ -211,7 +211,7 @@ export default function DiscoverPage() {
               <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
                 Instruments
               </span>
-              <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
                 {wikiInstruments.map((inst) => (
                   <button
                     key={inst.$id}
@@ -235,7 +235,7 @@ export default function DiscoverPage() {
               <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
                 Genres
               </span>
-              <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
                 {wikiGenres.map((genre) => (
                   <button
                     key={genre.$id}
@@ -258,7 +258,7 @@ export default function DiscoverPage() {
             <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
               Difficulty
             </span>
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
               {DIFFICULTY_OPTIONS.map((tag) => (
                 <button
                   key={tag}
@@ -302,11 +302,18 @@ export default function DiscoverPage() {
                {playlists.slice(0, 3).map((pl) => (
                   <Link href={`/collection/${pl.$id}`} key={pl.$id} className="block group">
                      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 hover:border-zinc-300 dark:hover:border-white/20 transition-all duration-300 transform-gpu isolate">
-                        <div className="h-40 bg-zinc-100 dark:bg-black/50 relative overflow-hidden rounded-t-[15px] flex items-center justify-center p-6 border-b border-zinc-200 dark:border-white/5 z-0">
+                        <div className="h-40 relative overflow-hidden rounded-t-[15px] flex items-center justify-center border-b border-zinc-200 dark:border-white/5 z-0"
+                          style={{
+                            background: pl.coverImageId ? undefined : `linear-gradient(135deg, hsl(${(pl.name.length * 53 + (pl.name.charCodeAt(0) || 0) * 17) % 360}, 50%, 30%), hsl(${(pl.name.length * 53 + (pl.name.charCodeAt(0) || 0) * 17 + 80) % 360}, 55%, 22%))`,
+                          }}
+                        >
                            {pl.coverImageId ? (
                              <img src={getFileViewUrl(pl.coverImageId).toString()} alt="cover" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 border-0" />
                            ) : (
-                             <LayoutGrid className="w-16 h-16 text-zinc-300 dark:text-zinc-700 opacity-50 transition-transform duration-500 group-hover:scale-110" />
+                             <div className="flex flex-col items-center gap-2">
+                               <ListMusic className="w-12 h-12 text-white/25" />
+                               <span className="text-white/50 text-xs font-bold uppercase tracking-widest">{pl.projectIds?.length || 0} Tracks</span>
+                             </div>
                            )}
                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 pointer-events-none mix-blend-overlay"></div>
                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider text-white flex items-center gap-1.5 border border-white/10 shadow-lg">
@@ -384,15 +391,14 @@ export default function DiscoverPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                       />
                     ) : (
-                      <div className="w-full h-full bg-slate-50 relative p-4 flex flex-col border border-zinc-200 shadow-sm">
-                         {/* Faux Sheet Music UI overlay */}
-                         <div className="w-full h-1 bg-black mb-2 opacity-10"></div>
-                         <div className="w-full h-1 bg-black mb-2 opacity-10"></div>
-                         <div className="w-full h-1 bg-black mb-2 opacity-10"></div>
-                         <div className="w-full h-1 bg-black mb-2 opacity-10"></div>
-                         <div className="w-full h-1 bg-black mb-6 opacity-10"></div>
-                         <div className="w-full text-center text-black font-serif font-bold text-lg opacity-80 line-clamp-1">{p.name}</div>
-                         <div className="w-full font-serif text-right text-black text-[10px] opacity-60 line-clamp-1">{p.creatorEmail?.split('@')[0] || "Unknown"}</div>
+                      <div className="w-full h-full relative flex flex-col items-center justify-center p-6"
+                        style={{
+                          background: `linear-gradient(135deg, hsl(${(p.name.length * 47 + (p.name.charCodeAt(0) || 0) * 13) % 360}, 45%, 35%), hsl(${(p.name.length * 47 + (p.name.charCodeAt(0) || 0) * 13 + 60) % 360}, 50%, 25%))`,
+                        }}
+                      >
+                        <Music4 className="w-10 h-10 text-white/20 mb-3" />
+                        <div className="text-center text-white font-serif font-bold text-lg leading-tight line-clamp-2 drop-shadow-lg">{p.name}</div>
+                        <div className="text-white/60 text-xs font-medium mt-1.5 line-clamp-1">{p.creatorEmail?.split('@')[0] || "Unknown"}</div>
                       </div>
                     )}
                   </div>

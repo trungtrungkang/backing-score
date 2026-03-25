@@ -279,7 +279,7 @@ export function PlayerControls({
                       className={cn("h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
                       title="Practice Mode Settings"
                     >
-                      <Keyboard className="w-4 h-4" /> Practice
+                      <Keyboard className="w-4 h-4" /><span className="hidden sm:inline"> Practice</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="z-[200] w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-4 shadow-xl" sideOffset={8}>
