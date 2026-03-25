@@ -49,6 +49,7 @@ export default function DiscoverPage() {
   const [activeDifficulty, setActiveDifficulty] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"newest" | "az" | "oldest">("newest");
   const [composerNames, setComposerNames] = useState<Map<string, string>>(new Map());
+  const [visibleCount, setVisibleCount] = useState(12);
 
   const handleCopyToMine = async (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
@@ -189,6 +190,11 @@ export default function DiscoverPage() {
         return 0;
     }
   });
+
+  // Reset to first page when search/sort changes
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [searchQuery, sortBy, activeDifficulty, activeGenreId, activeInstrumentIds]);
 
   return (
     <div className="min-h-screen bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white relative flex flex-col items-center pt-8 pb-32 px-6">
@@ -389,8 +395,9 @@ export default function DiscoverPage() {
             </p>
           </div>
         ) : (
+          <>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProjects.map((p) => {
+            {filteredProjects.slice(0, visibleCount).map((p) => {
               const isEasy = p.tags?.includes("Beginner");
               const isIntermediate = p.tags?.includes("Intermediate");
               const isAdvanced = p.tags?.includes("Advanced");
@@ -429,7 +436,7 @@ export default function DiscoverPage() {
                       >
                         <Music4 className="w-10 h-10 text-white/20 mb-3" />
                         <div className="text-center text-white font-serif font-bold text-lg leading-tight line-clamp-2 drop-shadow-lg">{p.name}</div>
-                        <div className="text-white/60 text-xs font-medium mt-1.5 line-clamp-1">{p.creatorEmail?.split('@')[0] || "Unknown"}</div>
+                        <div className="text-white/60 text-xs font-medium mt-1.5 line-clamp-1">{getComposerName(p)}</div>
                       </div>
                     )}
                   </div>
@@ -513,6 +520,17 @@ export default function DiscoverPage() {
               );
             })}
           </ul>
+          {filteredProjects.length > visibleCount && (
+            <div className="flex justify-center mt-10">
+              <button
+                onClick={() => setVisibleCount(prev => prev + 12)}
+                className="px-8 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Load More ({filteredProjects.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>
