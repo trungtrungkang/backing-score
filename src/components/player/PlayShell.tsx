@@ -14,7 +14,7 @@ import { useScoreEngine } from "@/hooks/useScoreEngine";
 import { useAuth } from "@/contexts/AuthContext";
 import UpgradePrompt from "@/components/UpgradePrompt";
 
-const FREE_DAILY_PLAY_LIMIT = 3;
+const FREE_DAILY_PLAY_LIMIT = 999;
 
 function getPlayCount(): { count: number; date: string } {
   try {
@@ -24,7 +24,7 @@ function getPlayCount(): { count: number; date: string } {
       const today = new Date().toISOString().slice(0, 10);
       if (data.date === today) return data;
     }
-  } catch {}
+  } catch { }
   return { count: 0, date: new Date().toISOString().slice(0, 10) };
 }
 
@@ -99,7 +99,7 @@ export function PlayShell({
   const displayTracks = useMemo(() => {
     const tracks = [...payload.audioTracks];
     const autoUnmuteScoreSynth = tracks.length === 0 && !state.isWaitMode;
-    
+
     if (scoreFileId) {
       tracks.push({
         id: "score-midi",
@@ -142,7 +142,7 @@ export function PlayShell({
       <div className={cn("flex-1 min-h-0 w-full h-full pt-16 overflow-hidden relative transition-all duration-300", state.isControlsCollapsed ? "pb-0" : "pb-[120px]")}>
         <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#fdfdfc] dark:from-[#1A1A1E] to-transparent z-10 pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#fdfdfc] dark:from-[#1A1A1E] to-transparent z-10 pointer-events-none" />
-        
+
         {/* Headless MIDI Player for Fallback SoundFont engine */}
         {state.stretchedMidiBase64 && (
           <div className="hidden">
@@ -159,7 +159,7 @@ export function PlayShell({
             scoreFileId={scoreFileId}
             positionMs={state.positionMs}
             isPlaying={state.isPlaying}
-            timemap={state.correctedTimemap || payload.notationData?.timemap || []}
+            timemap={payload.notationData?.timemap || []}
             measureMap={payload.notationData?.measureMap}
             onSeek={actions.handleSeek}
             onMidiExtracted={actions.handleMidiExtracted}
@@ -178,7 +178,7 @@ export function PlayShell({
 
       {/* 4. Practice Mode Monitor Overlay */}
       {state.showWaitModeMonitor && (
-        <div 
+        <div
           ref={refs.waitModeMonitorRef}
           className="absolute top-20 left-4 z-[150] w-64 bg-[#18181b]/95 backdrop-blur-xl border border-blue-500/30 rounded-xl p-3 text-xs tracking-wider text-zinc-300 shadow-[0_0_20px_rgba(59,130,246,0.15)] select-none pointer-events-none"
         >
@@ -227,8 +227,8 @@ export function PlayShell({
         isWaitModeLenient={state.isWaitModeLenient}
         onWaitModeLenientToggle={actions.setIsWaitModeLenient}
         isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
-        onSynthMuteToggle={() => {}}
-        midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: state.partNames?.[i] || t.name || `Instrument ${i+1}` })) : []}
+        onSynthMuteToggle={() => { }}
+        midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: state.partNames?.[i] || t.name || `Instrument ${i + 1}` })) : []}
         practiceTrackIds={state.practiceTrackIds}
         onPracticeTrackChange={actions.setPracticeTrackIds}
         showWaitModeMonitor={state.showWaitModeMonitor}

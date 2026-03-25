@@ -76,6 +76,10 @@ export class AudioManager {
     }
   }
 
+  public getContext(): AudioContext | null {
+    return this.context;
+  }
+
   /**
    * Universal iOS/Safari Web Audio Unlocker.
    * MUST be called synchronously inside a user gesture (e.g. onClick).
@@ -283,15 +287,12 @@ export class AudioManager {
     });
 
     if (this.metronome && this.metronome.getEnabled()) {
-      // If there is a preRollDelaySec, we start the metronome ticking immediately (pre-emptively)
-      // by pushing the MetronomeEngine's "Song start time" into the future relative to its tick schedule.
-      // E.g. We tell the metronome the song actually started `preRollDelaySec` ago, so it ticks negative beats.
       const metronomeStartOffsetMs = this.offsetTime * 1000 - (preRollDelaySec * 1000 * this.playbackRate);
-      // Compensate for SoundTouch worklet processing latency (~30ms).
-      // Audio tracks go through the worklet (adding buffer delay), but the metronome
-      // oscillator goes directly to output — without compensation, clicks arrive early.
-      const workletLatencyCompSec = this.workletLoaded ? 0.060 : 0;
-      this.metronome.start(metronomeStartOffsetMs, this.context.currentTime + 0.05 + workletLatencyCompSec);
+      // Metronome oscillator goes direct to output (zero latency), but audio tracks
+      // pass through SoundTouch worklet buffer (~30ms). Delay the metronome slightly
+      // so clicks land on the beat rather than ahead of it.
+      const metronomeLatencyComp = this.workletLoaded ? 0.110 : 0;
+      this.metronome.start(metronomeStartOffsetMs, syncStartTime + metronomeLatencyComp);
     }
 
     this.updateMuteSoloVolumes();
@@ -486,8 +487,8 @@ export class AudioManager {
 
       if (this.metronome && this.metronome.getEnabled()) {
         this.metronome.setPlaybackRate(rate);
-        const workletLatencyCompSec = this.workletLoaded ? 0.080 : 0;
-        this.metronome.start(this.offsetTime * 1000, this.context!.currentTime + workletLatencyCompSec);
+        const metronomeLatencyComp = this.workletLoaded ? 0.110 : 0;
+        this.metronome.start(this.offsetTime * 1000, this.context!.currentTime + 0.05 + metronomeLatencyComp);
       }
     } else {
       if (this.metronome) {
@@ -498,6 +499,13 @@ export class AudioManager {
 
   public getPlaybackRate(): number {
     return this.playbackRate;
+  }
+
+  /** Set internal rate without touching audio sources or metronome.
+   *  Used by MIDI-only projects where rate is managed by useScoreEngine. */
+  public setPlaybackRateInternal(rate: number) {
+    if (rate <= 0) return;
+    this.playbackRate = rate;
   }
 
   /**
@@ -586,8 +594,8 @@ export class AudioManager {
     if (!this.metronome) return;
     this.metronome.setEnabled(enabled);
     if (enabled && this.isPlaying && this.context) {
-      const workletLatencyCompSec = this.workletLoaded ? 0.080 : 0;
-      this.metronome.start(this.getCurrentPositionMs(), this.context.currentTime + workletLatencyCompSec);
+      const metronomeLatencyComp = this.workletLoaded ? 0.110 : 0;
+      this.metronome.start(this.getCurrentPositionMs(), this.context.currentTime + 0.05 + metronomeLatencyComp);
     } else {
       this.metronome.stop();
     }

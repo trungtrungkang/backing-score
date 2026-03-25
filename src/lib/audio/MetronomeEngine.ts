@@ -64,6 +64,16 @@ export class MetronomeEngine {
   }
 
   public setPlaybackRate(rate: number) {
+    // Re-anchor sync point so scheduler calculates correct times with new rate
+    if (this.isPlaying && this.playbackRate !== rate) {
+      const now = this.context.currentTime;
+      const elapsedContextSecs = now - this.syncStartTimeContext;
+      const elapsedSongMs = elapsedContextSecs * this.playbackRate * 1000;
+      const currentSongMs = this.syncOffsetMsSong + elapsedSongMs;
+      // Re-anchor: from this point, use the new rate
+      this.syncStartTimeContext = now;
+      this.syncOffsetMsSong = currentSongMs;
+    }
     this.playbackRate = rate;
   }
 
