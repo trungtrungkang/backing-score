@@ -224,6 +224,10 @@ export default function AdminReviewPage() {
     for (let i = 0; i < draftIds.length; i++) {
       await handleAIEnrich(draftIds[i]);
       setBulkProgress({ done: i + 1, total: draftIds.length });
+      // Rate limit: wait 5s between requests to stay within free tier limits
+      if (i < draftIds.length - 1) {
+        await new Promise(r => setTimeout(r, 5000));
+      }
     }
     setBulkEnriching(false);
     toast.success(`Enriched ${draftIds.length} projects`);

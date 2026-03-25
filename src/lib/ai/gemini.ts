@@ -48,6 +48,13 @@ Return ONLY valid JSON matching this schema:
   "coverPrompt": "string"
 }`;
 
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 36_000; // 36 seconds (API says retry in ~35s)
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function enrichProject(input: EnrichmentInput): Promise<EnrichmentResult> {
   const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash",
@@ -56,20 +63,36 @@ export async function enrichProject(input: EnrichmentInput): Promise<EnrichmentR
   });
 
   const userPrompt = buildUserPrompt(input);
-  const result = await model.generateContent(userPrompt);
-  const text = result.response.text();
 
-  try {
-    const parsed = JSON.parse(text);
-    return {
-      description: parsed.description || "",
-      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-      difficulty: parsed.difficulty || "Intermediate",
-      coverPrompt: parsed.coverPrompt || "",
-    };
-  } catch {
-    throw new Error(`Failed to parse Gemini response: ${text.substring(0, 200)}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await model.generateContent(userPrompt);
+      const text = result.response.text();
+
+      try {
+        const parsed = JSON.parse(text);
+        return {
+          description: parsed.description || "",
+          tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+          difficulty: parsed.difficulty || "Intermediate",
+          coverPrompt: parsed.coverPrompt || "",
+        };
+      } catch {
+        throw new Error(`Failed to parse Gemini response: ${text.substring(0, 200)}`);
+      }
+    } catch (err: any) {
+      const is429 = err?.message?.includes("429") || err?.message?.includes("Too Many Requests") || err?.message?.includes("quota");
+      if (is429 && attempt < MAX_RETRIES) {
+        const delay = RETRY_BASE_DELAY_MS * (attempt + 1);
+        console.log(`[AI Enrich] Rate limited, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
   }
+
+  throw new Error("Max retries exceeded");
 }
 
 function buildUserPrompt(input: EnrichmentInput): string {
