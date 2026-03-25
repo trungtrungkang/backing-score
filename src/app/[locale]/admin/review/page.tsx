@@ -7,6 +7,7 @@ import {
   Loader2, CheckCircle2, XCircle, Play, ExternalLink,
   Music, Globe, Tag, ChevronLeft, ChevronRight, RefreshCw,
   Eye, Trash2, BookOpen, User, AlertTriangle, ClipboardList,
+  Sparkles, Wand2, X, Save, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,6 +31,13 @@ interface ReviewProject extends ProjectDocument {
   compositionTitle?: string;
 }
 
+interface AIEnrichment {
+  description: string;
+  tags: string[];
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
+  coverPrompt: string;
+}
+
 const PAGE_SIZE = 20;
 
 // ── Main Page ──────────────────────────────────────────────────────────
@@ -43,6 +51,12 @@ export default function AdminReviewPage() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // AI Enrichment state
+  const [enrichments, setEnrichments] = useState<Record<string, AIEnrichment>>({});
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
+  const [bulkEnriching, setBulkEnriching] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
 
   // Filters
   const [filterImported, setFilterImported] = useState(true); // only show importFile projects
@@ -178,6 +192,84 @@ export default function AdminReviewPage() {
     }
   }
 
+  // ── AI Enrichment ────────────────────────────────────────────────────
+
+  async function handleAIEnrich(projectId: string) {
+    setEnrichingIds(prev => new Set(prev).add(projectId));
+    try {
+      const res = await fetch("/api/ai-enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const data = await res.json();
+      if (data.results?.[projectId]?.status === "ok") {
+        setEnrichments(prev => ({ ...prev, [projectId]: data.results[projectId] }));
+        toast.success("AI suggestions ready");
+      } else {
+        toast.error("AI enrich failed: " + (data.results?.[projectId]?.error || data.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      toast.error("AI enrich error: " + err.message);
+    } finally {
+      setEnrichingIds(prev => { const n = new Set(prev); n.delete(projectId); return n; });
+    }
+  }
+
+  async function handleBulkEnrich() {
+    const draftIds = projects.filter(p => !p.published).map(p => p.$id);
+    if (!draftIds.length) { toast.info("No drafts to enrich"); return; }
+    setBulkEnriching(true);
+    setBulkProgress({ done: 0, total: draftIds.length });
+    for (let i = 0; i < draftIds.length; i++) {
+      await handleAIEnrich(draftIds[i]);
+      setBulkProgress({ done: i + 1, total: draftIds.length });
+    }
+    setBulkEnriching(false);
+    toast.success(`Enriched ${draftIds.length} projects`);
+  }
+
+  async function handleApplyEnrichment(projectId: string) {
+    const enrichment = enrichments[projectId];
+    if (!enrichment) return;
+    setActionLoading(projectId + ":apply");
+    try {
+      // Merge AI tags with existing tags (avoid duplicates)
+      const project = projects.find(p => p.$id === projectId);
+      const existingTags = (project?.tags || []).filter(t => !t.startsWith("importFile:") && !t.startsWith("difficulty-"));
+      const mergedTags = [...new Set([...existingTags, ...enrichment.tags, enrichment.difficulty])];
+
+      await databases.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_PROJECTS_COLLECTION_ID,
+        projectId,
+        {
+          description: enrichment.description,
+          tags: mergedTags,
+        },
+      );
+      toast.success("Applied AI suggestions ✓");
+      setEnrichments(prev => { const n = { ...prev }; delete n[projectId]; return n; });
+      // Update local state
+      setProjects(prev => prev.map(p => p.$id === projectId ? { ...p, description: enrichment.description, tags: mergedTags } : p));
+    } catch (err: any) {
+      toast.error("Failed to apply: " + err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  function handleDiscardEnrichment(projectId: string) {
+    setEnrichments(prev => { const n = { ...prev }; delete n[projectId]; return n; });
+  }
+
+  function handleEditEnrichment(projectId: string, field: keyof AIEnrichment, value: any) {
+    setEnrichments(prev => ({
+      ...prev,
+      [projectId]: { ...prev[projectId], [field]: value },
+    }));
+  }
+
   async function handleUnpublish(projectId: string) {
     setActionLoading(projectId + ":unpublish");
     try {
@@ -218,10 +310,20 @@ export default function AdminReviewPage() {
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-1">Review Queue</h1>
           <p className="text-zinc-500 dark:text-zinc-400">Preview, publish, or reject imported music projects</p>
         </div>
-        <button onClick={loadProjects} disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-xl transition-colors">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleBulkEnrich} disabled={loading || bulkEnriching}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-violet-100 dark:bg-violet-500/10 hover:bg-violet-200 dark:hover:bg-violet-500/20 text-violet-700 dark:text-violet-400 font-semibold rounded-xl transition-colors disabled:opacity-50">
+            {bulkEnriching ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> {bulkProgress.done}/{bulkProgress.total}</>
+            ) : (
+              <><Wand2 className="w-4 h-4" /> Enrich All Drafts</>
+            )}
+          </button>
+          <button onClick={loadProjects} disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-xl transition-colors">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -341,6 +443,14 @@ export default function AdminReviewPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* AI Enrich */}
+                    <button onClick={() => handleAIEnrich(project.$id)}
+                      disabled={enrichingIds.has(project.$id) || !!enrichments[project.$id]}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20 rounded-xl transition-colors disabled:opacity-50">
+                      {enrichingIds.has(project.$id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {enrichments[project.$id] ? "Done" : "AI Enrich"}
+                    </button>
+
                     {/* Preview */}
                     <a href={`/editor/project/${project.$id}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-colors">
@@ -370,9 +480,69 @@ export default function AdminReviewPage() {
                         </button>
                       </>
                     )}
-                  </div>
                 </div>
               </div>
+
+              {/* AI Enrichment Suggestions Panel */}
+              {enrichments[project.$id] && (
+                <div className="border-t border-violet-200 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-500/5 px-5 py-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">AI Suggestions</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <button onClick={() => handleApplyEnrichment(project.$id)}
+                        disabled={actionLoading === project.$id + ":apply"}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors shadow-lg shadow-violet-600/20 disabled:opacity-50">
+                        {actionLoading === project.$id + ":apply" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                        Apply
+                      </button>
+                      <button onClick={() => handleDiscardEnrichment(project.$id)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+                        <X className="w-3 h-3" /> Discard
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Description */}
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1 block">Description</label>
+                      <textarea
+                        value={enrichments[project.$id].description}
+                        onChange={(e) => handleEditEnrichment(project.$id, "description", e.target.value)}
+                        rows={2}
+                        className="w-full text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 outline-none focus:border-violet-500 resize-none"
+                      />
+                    </div>
+
+                    {/* Tags */}
+                    <div>
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1 block">Tags</label>
+                      <input
+                        value={enrichments[project.$id].tags.join(", ")}
+                        onChange={(e) => handleEditEnrichment(project.$id, "tags", e.target.value.split(",").map((t: string) => t.trim()).filter(Boolean))}
+                        className="w-full text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 outline-none focus:border-violet-500"
+                        placeholder="Comma-separated tags"
+                      />
+                    </div>
+
+                    {/* Difficulty */}
+                    <div>
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1 block">Difficulty</label>
+                      <select
+                        value={enrichments[project.$id].difficulty}
+                        onChange={(e) => handleEditEnrichment(project.$id, "difficulty", e.target.value)}
+                        className="w-full text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 outline-none focus:border-violet-500"
+                      >
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             );
           })}
         </div>
