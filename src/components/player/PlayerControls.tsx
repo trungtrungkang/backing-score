@@ -173,11 +173,10 @@ export function PlayerControls({
       <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-4 flex flex-col gap-3 pointer-events-auto relative">
         <button
           onClick={() => onCollapseToggle?.(true)}
-          className="absolute -top-[27px] left-1/2 -translate-x-1/2 w-24 h-8 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl flex flex-col items-center justify-center gap-0.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl z-[-1] group"
+          className="absolute -top-[23px] left-1/2 -translate-x-1/2 w-12 h-6 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-lg flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors z-[-1]"
           title="Hide Player Controls"
         >
-          <ChevronDown className="w-3 h-3" />
-          <div className="w-8 h-1 rounded-full bg-zinc-400/50 group-hover:bg-zinc-500 transition-colors" />
+          <ChevronDown className="w-4 h-4" />
         </button>
 
         <div className="flex flex-col w-full gap-2">
