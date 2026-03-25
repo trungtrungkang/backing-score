@@ -354,5 +354,15 @@
     "activePlan": "Premium Active",
     "cancelledNote": "Cancels at end of billing period",
     "guarantee": "All payments are securely processed by LemonSqueezy. Cancel anytime — no questions asked. 7-day money-back guarantee."
+  },
+  "Subscription": {
+    "freePlan": "Free Plan",
+    "upgradeHint": "Upgrade to unlock unlimited plays, Wait Mode, and more",
+    "upgrade": "Upgrade",
+    "premiumPlan": "Premium Plan",
+    "activeStatus": "Active",
+    "cancelledStatus": "Cancelling",
+    "cancelledNote": "Your access continues until the end of your billing period",
+    "manageBilling": "Manage Billing"
   }
 }

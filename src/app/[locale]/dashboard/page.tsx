@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2 } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
+import SubscriptionCard from "@/components/SubscriptionCard";
+import { useSearchParams } from "next/navigation";
 
 function formatDate(iso: string) {
   try {
@@ -51,6 +53,16 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { confirm } = useDialogs();
+  const searchParams = useSearchParams();
+
+  // Show success toast after checkout redirect
+  useEffect(() => {
+    if (searchParams.get("checkout") === "success") {
+      toast.success("🎉 Welcome to Premium! Your subscription is now active.");
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -161,6 +173,10 @@ export default function DashboardPage() {
               <Globe className="w-4 h-4" />
               {t("userGuide")}
             </Link>
+            <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
+              <Crown className="w-4 h-4 text-[#C8A856]" />
+              Premium
+            </Link>
           </nav>
         </div>
       </aside>
@@ -186,6 +202,9 @@ export default function DashboardPage() {
               </Button>
             </div>
           )}
+
+          {/* Subscription Status */}
+          <SubscriptionCard />
 
           {/* Header Row */}
           <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
