@@ -364,5 +364,13 @@
     "cancelledStatus": "Cancelling",
     "cancelledNote": "Your access continues until the end of your billing period",
     "manageBilling": "Manage Billing"
+  },
+  "UpgradePrompt": {
+    "playLimitTitle": "Daily Play Limit Reached",
+    "playLimitDesc": "Free accounts can play up to 3 pieces per day. Upgrade to Premium for unlimited plays, Practice Mode, and more.",
+    "waitModeTitle": "Practice Mode is Premium",
+    "waitModeDesc": "Practice Mode (Wait Mode) pauses playback and waits for you to play the correct notes — it's the ultimate practice tool. Upgrade to unlock it.",
+    "upgradeNow": "Upgrade to Premium",
+    "maybeLater": "Maybe Later"
   }
 }

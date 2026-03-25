@@ -68,6 +68,7 @@ interface PlayerControlsProps {
   isMicInitialized?: boolean;
   onInitializeMic?: () => Promise<boolean>;
   onDisconnectMic?: () => void;
+  isPremium?: boolean;
 }
 
 export function formatTime(ms: number) {
@@ -127,7 +128,8 @@ export function PlayerControls({
   onDisconnectMidi,
   isMicInitialized = false,
   onInitializeMic,
-  onDisconnectMic
+  onDisconnectMic,
+  isPremium = false
 }: PlayerControlsProps) {
 
   const [localPos, setLocalPos] = useState(positionMs);
@@ -279,6 +281,7 @@ export function PlayerControls({
                       title="Practice Mode Settings"
                     >
                       <Keyboard className="w-4 h-4" /><span className="hidden sm:inline"> Practice</span>
+                      {!isPremium && <span className="text-[10px] ml-1">👑</span>}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="z-[200] w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-4 shadow-xl" sideOffset={8}>
@@ -291,6 +294,12 @@ export function PlayerControls({
                             id="wait-mode-toggle-popup"
                             checked={isWaitMode}
                             onChange={(e) => {
+                              if (e.target.checked && !isPremium) {
+                                // Free user: trigger the upgrade prompt via the gated handler
+                                onWaitModeToggle?.(true);
+                                e.target.checked = false;
+                                return;
+                              }
                               if (e.target.checked && !isMidiInitialized && !isMicInitialized && (onInitializeMidi || onInitializeMic)) {
                                 const pref = localStorage.getItem("bs_preferred_instrument");
                                 if (pref === "mic" && onInitializeMic) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft, Music } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
@@ -11,6 +11,29 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
+import { useAuth } from "@/contexts/AuthContext";
+import UpgradePrompt from "@/components/UpgradePrompt";
+
+const FREE_DAILY_PLAY_LIMIT = 3;
+
+function getPlayCount(): { count: number; date: string } {
+  try {
+    const raw = localStorage.getItem("bs_play_count");
+    if (raw) {
+      const data = JSON.parse(raw);
+      const today = new Date().toISOString().slice(0, 10);
+      if (data.date === today) return data;
+    }
+  } catch {}
+  return { count: 0, date: new Date().toISOString().slice(0, 10) };
+}
+
+function incrementPlayCount(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  const current = getPlayCount();
+  const newCount = current.date === today ? current.count + 1 : 1;
+  localStorage.setItem("bs_play_count", JSON.stringify({ count: newCount, date: today }));
+}
 
 export interface PlayShellProps {
   projectId: string;
@@ -41,8 +64,34 @@ export function PlayShell({
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
+  const { isPremium } = useAuth();
+  const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
 
   const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
+
+  // Gated play handler — checks play count for free users
+  const gatedHandlePlay = useCallback(() => {
+    if (isPremium) {
+      actions.handlePlay();
+      return;
+    }
+    const { count } = getPlayCount();
+    if (count >= FREE_DAILY_PLAY_LIMIT) {
+      setShowUpgrade("playLimit");
+      return;
+    }
+    incrementPlayCount();
+    actions.handlePlay();
+  }, [isPremium, actions]);
+
+  // Gated Wait Mode toggle
+  const gatedWaitModeToggle = useCallback((enabled: boolean) => {
+    if (enabled && !isPremium) {
+      setShowUpgrade("waitMode");
+      return;
+    }
+    actions.setIsWaitMode(enabled);
+  }, [isPremium, actions]);
 
   const scoreFileId = payload.notationData?.fileId;
 
@@ -144,7 +193,7 @@ export function PlayShell({
         durationMs={state.totalSongDurationMs}
         isPlaying={state.isPlaying}
         loadingAudio={state.loadingAudio}
-        onPlay={actions.handlePlay}
+        onPlay={gatedHandlePlay}
         onPause={actions.handlePause}
         onStop={actions.handleStop}
         onSeek={actions.handleSeek}
@@ -173,7 +222,8 @@ export function PlayShell({
         isAutoplayEnabled={state.isAutoplayEnabled}
         onAutoplayToggle={actions.setIsAutoplayEnabled}
         isWaitMode={state.isWaitMode}
-        onWaitModeToggle={actions.setIsWaitMode}
+        onWaitModeToggle={gatedWaitModeToggle}
+        isPremium={isPremium}
         isWaitModeLenient={state.isWaitModeLenient}
         onWaitModeLenientToggle={actions.setIsWaitModeLenient}
         isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
@@ -190,6 +240,11 @@ export function PlayShell({
         onInitializeMic={actions.initializeMic}
         onDisconnectMic={actions.disconnectMic}
       />
+
+      {/* Upgrade Prompt */}
+      {showUpgrade && (
+        <UpgradePrompt feature={showUpgrade} onClose={() => setShowUpgrade(null)} />
+      )}
     </div>
   );
 }
