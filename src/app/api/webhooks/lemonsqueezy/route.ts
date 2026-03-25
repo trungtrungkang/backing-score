@@ -26,16 +26,22 @@ const WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "";
 function verifySignature(rawBody: string, signature: string): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn("[Webhook] LEMONSQUEEZY_WEBHOOK_SECRET not set — skipping verification");
-    return true; // Allow in dev without secret
+    return true;
   }
-  const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
-  const digest = hmac.update(rawBody).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+  try {
+    const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
+    const digest = hmac.update(rawBody).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+  } catch (err) {
+    console.error("[Webhook] Signature verification error:", err);
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
+  let rawBody = "";
   try {
-    const rawBody = await req.text();
+    rawBody = await req.text();
     const signature = req.headers.get("x-signature") || "";
 
     // Verify webhook authenticity
@@ -48,6 +54,12 @@ export async function POST(req: NextRequest) {
     const eventName: string = payload.meta?.event_name || "";
     const customData = payload.meta?.custom_data || {};
     const userId: string = customData.user_id || "";
+
+    // Log full payload structure for debugging
+    console.log(`[Webhook] Event: ${eventName}`);
+    console.log(`[Webhook] Data type: ${payload.data?.type}`);
+    console.log(`[Webhook] Data ID: ${payload.data?.id}`);
+    console.log(`[Webhook] Custom data:`, JSON.stringify(customData));
 
     // Extract subscription data from the payload
     const attrs = payload.data?.attributes || {};
@@ -62,17 +74,19 @@ export async function POST(req: NextRequest) {
     const productName: string = attrs.product_name || attrs.variant_name || "";
     const userEmail: string = attrs.user_email || "";
 
-    console.log(`[Webhook] Event: ${eventName} | Sub: ${subscriptionId} | Status: ${status} | User: ${userId}`);
+    console.log(`[Webhook] Sub: ${subscriptionId} | Status: ${status} | User: ${userId} | Email: ${userEmail}`);
 
-    // Only process subscription events
+    // For non-subscription events, just acknowledge
     if (!eventName.startsWith("subscription_")) {
       console.log(`[Webhook] Ignoring non-subscription event: ${eventName}`);
       return NextResponse.json({ received: true });
     }
 
+    // If subscription ID is missing, log and still return 200 to prevent LS retries
     if (!subscriptionId) {
-      console.error("[Webhook] No subscription ID in payload");
-      return NextResponse.json({ error: "No subscription ID" }, { status: 400 });
+      console.warn("[Webhook] No subscription ID in payload — acknowledging anyway");
+      console.warn("[Webhook] Full payload:", rawBody.substring(0, 500));
+      return NextResponse.json({ received: true, warning: "no subscription id" });
     }
 
     // Determine the current period end date
@@ -108,7 +122,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (err: any) {
     console.error("[Webhook] Error processing:", err.message);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    console.error("[Webhook] Raw body (first 500 chars):", rawBody.substring(0, 500));
+    // Return 200 even on error to prevent LS from endlessly retrying
+    return NextResponse.json({ received: true, error: err.message });
   }
 }
 
