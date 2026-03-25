@@ -743,6 +743,50 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
           const elapsedMs = now - midiPlayStartTimeRef.current;
           currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
+
+          // MIDI-only loop enforcement: AudioManager's loop interval doesn't run without audio tracks
+          if (loopState.enabled && !isWaitModeRef.current) {
+            const bpm = payload.metadata?.tempo || 120;
+            const ts = payload.metadata?.timeSignature || "4/4";
+            const [numStr, denStr] = ts.split("/");
+            const beatsPerMeasure = parseInt(numStr, 10) || 4;
+            const noteValue = parseInt(denStr, 10) || 4;
+            const measureMs = ((60 * 1000) / bpm) * (4 / noteValue) * beatsPerMeasure;
+            const loopStartMs = (loopState.startBar - 1) * measureMs;
+            const loopEndMs = loopState.endBar * measureMs;
+
+            if (currentPos >= loopEndMs && loopEndMs > loopStartMs) {
+              // Wrap position back to loop start
+              currentPos = loopStartMs;
+
+              // Tempo ramp: increment speed on each loop iteration
+              if (loopState.tempoRamp) {
+                loopIterationRef.current++;
+                const newRate = Math.min(
+                  loopState.tempoRampTarget,
+                  playbackRate + loopState.tempoRampStep
+                );
+                if (newRate !== playbackRate) {
+                  setPlaybackRate(newRate);
+                  if (audioManagerRef.current) audioManagerRef.current.setPlaybackRate(newRate);
+                }
+              }
+
+              // Seek MIDI player to loop start
+              const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
+              const targetTimeSecs = (loopStartMs - offsetMs + midiStartOffsetMs) / 1000;
+              if (midiPlayerRef.current) {
+                midiPlayerRef.current.stop();
+                midiPlayerRef.current.currentTime = Math.max(0, targetTimeSecs);
+                if (!isScoreSynthMutedRef.current) {
+                  Promise.resolve(midiPlayerRef.current.start()).catch(() => {});
+                }
+              }
+              // Reset timing refs for position calculation
+              midiPlayStartTimeRef.current = performance.now();
+              midiPlayStartPosRef.current = loopStartMs;
+            }
+          }
       } else if (audioManagerRef.current) {
           currentPos = audioManagerRef.current.getCurrentPositionMs();
       }
@@ -772,7 +816,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
             playbackRate + loopState.tempoRampStep
           );
           if (newRate !== playbackRate) {
-            handlePlaybackRateChange(newRate);
+            setPlaybackRate(newRate);
+            if (audioManagerRef.current) audioManagerRef.current.setPlaybackRate(newRate);
           }
         }
         prevLoopPosRef.current = roundedPos;
@@ -799,7 +844,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     }
 
     requestRef.current = requestAnimationFrame(updatePosition);
-  }, [payload.audioTracks.length, midiStartOffsetMs, totalSongDurationMs, showWaitModeMonitor, playbackRate, isAutoplayEnabled, onNext, handleStop]);
+  }, [payload.audioTracks.length, midiStartOffsetMs, totalSongDurationMs, showWaitModeMonitor, playbackRate, isAutoplayEnabled, onNext, handleStop, loopState, payload.metadata]);
 
   useEffect(() => {
     if (isPlaying) {
