@@ -5,11 +5,6 @@ import { createPortal } from "react-dom";
 import { Bell, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { getAppwriteClient } from "@/lib/appwrite/client";
-import {
-  APPWRITE_DATABASE_ID,
-  APPWRITE_NOTIFICATIONS_COLLECTION_ID,
-} from "@/lib/appwrite/constants";
 import {
   listMyNotifications,
   markAllNotificationsRead,
@@ -51,41 +46,13 @@ export function NotificationBell() {
     loadNotifications();
   }, [loadNotifications]);
 
-  // Subscribe to Appwrite Realtime for live notifications
+  // Poll for new notifications every 30 seconds
+  // (Appwrite Realtime requires WebSocket support which may not always be available)
   useEffect(() => {
     if (!user) return;
-
-    const client = getAppwriteClient();
-    const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_NOTIFICATIONS_COLLECTION_ID}.documents`;
-
-    try {
-      const unsubscribe = client.subscribe(channel, (response: any) => {
-        const payload = response.payload as NotificationDoc;
-        // Only handle events for the current user
-        if (payload.recipientId === user.$id) {
-          const events = response.events as string[];
-          if (events.some((e: string) => e.includes(".create"))) {
-            // New notification — prepend
-            setNotifications((prev) => [payload, ...prev]);
-          } else if (events.some((e: string) => e.includes(".update"))) {
-            // Updated notification — replace
-            setNotifications((prev) =>
-              prev.map((n) => (n.$id === payload.$id ? payload : n))
-            );
-          } else if (events.some((e: string) => e.includes(".delete"))) {
-            // Deleted notification — remove
-            setNotifications((prev) =>
-              prev.filter((n) => n.$id !== payload.$id)
-            );
-          }
-        }
-      });
-      return () => unsubscribe();
-    } catch {
-      // Realtime not available — fall back to polling
-      console.warn("[NotificationBell] Realtime subscription failed");
-    }
-  }, [user]);
+    const interval = setInterval(loadNotifications, 30_000);
+    return () => clearInterval(interval);
+  }, [user, loadNotifications]);
 
   // Handle mark all read
   const handleMarkAllRead = async () => {
