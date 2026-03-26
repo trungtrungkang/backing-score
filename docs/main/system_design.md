@@ -1,7 +1,7 @@
 # Backing & Score — Tài Liệu Phân Tích Thiết Kế Hệ Thống
 
-**Phiên bản:** 3.0 (Public Beta)  
-**Cập nhật:** 2026-03-23  
+**Phiên bản:** 4.0 (Public Beta)  
+**Cập nhật:** 2026-03-26  
 **Tác giả:** Đội ngũ kỹ thuật Backing & Score
 
 ---
@@ -26,7 +26,11 @@
 16. [Thiết Kế Mở Rộng — Bách Khoa Toàn Thư](#16-thiết-kế-mở-rộng--bách-khoa-toàn-thư)
 17. [Thiết Kế Mở Rộng — Phân Tích & Thích Ứng](#17-thiết-kế-mở-rộng--phân-tích--thích-ứng)
 18. [Thiết Kế Mở Rộng — Thanh Toán & Kiếm Tiền](#18-thiết-kế-mở-rộng--thanh-toán--kiếm-tiền)
-19. [Đánh Giá Rủi Ro & Hạn Chế](#19-đánh-giá-rủi-ro--hạn-chế)
+19. [Beat-Level Sync Engine — Đồng Bộ Audio↔Score](#19-beat-level-sync-engine)
+20. [Hệ Thống Phân Quyền (RBAC)](#20-hệ-thống-phân-quyền-rbac)
+21. [Gamification — Hệ Thống Trò Chơi Hóa](#21-gamification)
+22. [Lộ Trình Phát Triển (Roadmap)](#22-lộ-trình-phát-triển)
+23. [Đánh Giá Rủi Ro & Hạn Chế](#23-đánh-giá-rủi-ro--hạn-chế)
 
 ---
 
@@ -856,35 +860,304 @@ Giai đoạn 3: Adaptive (hệ thống đề xuất dựa trên dữ liệu)
 
 ## 18. Thiết Kế Mở Rộng — Thanh Toán & Kiếm Tiền
 
-> **Trạng thái:** Ý tưởng | **Mục tiêu:** Q4 2026
+> **Trạng thái:** Cơ bản đã triển khai (LemonSqueezy) ✅ | Marketplace: Ý tưởng
 
-### 18.1 Kiến Trúc Thanh Toán (Dự Kiến)
-
-```
-┌──────────┐     ┌──────────────┐     ┌──────────────┐
-│  Learner │────►│ Stripe API   │────►│  Platform    │
-│  (Buyer) │     │ (Checkout)   │     │  Account     │
-└──────────┘     └──────┬───────┘     └──────┬───────┘
-                        │                    │
-                        │              ┌─────▼───────┐
-                        └─────────────►│  Creator    │
-                          Connect      │  Payout     │
-                          (70-80%)     └─────────────┘
-```
-
-### 18.2 Collections Mới (Dự Kiến)
+### 18.1 Kiến Trúc Thanh Toán (Hiện Tại — LemonSqueezy)
 
 ```
-subscriptions → { userId, planId, status, startDate, endDate }
-transactions  → { buyerId, creatorId, courseId, amount, platformFee, stripeId }
+┌──────────┐     ┌──────────────────┐     ┌──────────────┐
+│  User    │────►│ LemonSqueezy API │────►│ Platform     │
+│  (Buyer) │     │ (Checkout)       │     │ Subscription │
+└──────────┘     └──────┬───────────┘     └──────┬───────┘
+                        │                        │
+                        │ Webhook                │
+                        ▼                        ▼
+               ┌──────────────────┐    ┌─────────────────┐
+               │ /api/checkout    │    │ subscriptions   │
+               │ /api/subscription│    │ (Appwrite)      │
+               └──────────────────┘    └─────────────────┘
+```
+
+**Đã triển khai:**
+- `api/checkout/route.ts` — Tạo checkout session qua LemonSqueezy
+- `api/subscription/route.ts` — Sync/query subscription status
+- `SubscriptionCard.tsx` — Hiển thị trạng thái subscription trên Dashboard
+- `UpgradePrompt.tsx` — Gating UI (giới hạn play count/ngày cho free user)
+- `pricing/page.tsx` — Trang giá với các gói subscription
+
+### 18.2 Collections
+
+```
+subscriptions → { userId, lsSubscriptionId, lsCustomerId, status, planName,
+                  currentPeriodEnd, cancelAtPeriodEnd, variantId }
+```
+
+### 18.3 Marketplace (Dự Kiến — Tương Lai)
+
+```
+┌──────────┐     ┌──────────────────┐     ┌──────────────┐
+│  Learner │────►│ LemonSqueezy     │────►│  Platform    │
+│  (Buyer) │     │ (Per-item buy)   │     │  Revenue     │
+└──────────┘     └──────┬───────────┘     └──────┬───────┘
+                        │                        │
+                        │                  ┌─────▼───────┐
+                        └─────────────────►│  Creator    │
+                          Revenue Share    │  Payout     │
+                          (70/30)          └─────────────┘
+```
+
+Collections dự kiến:
+```
+transactions  → { buyerId, creatorId, courseId, amount, platformFee, lsOrderId }
 payouts       → { creatorId, amount, status, paidAt }
 ```
 
 ---
 
-## 19. Đánh Giá Rủi Ro & Hạn Chế
+## 19. Beat-Level Sync Engine — Đồng Bộ Audio↔Score
 
-### 19.1 Rủi Ro Kỹ Thuật
+> **Trạng thái:** Đã triển khai đầy đủ ✅ (2026-03-26)
+
+### 19.1 Tổng Quan
+
+Hệ thống cho phép Creator đồng bộ audio với bản nhạc ở cấp độ **từng phách (beat-level)** thay vì chỉ cấp độ ô nhịp. Điều này đảm bảo playhead và metronome bám sát audio ngay cả khi nhạc có rubato (thay đổi tốc độ tự nhiên).
+
+### 19.2 Data Model
+
+```typescript
+interface TimemapEntry {
+  timeMs: number;         // Thời điểm bắt đầu ô nhịp (ms)
+  measure: number;        // Số thứ tự ô nhịp
+  beatTimestamps?: number[];  // [beat1Ms, beat2Ms, ...] — per-beat timestamps
+  timeSignature?: string;     // Dynamic meter (e.g. "6/8")
+  tempo?: number;             // Dynamic tempo (BPM)
+  durationInQuarters?: number;
+  tempoAtBeat?: {beatPos: number, tempo: number}[];
+  startsAtBeat?: number;      // Cho nhịp lấy đà (anacrusis)
+}
+```
+
+### 19.3 Hệ Thống Gõ Nhịp 3 Phím
+
+| Phím | Chức Năng | KeyboardEvent.code |
+|------|-----------|--------------------|
+| **Enter** | Downbeat — Phách 1, tạo ô nhịp mới | `Enter` |
+| **Shift** | Mid-measure — Phách giữa ô nhịp (VD: phách 3 trong 4/4, phách 4 trong 6/8) | `ShiftLeft` |
+| **← (Arrow Left)** | Single beat — Thêm 1 phách đơn lẻ | `ArrowLeft` |
+
+**Metadata lưu trữ:** `FileMetadata.syncDownbeatKey`, `.syncMidMeasureKey`, `.syncUpbeatKey`
+
+### 19.4 Auto-Fill Logic
+
+Khi số phách đã ghi ít hơn `beatsPerBar` (từ time signature):
+
+```
+Tình huống 1: Enter → Shift (thiếu phách giữa)
+  → Fill đều các phách từ Enter đến Shift
+  VD: 4/4, Enter t=0, Shift t=500 → fill phách 2 tại t=250
+
+Tình huống 2: Enter mới (thiếu phách cuối ô nhịp trước)
+  → Backfill đều từ phách cuối đã ghi đến Enter mới
+  VD: 6/8, đã có 4 phách, Enter mới t=1000 → fill phách 5,6
+```
+
+### 19.5 Engine Integration
+
+```
+beatTimestamps[] ──┬──► MetronomeEngine.getTimeOfTick()   → Clicks chính xác
+                   ├──► MetronomeEngine.initTickAtTime()  → Beat index lookup
+                   └──► MusicXMLVisualizer (RAF loop)     → Playhead phi tuyến tính
+
+Fallback: Nếu không có beatTimestamps → chia đều theo BPM (backwards compatible)
+```
+
+### 19.6 Components
+
+| Component | File | Vai Trò |
+|-----------|------|---------|
+| `SyncModeHUD` | `SyncModeHUD.tsx` | Hiển thị hướng dẫn 3 phím, đếm measures/beats realtime |
+| `SyncKeyConfigPopover` | `TransportBar.tsx` | UI cấu hình 3 phím tùy chỉnh |
+| `BeatTimelineEditor` | `BeatTimelineEditor.tsx` | Sửa timestamp từng beat sau khi gõ |
+| `MeasureMapEditor` | `MeasureMapEditor.tsx` | Grid ô nhịp + anchor points + beat editor |
+| `TempoMapTrack` | `TempoMapTrack.tsx` | Đường tempo map song song với waveform |
+
+---
+
+## 20. Hệ Thống Phân Quyền (RBAC)
+
+> **Trạng thái:** Thiết kế | **Mục tiêu:** Sprint 1
+
+### 20.1 User Roles
+
+| Role | Mô tả | Permissions |
+|------|-------|------------|
+| **Admin** | Toàn quyền | CRUD tất cả entity, grant/revoke roles, manage users |
+| **Content Manager** | Quản lý nội dung | Edit/delete/publish/unpublish mọi project/collection |
+| **Creator** | Tạo nội dung | Create/edit/delete/publish project/collection do mình tạo |
+| **User** | Người dùng | Play, practice, join course, mua sản phẩm, bookmark |
+| **Guest** | Khách | Xem, play theo daily limit, tra cứu wiki |
+
+### 20.2 Kiến Trúc Dự Kiến
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     MIDDLEWARE LAYER                      │
+│  src/middleware.ts                                        │
+│                                                          │
+│  Request ──► Check auth session                          │
+│          ──► Extract user role (from Appwrite labels     │
+│              or custom attribute)                         │
+│          ──► Route guard: /admin/* → require admin        │
+│          ──► API guard: server-side role verification     │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 20.3 Implementation Plan
+
+1. **Appwrite User Labels:** Sử dụng `account.prefs.role` hoặc Appwrite Teams
+2. **Middleware Guard:** Check role trước khi cho access admin routes
+3. **API Protection:** Server Actions verify role trước khi thực hiện mutation
+4. **UI Conditional Rendering:** Ẩn menu items không phù hợp với role
+
+### 20.4 Permission Matrix
+
+| Action | Admin | Content Mgr | Creator | User | Guest |
+|--------|:-----:|:-----------:|:-------:|:----:|:-----:|
+| View published content | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Play (unlimited) | ✅ | ✅ | ✅ | ✅ (sub) | ❌ (limit) |
+| Create project | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Edit own project | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Edit any project | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Publish/Unpublish | ✅ | ✅ | ✅ (own) | ❌ | ❌ |
+| Delete any project | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Manage users | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Access /admin/* | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Import MusicXML (batch) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Wiki CMS (edit) | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+---
+
+## 21. Gamification — Hệ Thống Trò Chơi Hóa
+
+> **Trạng thái:** Thiết kế | **Mục tiêu:** Sprint 2
+
+### 21.1 Practice History Tracking
+
+```
+practice_sessions (Appwrite Collection — mới)
+  ├── userId         (string)
+  ├── projectId      (string)
+  ├── startedAt      (datetime)
+  ├── durationMs     (integer) — Thời lượng practice
+  ├── maxSpeed       (number)  — Tốc độ cao nhất đạt được (%)
+  ├── waitModeScore  (integer) — Điểm Wait Mode (0-100) nếu có
+  └── completedAt    (datetime)
+```
+
+### 21.2 XP & Level System
+
+```
+user_stats (Appwrite Collection — mới)
+  ├── userId          (string, unique)
+  ├── totalXP         (integer)
+  ├── level           (integer)
+  ├── currentStreak   (integer) — Số ngày practice liên tục
+  ├── longestStreak   (integer) — Kỷ lục streak
+  ├── lastPracticeDate (string) — YYYY-MM-DD
+  ├── totalPracticeMs (integer) — Tổng thời gian practice
+  └── badges[]        (string[]) — Danh sách badge IDs
+```
+
+**Công thức XP:**
+| Hoạt động | XP |
+|-----------|----|
+| Practice 1 phút | +2 XP |
+| Hoàn thành 1 bài (play hết) | +10 XP |
+| Wait Mode score ≥ 80 | +25 XP |
+| Wait Mode score = 100 | +50 XP |
+| Daily streak bonus (mỗi ngày) | +5 × streak_count |
+| Daily Challenge hoàn thành | +30 XP |
+
+**Level Thresholds:**
+| Level | Tên | XP Cần |
+|-------|-----|--------|
+| 1 | Beginner | 0 |
+| 2 | Student | 100 |
+| 3 | Practitioner | 500 |
+| 4 | Musician | 2,000 |
+| 5 | Advanced | 5,000 |
+| 6 | Virtuoso | 15,000 |
+| 7 | Master | 50,000 |
+
+### 21.3 Daily Challenge
+
+```
+Mỗi ngày lúc 00:00 UTC:
+  → Random chọn 1 project published có difficulty phù hợp
+  → Hiển thị card "Daily Challenge" trên Dashboard + Discover
+  → User practice xong → nhận bonus XP
+  → Chỉ tính 1 lần/ngày
+```
+
+### 21.4 UI Components
+
+```
+Header
+  └── XP Bar (progress to next level) + 🔥 Streak flame icon
+
+Dashboard
+  ├── Weekly Practice Chart (bar chart — minutes/day)
+  ├── Streak Calendar (GitHub-style contribution graph)
+  ├── Daily Challenge Card
+  └── Recent Practice Sessions
+
+Player (after play ends)
+  └── +XP animation + Level up celebration (confetti)
+```
+
+---
+
+## 22. Lộ Trình Phát Triển (Roadmap)
+
+> Cập nhật: 2026-03-26
+
+### Sprint 1: Foundation & Quick Wins (1-2 tuần)
+- [ ] RBAC & Permission System (§20)
+- [ ] Social share buttons trên Player
+- [ ] Play count badge trên Discover page
+
+### Sprint 2: Gamification & Practice Tracking (2-3 tuần)
+- [ ] Practice History collection + recording (§21.1)
+- [ ] XP & Streak System (§21.2)
+- [ ] Daily Challenge (§21.3)
+- [ ] Dashboard widgets (§21.4)
+
+### Sprint 3: Creator Dashboard & Analytics (2 tuần)
+- [ ] Creator analytics page (play counts, favorites, followers)
+- [ ] Comment & rating system trên project page
+- [ ] Real-time "X người đang practice" indicator
+
+### Sprint 4: Academy MVP (3-4 tuần)
+- [ ] Course/Lesson CRUD + detail pages (§10)
+- [ ] Academy catalog với filter
+- [ ] Enrollment + progress tracking
+- [ ] Certificate/badge khi hoàn thành
+
+### Sprint 5: Classroom & Collaboration (tương lai)
+- [ ] Teacher tạo classroom → invite students
+- [ ] Assign bài tập + deadline
+- [ ] Student progress dashboard cho teacher
+
+### Sprint 6: Marketplace & Revenue (tương lai)
+- [ ] Creator upload premium content → set price
+- [ ] Per-item purchase flow (§18.3)
+- [ ] Revenue dashboard + payout tracking
+
+---
+
+## 23. Đánh Giá Rủi Ro & Hạn Chế
+
+### 23.1 Rủi Ro Kỹ Thuật
 
 | Rủi ro | Ảnh hưởng | Giải pháp |
 |---|---|---|
@@ -892,8 +1165,9 @@ payouts       → { creatorId, amount, status, paidAt }
 | Microphone permission bị từ chối | Không dùng được Wait Mode | UI rõ ràng giải thích quyền; cho phép vẫn dùng Player thường |
 | Payload JSON quá lớn (multi-track) | Chậm khi load/save | Lazy loading, nén payload, tách track data |
 | Appwrite query giới hạn 100 items | Timeline social bị cắt | Fan-out on write hoặc Meilisearch |
+| Chưa có RBAC middleware | Admin routes chỉ guard client-side | Sprint 1: implement server-side role check |
 
-### 19.2 Hạn Chế Thiết Kế Hiện Tại
+### 23.2 Hạn Chế Thiết Kế Hiện Tại
 
 | Hạn chế | Mô tả | Kế hoạch xử lý |
 |---|---|---|
@@ -902,6 +1176,8 @@ payouts       → { creatorId, amount, status, paidAt }
 | Social timeline đơn giản | Chỉ hiện bài từ người follow | Thêm algorithm recommendation (trending, suggested) |
 | Live chưa real-time | Chỉ có UI, chưa sync | Appwrite Realtime hoặc WebRTC |
 | Chưa có search engine | Chỉ dùng Appwrite queries | Tích hợp Meilisearch |
+| Chưa có practice tracking | User practice không được ghi nhận | Sprint 2: Gamification system |
+| Chưa có Creator analytics | Creator không biết content performance | Sprint 3: Creator Dashboard |
 
 ---
 

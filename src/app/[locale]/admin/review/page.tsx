@@ -10,6 +10,7 @@ import {
   Sparkles, Wand2, X, Save, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { canAccessAdmin, canEditWiki } from "@/lib/auth/roles";
 import {
   databases,
   Permission,
@@ -65,7 +66,7 @@ export default function AdminReviewPage() {
   // Auth guard
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !(user.labels?.includes("admin") || user.labels?.includes("wiki_editor"))) {
+    if (!user || !(canAccessAdmin(user.labels) || canEditWiki(user.labels))) {
       router.push("/dashboard");
     }
   }, [user, authLoading, router]);

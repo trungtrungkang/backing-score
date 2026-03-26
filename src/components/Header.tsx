@@ -12,6 +12,7 @@ import { WikiSearchDialog } from "@/components/WikiSearchDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslations } from "next-intl";
+import { canAccessAdmin } from "@/lib/auth/roles";
 import {
   Tooltip,
   TooltipContent,
@@ -213,7 +214,7 @@ export function Header() {
                 </div>
 
                 {/* Admin */}
-                {user?.labels?.includes("admin") && (
+                {canAccessAdmin(user?.labels) && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
@@ -281,7 +282,7 @@ export function Header() {
           {user && (
             <SidebarItem href="/feed"    icon={Users}         label={t("community")} active={pathname.startsWith("/feed")}      onClick={closeSidebar} />
           )}
-          {user?.labels?.includes("admin") && (
+          {canAccessAdmin(user?.labels) && (
             <SidebarItem href="/admin"   icon={ShieldAlert}   label={t("admin")}     active={pathname.startsWith("/admin")}     onClick={closeSidebar} danger />
           )}
         </nav>

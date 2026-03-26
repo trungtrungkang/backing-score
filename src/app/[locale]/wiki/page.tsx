@@ -11,11 +11,12 @@ import type { ArtistDocument, InstrumentDocument, CompositionDocument, GenreDocu
 import { Search, Music, Guitar, BookOpen, Tag, ChevronRight, ChevronDown, User2, Disc3, Settings2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { canEditWiki } from "@/lib/auth/roles";
 
 export default function WikiPage() {
   const t = useTranslations("Wiki");
   const { user } = useAuth();
-  const canManage = user?.labels?.includes("admin") || user?.labels?.includes("wiki_editor");
+  const canManage = canEditWiki(user?.labels);
   const [search, setSearch] = useState("");
   const [artists, setArtists] = useState<ArtistDocument[]>([]);
   const [instruments, setInstruments] = useState<InstrumentDocument[]>([]);

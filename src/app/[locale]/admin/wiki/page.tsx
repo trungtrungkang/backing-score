@@ -21,6 +21,7 @@ import {
   ShieldAlert, Loader2, Plus, Pencil, Trash2, User2, Guitar, Music, Tag, X, Save, ChevronDown, Globe
 } from "lucide-react";
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { canAccessAdmin, canEditWiki } from "@/lib/auth/roles";
 
 const LOCALES = [
   { code: "vi", label: "Tiếng Việt" },
@@ -122,7 +123,7 @@ export default function AdminWikiPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !(user.labels?.includes("admin") || user.labels?.includes("wiki_editor"))) {
+    if (!user || !(canAccessAdmin(user.labels) || canEditWiki(user.labels))) {
       router.push("/dashboard");
     }
   }, [user, authLoading, router]);

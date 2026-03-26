@@ -9,6 +9,7 @@ import { getCreatorCourses, deleteCourse, createCourse, CourseDoc } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
+import { canCreate } from "@/lib/auth/roles";
 
 export default function CreatorCoursesPage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function CreatorCoursesPage() {
     if (!user) return;
     
     // Safety check: Only Admins/Creators can access the Creator Dashboard portal
-    if (!user.labels?.includes("admin") && !user.labels?.includes("creator")) {
+    if (!canCreate(user.labels)) {
       router.push("/dashboard");
       return;
     }

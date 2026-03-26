@@ -10,6 +10,7 @@ import {
   Eye, Play, X as XIcon, Maximize2, Minimize2
 } from "lucide-react";
 import { toast } from "sonner";
+import { canAccessAdmin, canEditWiki } from "@/lib/auth/roles";
 import { VerovioWorkerProxy, type IVerovioWorkerProxy } from "@/lib/verovio/worker-proxy";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -80,7 +81,7 @@ export default function AdminImportPage() {
   // Auth guard
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !(user.labels?.includes("admin") || user.labels?.includes("wiki_editor"))) {
+    if (!user || !(canAccessAdmin(user.labels) || canEditWiki(user.labels))) {
       router.push("/dashboard");
     }
   }, [user, authLoading, router]);

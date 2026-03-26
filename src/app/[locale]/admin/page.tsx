@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { listAllUsers, toggleUserLabel } from "@/app/actions/admin";
 import { toast } from "sonner";
 import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight, ClipboardList, Sparkles } from "lucide-react";
+import { canAccessAdmin } from "@/lib/auth/roles";
 
 interface UserInfo {
   id: string;
@@ -26,7 +27,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authLoading) return;
     
-    if (!user || !user.labels?.includes("admin")) {
+    if (!user || !canAccessAdmin(user.labels)) {
       router.push("/dashboard");
       return;
     }

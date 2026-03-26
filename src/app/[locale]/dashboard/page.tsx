@@ -25,6 +25,7 @@ import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { useSearchParams } from "next/navigation";
+import { canCreate } from "@/lib/auth/roles";
 
 function formatDate(iso: string) {
   try {
@@ -239,7 +240,7 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               
-              {(user.labels?.includes("admin") || user.labels?.includes("creator")) && (
+              {canCreate(user.labels) && (
                 <Button
                   onClick={handleNewProject}
                   disabled={creating}
@@ -276,11 +277,11 @@ export default function DashboardPage() {
                </div>
                <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">{t("noProjectsTitle")}</h3>
                <p className="text-zinc-400 max-w-sm mb-6">
-                 {user.labels?.includes("admin") || user.labels?.includes("creator") 
+                 {canCreate(user.labels)
                    ? t("noProjectsCreator")
                    : t("noProjectsUser")}
                </p>
-               {(user.labels?.includes("admin") || user.labels?.includes("creator")) && (
+               {canCreate(user.labels) && (
                  <Button onClick={handleNewProject} disabled={creating} className="bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-zinc-200">
                    <Plus className="w-4 h-4 mr-2" /> {t("createFirstProject")}
                  </Button>
