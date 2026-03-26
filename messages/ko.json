@@ -355,5 +355,15 @@
     "waitModeDesc": "연습 모드는 재생을 일시 정지하고 올바른 음을 연주할 때까지 기다립니다 — 최고의 연습 도구입니다. 업그레이드하여 잠금을 해제하세요.",
     "upgradeNow": "프리미엄으로 업그레이드",
     "maybeLater": "나중에"
+  },
+  "Notifications": {
+    "title": "알림",
+    "like": "{userName}님이 \"{targetName}\"을 좋아합니다",
+    "follow": "{userName}님이 팔로우하기 시작했습니다",
+    "comment": "{userName}님이 \"{targetName}\"에 댓글을 달았습니다",
+    "report_resolved": "\"{targetName}\"에 대한 신고가 검토되었습니다",
+    "markAllRead": "모두 읽음 처리",
+    "noNotifications": "알림 없음",
+    "justNow": "방금"
   }
 }

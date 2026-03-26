@@ -355,5 +355,15 @@
     "waitModeDesc": "Le mode pratique met la lecture en pause et attend que vous jouiez les bonnes notes — l'outil de pratique ultime. Passez à Premium pour le débloquer.",
     "upgradeNow": "Passer à Premium",
     "maybeLater": "Peut-être plus tard"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "like": "{userName} a aimé \"{targetName}\"",
+    "follow": "{userName} a commencé à vous suivre",
+    "comment": "{userName} a commenté \"{targetName}\"",
+    "report_resolved": "Votre signalement de \"{targetName}\" a été examiné",
+    "markAllRead": "Tout marquer comme lu",
+    "noNotifications": "Aucune notification",
+    "justNow": "À l'instant"
   }
 }

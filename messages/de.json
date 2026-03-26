@@ -355,5 +355,15 @@
     "waitModeDesc": "Der Übungsmodus pausiert die Wiedergabe und wartet, bis Sie die richtigen Noten spielen — das ultimative Übungswerkzeug. Upgraden Sie zum Freischalten.",
     "upgradeNow": "Auf Premium upgraden",
     "maybeLater": "Vielleicht später"
+  },
+  "Notifications": {
+    "title": "Benachrichtigungen",
+    "like": "{userName} hat \"{targetName}\" geliked",
+    "follow": "{userName} folgt dir jetzt",
+    "comment": "{userName} hat \"{targetName}\" kommentiert",
+    "report_resolved": "Dein Report zu \"{targetName}\" wurde bearbeitet",
+    "markAllRead": "Alle als gelesen markieren",
+    "noNotifications": "Keine Benachrichtigungen",
+    "justNow": "Gerade eben"
   }
 }

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DialogProvider } from "@/components/ui/dialog-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteChangeCleanup } from "@/components/providers/RouteChangeCleanup";
@@ -115,8 +116,10 @@ export default async function RootLayout({
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
               <DialogProvider>
                 <RouteChangeCleanup />
-                <Header />
-                {children}
+                <ErrorBoundary>
+                  <Header />
+                  {children}
+                </ErrorBoundary>
               </DialogProvider>
               <Toaster position="bottom-right" richColors theme="system" />
             </ThemeProvider>

@@ -15,6 +15,7 @@ import {
   APPWRITE_FOLLOWS_COLLECTION_ID,
   isAppwriteConfigured
 } from "./constants";
+import { createNotification } from "./notifications";
 import type { 
   PostDocument, 
   CommentDocument, 
@@ -135,6 +136,13 @@ export async function followUser(targetUserId: string): Promise<boolean> {
         clientPermission.delete(clientRole.user(user.$id))
       ]
     );
+    // Fire-and-forget notification
+    createNotification({
+      recipientId: targetUserId,
+      type: "follow",
+      sourceUserName: user.name || user.email?.split("@")[0] || "Someone",
+      sourceUserId: user.$id,
+    }).catch(() => {});
     return true;
   } catch (e: any) {
     // Unique index conflict = already following
@@ -269,6 +277,9 @@ export async function toggleReaction(targetType: "post"|"comment"|"project"|"pla
         clientPermission.delete(clientRole.user(user.$id))
       ]
     );
+    // Fire-and-forget notification for likes
+    // Note: targetOwnerId would need to be resolved by the caller or a lookup
+    // For now, we skip notification here — it will be triggered by the UI component
     return true; // Reacted
   }
 }

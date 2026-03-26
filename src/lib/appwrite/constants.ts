@@ -18,6 +18,8 @@ export const APPWRITE_POSTS_COLLECTION_ID = "posts";
 export const APPWRITE_COMMENTS_COLLECTION_ID = "comments";
 export const APPWRITE_REACTIONS_COLLECTION_ID = "reactions";
 export const APPWRITE_FOLLOWS_COLLECTION_ID = "follows";
+export const APPWRITE_NOTIFICATIONS_COLLECTION_ID = "notifications";
+export const APPWRITE_REPORTS_COLLECTION_ID = "reports";
 
 // Wiki / Encyclopedia collections
 export const APPWRITE_WIKI_ARTISTS_COLLECTION_ID = "wiki_artists";

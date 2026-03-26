@@ -358,5 +358,15 @@
     "waitModeDesc": "Chế độ Luyện tập tạm dừng phát nhạc và chờ bạn chơi đúng nốt — công cụ luyện tập tốt nhất. Nâng cấp để mở khóa.",
     "upgradeNow": "Nâng cấp lên Premium",
     "maybeLater": "Để sau"
+  },
+  "Notifications": {
+    "title": "Thông báo",
+    "like": "{userName} đã thích \"{targetName}\"",
+    "follow": "{userName} đã theo dõi bạn",
+    "comment": "{userName} đã bình luận về \"{targetName}\"",
+    "report_resolved": "Báo cáo của bạn về \"{targetName}\" đã được xử lý",
+    "markAllRead": "Đánh dấu đã đọc",
+    "noNotifications": "Chưa có thông báo",
+    "justNow": "Vừa xong"
   }
 }

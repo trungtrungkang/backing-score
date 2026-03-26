@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * POST /api/reports — Submit a content report.
- * Stores in a simple JSON file for now; in production, this would go to a database.
+ * Persists to Appwrite "reports" collection.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -13,15 +13,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Log the report (in production: store in Appwrite or database)
-    console.log("[REPORT]", {
-      timestamp: new Date().toISOString(),
-      targetType,
-      targetId,
-      reason,
-      details,
-      reporterId,
-    });
+    // Try to persist in Appwrite; fall back to logging if collection doesn't exist
+    try {
+      const { createReport } = await import("@/lib/appwrite/reports");
+      await createReport({ targetType, targetId, reason, details, reporterId });
+    } catch (err) {
+      // Collection might not exist yet — log instead
+      console.log("[REPORT]", {
+        timestamp: new Date().toISOString(),
+        targetType,
+        targetId,
+        reason,
+        details,
+        reporterId,
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Report received" });
   } catch (error) {

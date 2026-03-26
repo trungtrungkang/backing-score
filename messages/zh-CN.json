@@ -355,5 +355,15 @@
     "waitModeDesc": "练习模式会暂停播放并等待您弹奏正确的音符——终极练习工具。升级以解锁。",
     "upgradeNow": "升级到高级版",
     "maybeLater": "以后再说"
+  },
+  "Notifications": {
+    "title": "通知",
+    "like": "{userName} 赞了「{targetName}」",
+    "follow": "{userName} 开始关注你",
+    "comment": "{userName} 评论了「{targetName}」",
+    "report_resolved": "你对「{targetName}」的举报已处理",
+    "markAllRead": "全部标为已读",
+    "noNotifications": "暂无通知",
+    "justNow": "刚刚"
   }
 }

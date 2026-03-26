@@ -391,5 +391,15 @@
     "waitModeDesc": "Practice Mode (Wait Mode) pauses playback and waits for you to play the correct notes — it's the ultimate practice tool. Upgrade to unlock it.",
     "upgradeNow": "Upgrade to Premium",
     "maybeLater": "Maybe Later"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "like": "{userName} liked \"{targetName}\"",
+    "follow": "{userName} started following you",
+    "comment": "{userName} commented on \"{targetName}\"",
+    "report_resolved": "Your report on \"{targetName}\" has been reviewed",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications yet",
+    "justNow": "Just now"
   }
 }

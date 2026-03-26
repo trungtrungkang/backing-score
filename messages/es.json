@@ -355,5 +355,15 @@
     "waitModeDesc": "El modo de práctica pausa la reproducción y espera a que toques las notas correctas — la herramienta de práctica definitiva. Mejora para desbloquearlo.",
     "upgradeNow": "Mejorar a Premium",
     "maybeLater": "Quizás después"
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "like": "{userName} le gustó \"{targetName}\"",
+    "follow": "{userName} comenzó a seguirte",
+    "comment": "{userName} comentó en \"{targetName}\"",
+    "report_resolved": "Tu reporte sobre \"{targetName}\" ha sido revisado",
+    "markAllRead": "Marcar todo como leído",
+    "noNotifications": "Sin notificaciones",
+    "justNow": "Ahora mismo"
   }
 }

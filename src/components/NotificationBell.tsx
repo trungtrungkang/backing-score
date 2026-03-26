@@ -1,25 +1,31 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Bell } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface Notification {
-  id: string;
-  type: "like" | "share" | "follow" | "comment";
-  message: string;
-  timestamp: string;
-  read: boolean;
-}
+import { useTranslations } from "next-intl";
+import { getAppwriteClient } from "@/lib/appwrite/client";
+import {
+  APPWRITE_DATABASE_ID,
+  APPWRITE_NOTIFICATIONS_COLLECTION_ID,
+} from "@/lib/appwrite/constants";
+import {
+  listMyNotifications,
+  markAllNotificationsRead,
+  type NotificationDoc,
+} from "@/lib/appwrite/notifications";
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const t = useTranslations("Notifications");
   const [open, setOpen] = useState(false);
-  const [notifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+  const [loading, setLoading] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, right: 0 });
 
+  // Position dropdown relative to button
   useEffect(() => {
     if (open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -27,9 +33,95 @@ export function NotificationBell() {
     }
   }, [open]);
 
+  // Load notifications on mount
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const docs = await listMyNotifications(user.$id);
+      setNotifications(docs);
+    } catch {
+      // Collection might not exist yet — gracefully ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  // Subscribe to Appwrite Realtime for live notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const client = getAppwriteClient();
+    const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_NOTIFICATIONS_COLLECTION_ID}.documents`;
+
+    try {
+      const unsubscribe = client.subscribe(channel, (response: any) => {
+        const payload = response.payload as NotificationDoc;
+        // Only handle events for the current user
+        if (payload.recipientId === user.$id) {
+          const events = response.events as string[];
+          if (events.some((e: string) => e.includes(".create"))) {
+            // New notification — prepend
+            setNotifications((prev) => [payload, ...prev]);
+          } else if (events.some((e: string) => e.includes(".update"))) {
+            // Updated notification — replace
+            setNotifications((prev) =>
+              prev.map((n) => (n.$id === payload.$id ? payload : n))
+            );
+          } else if (events.some((e: string) => e.includes(".delete"))) {
+            // Deleted notification — remove
+            setNotifications((prev) =>
+              prev.filter((n) => n.$id !== payload.$id)
+            );
+          }
+        }
+      });
+      return () => unsubscribe();
+    } catch {
+      // Realtime not available — fall back to polling
+      console.warn("[NotificationBell] Realtime subscription failed");
+    }
+  }, [user]);
+
+  // Handle mark all read
+  const handleMarkAllRead = async () => {
+    if (!user) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    await markAllNotificationsRead(user.$id);
+  };
+
   if (!user) return null;
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Format message using i18n templates
+  const formatMessage = (n: NotificationDoc): string => {
+    try {
+      return t(n.type, {
+        userName: n.sourceUserName,
+        targetName: n.targetName || "",
+      });
+    } catch {
+      // Fallback if translation key missing
+      return `${n.sourceUserName} — ${n.type}`;
+    }
+  };
+
+  // Relative time
+  const timeAgo = (iso: string): string => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t("justNow");
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  };
 
   return (
     <>
@@ -40,48 +132,85 @@ export function NotificationBell() {
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-        {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-            {unread > 9 ? "9+" : unread}
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center animate-pulse">
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
-      {open && createPortal(
-        <>
-          <div className="fixed inset-0 z-[200]" onClick={() => setOpen(false)} />
-          <div
-            className="fixed w-80 max-h-96 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl z-[201]"
-            style={{ top: pos.top, right: pos.right }}
-          >
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-              <h3 className="font-bold text-sm">Notifications</h3>
-            </div>
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-zinc-500 text-sm">
-                <Bell className="w-8 h-8 mx-auto mb-2 text-zinc-300 dark:text-zinc-700" />
-                No notifications yet
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0 ${
-                      !n.read ? "bg-blue-50/50 dark:bg-blue-500/5" : ""
-                    }`}
+      {open &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[200]"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="fixed w-80 max-h-[28rem] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl z-[201]"
+              style={{ top: pos.top, right: pos.right }}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white dark:bg-zinc-900 z-10">
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+                  {t("title")}
+                </h3>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[11px] font-semibold text-blue-500 hover:text-blue-600 flex items-center gap-1"
                   >
-                    <p className="text-sm text-zinc-900 dark:text-white">{n.message}</p>
-                    <p className="text-[10px] text-zinc-400 mt-1">{n.timestamp}</p>
-                  </div>
-                ))}
+                    <Check className="w-3 h-3" />
+                    {t("markAllRead")}
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        </>,
-        document.body
-      )}
+
+              {/* Content */}
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-600 border-t-blue-500 rounded-full animate-spin mx-auto" />
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="p-8 text-center text-zinc-500 text-sm">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-zinc-300 dark:text-zinc-700" />
+                  {t("noNotifications")}
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.$id}
+                      className={`px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0 transition-colors ${
+                        !n.read
+                          ? "bg-blue-50/50 dark:bg-blue-500/5"
+                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Unread dot */}
+                        <div className="mt-1.5 shrink-0">
+                          {!n.read && (
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-zinc-900 dark:text-white leading-snug">
+                            {formatMessage(n)}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 mt-1">
+                            {timeAgo(n.$createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>,
+          document.body
+        )}
     </>
   );
 }
-

@@ -355,5 +355,15 @@
     "waitModeDesc": "練習モードは再生を一時停止し、正しい音を弾くのを待ちます — 究極の練習ツールです。アップグレードしてロックを解除しましょう。",
     "upgradeNow": "プレミアムにアップグレード",
     "maybeLater": "後で"
+  },
+  "Notifications": {
+    "title": "通知",
+    "like": "{userName}が「{targetName}」にいいねしました",
+    "follow": "{userName}があなたをフォローしました",
+    "comment": "{userName}が「{targetName}」にコメントしました",
+    "report_resolved": "「{targetName}」への報告が確認されました",
+    "markAllRead": "すべて既読にする",
+    "noNotifications": "通知はありません",
+    "justNow": "たった今"
   }
 }
