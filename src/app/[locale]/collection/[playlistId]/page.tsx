@@ -25,7 +25,7 @@ import { getPublicProfile } from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
-import { Play, Share2, MoreVertical, Music4, ListMusic, Globe, Lock, Trash2, Edit2, X, Heart, Image as ImageIcon } from "lucide-react";
+import { Play, Share2, MoreVertical, Music4, ListMusic, Globe, Lock, Trash2, Edit2, X, Heart, Image as ImageIcon, GripVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +50,8 @@ export default function CollectionPage() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [authorProfile, setAuthorProfile] = useState<{name: string, prefs: any} | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +153,26 @@ export default function CollectionPage() {
       setProjects(prev => prev.filter(p => p.$id !== projectId));
     } catch {
       toast.error(t("removeError"));
+    }
+  };
+
+  const handleDragEnd = async () => {
+    if (dragIdx === null || dragOverIdx === null || dragIdx === dragOverIdx || !playlist) {
+      setDragIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const reordered = [...projects];
+    const [moved] = reordered.splice(dragIdx, 1);
+    reordered.splice(dragOverIdx, 0, moved);
+    setProjects(reordered);
+    setDragIdx(null);
+    setDragOverIdx(null);
+    // Persist new order
+    try {
+      await updatePlaylist(playlistId, { projectIds: reordered.map(p => p.$id) });
+    } catch {
+      toast.error("Failed to save track order");
     }
   };
 
@@ -367,13 +389,24 @@ export default function CollectionPage() {
 
                   {projects.map((proj, index) => (
                     <div 
-                      key={proj.$id} 
-                      className="group flex flex-row items-center gap-3 sm:gap-4 px-3 py-3 sm:px-4 sm:py-4 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10"
+                      key={proj.$id}
+                      draggable={isOwner}
+                      onDragStart={() => setDragIdx(index)}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverIdx(index); }}
+                      onDragEnd={handleDragEnd}
+                      className={`group flex flex-row items-center gap-3 sm:gap-4 px-3 py-3 sm:px-4 sm:py-4 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/10 ${
+                        dragOverIdx === index && dragIdx !== null && dragIdx !== index ? 'border-[#C8A856] dark:border-[#C8A856] bg-[#C8A856]/5' : ''
+                      } ${dragIdx === index ? 'opacity-50' : ''} ${isOwner ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     >
-                       <div className="hidden sm:flex w-12 items-center justify-center font-bold text-zinc-400 group-hover:hidden text-lg shrink-0">
+                       {isOwner && (
+                         <div className="hidden sm:flex w-6 items-center justify-center shrink-0 text-zinc-300 dark:text-zinc-700 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 cursor-grab">
+                           <GripVertical className="w-4 h-4" />
+                         </div>
+                       )}
+                       <div className="hidden sm:flex w-8 items-center justify-center font-bold text-zinc-400 group-hover:hidden text-lg shrink-0">
                          {index + 1}
                        </div>
-                       <div className="hidden sm:group-hover:flex w-12 items-center justify-center shrink-0">
+                       <div className="hidden sm:group-hover:flex w-8 items-center justify-center shrink-0">
                          <button onClick={() => router.push(`/play/${proj.$id}`)} className="text-zinc-900 dark:text-white hover:text-[#C8A856] dark:hover:text-[#C8A856] transition-colors">
                            <Play className="w-5 h-5 fill-current" />
                          </button>
