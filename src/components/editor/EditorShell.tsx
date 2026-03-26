@@ -266,15 +266,35 @@ export function EditorShell({
             const preciseTime = audioManagerRef.current?.getCurrentPositionMs() ?? 0;
 
             if (isDownbeat) {
-              // DOWNBEAT: start a new measure
+              // DOWNBEAT: start a new measure, backfilling previous measure's missing beats
               setRecordedTimemap(prev => {
                 const lastTap = prev[prev.length - 1];
                 if (lastTap && (preciseTime - lastTap.timeMs < 200)) return prev;
                 const roundedTime = Math.round(preciseTime);
-                syncCurrentMeasureRef.current = prev.length + 1;
+
+                // Backfill missing beats in the previous measure
+                const updated = [...prev];
+                if (updated.length > 0) {
+                  const prevMeasure = updated[updated.length - 1];
+                  const timeSig = payload.metadata?.timeSignature || "4/4";
+                  const beatsPerBar = parseInt(timeSig.split("/")[0], 10) || 4;
+                  const currentBeats = [...(prevMeasure.beatTimestamps || [prevMeasure.timeMs])];
+                  if (currentBeats.length < beatsPerBar) {
+                    const lastBeatMs = currentBeats[currentBeats.length - 1];
+                    const gap = roundedTime - lastBeatMs;
+                    const missing = beatsPerBar - currentBeats.length;
+                    for (let i = 1; i <= missing; i++) {
+                      currentBeats.push(Math.round(lastBeatMs + (gap * i / (missing + 1))));
+                    }
+                    updated[updated.length - 1] = { ...prevMeasure, beatTimestamps: currentBeats };
+                    syncTotalBeatCountRef.current += missing;
+                  }
+                }
+
+                syncCurrentMeasureRef.current = updated.length + 1;
                 syncCurrentBeatRef.current = 1;
                 syncTotalBeatCountRef.current++;
-                return [...prev, { measure: prev.length + 1, timeMs: roundedTime, beatTimestamps: [roundedTime] }];
+                return [...updated, { measure: updated.length + 1, timeMs: roundedTime, beatTimestamps: [roundedTime] }];
               });
             } else if (isMidMeasure) {
               // MID-MEASURE: insert beat at half-bar position
