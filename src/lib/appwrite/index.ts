@@ -36,6 +36,7 @@ export {
   deleteProject,
   copyProjectToMine,
   incrementPlayCount,
+  publishMyProject,
 } from "./projects";
 export {
   uploadProjectFile,

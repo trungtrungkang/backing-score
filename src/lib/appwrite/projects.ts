@@ -266,6 +266,36 @@ export async function listProjectsByComposition(compositionId: string, limit = 2
  * Increment the play count for a published project.
  * Called client-side when a user plays a score. Non-blocking, fire-and-forget.
  */
+/**
+ * Publish or unpublish your own project.
+ * Adjusts document permissions: published adds read(any), unpublished removes it.
+ */
+export async function publishMyProject(projectId: string, publish: boolean): Promise<ProjectDocument> {
+  const me = await account.get();
+  const body: Record<string, unknown> = {
+    published: publish,
+  };
+  if (publish) {
+    body.publishedAt = new Date().toISOString();
+  }
+
+  const permissions = publish
+    ? [
+        Permission.read(Role.any()),
+        Permission.read(Role.user(me.$id)),
+        Permission.update(Role.user(me.$id)),
+        Permission.delete(Role.user(me.$id)),
+      ]
+    : [
+        Permission.read(Role.user(me.$id)),
+        Permission.update(Role.user(me.$id)),
+        Permission.delete(Role.user(me.$id)),
+      ];
+
+  const doc = await databases.updateDocument(dbId, collId, projectId, body, permissions);
+  return doc as unknown as ProjectDocument;
+}
+
 export async function incrementPlayCount(projectId: string): Promise<void> {
   try {
     const doc = await databases.getDocument(dbId, collId, projectId);

@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,7 @@ import {
   listMyProjects,
   createProject,
   deleteProject,
+  publishMyProject,
   ProjectDocument,
   ProjectPayload
 } from "@/lib/appwrite";
@@ -53,6 +54,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const { confirm } = useDialogs();
   const searchParams = useSearchParams();
 
@@ -130,6 +132,26 @@ export default function DashboardPage() {
       setError(e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Failed to create project");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handlePublishToggle = async (e: React.MouseEvent, project: ProjectDocument) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (publishingId) return;
+    const newState = !project.published;
+    if (newState) {
+      if (!(await confirm({ title: "Publish Project", description: `Publish "${project.name}" to Discover? Everyone will be able to see and play it.`, confirmText: "Publish", cancelText: "Cancel" }))) return;
+    }
+    setPublishingId(project.$id);
+    try {
+      await publishMyProject(project.$id, newState);
+      setProjects((prev) => prev.map((p) => p.$id === project.$id ? { ...p, published: newState, publishedAt: newState ? new Date().toISOString() : p.publishedAt } : p));
+      toast.success(newState ? "Published ✓" : "Unpublished");
+    } catch (err: any) {
+      toast.error("Failed: " + (err?.message || "Unknown error"));
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -337,6 +359,15 @@ export default function DashboardPage() {
                               Draft
                             </span>
                           )}
+                          {(p as any).playCount > 0 && (
+                            <>
+                              <span className="text-zinc-300 dark:text-zinc-700 text-xs">•</span>
+                              <span className="text-[10px] text-zinc-400 flex items-center gap-0.5">
+                                <Play className="w-2.5 h-2.5" />
+                                {(p as any).playCount}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -349,69 +380,47 @@ export default function DashboardPage() {
                     </div>
 
                     {/* 5. Actions */}
-                    <div className="flex items-center justify-end shrink-0">
-                      {/* Mobile/tablet: single dropdown */}
-                      <div className="flex lg:hidden">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="h-8 w-8 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/play/${p.$id}`} className="flex items-center gap-2 cursor-pointer">
-                                <PlaySquare className="w-4 h-4" />
-                                {t("play")}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/p/${p.$id}`} className="flex items-center gap-2 cursor-pointer">
-                                <Music4 className="w-4 h-4" />
-                                {t("edit")}
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                    <div className="flex items-center justify-end shrink-0 gap-1.5">
+                      <Link
+                        href={`/play/${p.$id}`}
+                        className="h-8 px-3 rounded text-xs font-bold flex items-center justify-center bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-blue-600 dark:hover:bg-blue-500 transition-colors shadow-sm"
+                      >
+                        {t("play")}
+                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="h-8 w-8 flex items-center justify-center rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/p/${p.$id}`} className="flex items-center gap-2 cursor-pointer">
+                              <Music4 className="w-4 h-4" />
+                              {t("edit")}
+                            </Link>
+                          </DropdownMenuItem>
+                          {canCreate(user.labels) && (
                             <DropdownMenuItem
-                              onClick={(e) => handleDelete(e as any, p.$id)}
-                              disabled={deletingId === p.$id}
-                              className="flex items-center gap-2 cursor-pointer text-red-500 focus:text-red-500"
+                              onClick={(e) => handlePublishToggle(e as any, p)}
+                              disabled={publishingId === p.$id}
+                              className="flex items-center gap-2 cursor-pointer"
                             >
-                              <Trash2 className="w-4 h-4" />
-                              {deletingId === p.$id ? "..." : t("deleteCancel").includes("Cancel") ? "Delete" : t("deleteConfirm")}
+                              {p.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {publishingId === p.$id ? "..." : p.published ? "Unpublish" : "Publish"}
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* 4. Actions */}
-                      <div className="hidden lg:flex items-center justify-end gap-1.5">
-                        <Link
-                          href={`/play/${p.$id}`}
-                          className="h-8 px-3 rounded text-xs font-bold flex items-center justify-center bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-blue-600 dark:hover:bg-blue-500 transition-colors shadow-sm"
-                        >
-                          {t("play")}
-                        </Link>
-                        <Link
-                          href={`/p/${p.$id}`}
-                          className="h-8 px-3 rounded text-xs font-bold flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-300 transition-colors"
-                        >
-                          {t("edit")}
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDelete(e, p.$id)}
-                          disabled={deletingId === p.$id}
-                          title="Delete"
-                          className="h-8 w-8 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0 ml-1"
-                        >
-                          {deletingId === p.$id ? (
-                            <div className="w-3 h-3 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
                           )}
-                        </button>
-                      </div>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => handleDelete(e as any, p.$id)}
+                            disabled={deletingId === p.$id}
+                            className="flex items-center gap-2 cursor-pointer text-red-500 focus:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {deletingId === p.$id ? "..." : "Delete"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
