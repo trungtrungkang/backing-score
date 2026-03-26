@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +18,11 @@ import {
   createProject,
   deleteProject,
   publishMyProject,
+  listMyPlaylists,
+  addProjectToPlaylist,
   ProjectDocument,
-  ProjectPayload
+  ProjectPayload,
+  PlaylistDocument
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -58,8 +61,17 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectDocument | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
   const { confirm } = useDialogs();
   const searchParams = useSearchParams();
+
+  // Load playlists once for add-to-collection feature
+  useEffect(() => {
+    if (user) listMyPlaylists().then(setPlaylists).catch(() => {});
+  }, [user]);
 
   // After checkout success: sync subscription from LS and refresh premium status
   useEffect(() => {
@@ -190,9 +202,28 @@ export default function DashboardPage() {
       {/* Sidebar */}
       <DashboardSidebar />
 
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-900 shadow-2xl">
+            <div className="p-4 flex justify-end">
+              <button onClick={() => setMobileMenuOpen(false)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <DashboardSidebar />
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
         <div className="max-w-6xl mx-auto">
+          {/* Mobile sidebar toggle */}
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+            <Menu className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
+          </button>
+
+
           {!user.emailVerification && (
             <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -261,7 +292,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.length}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("totalProjects")}</div>
                 </div>
               </div>
               <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
@@ -270,7 +301,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.filter(p => p.published).length}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Published</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("publishedCount")}</div>
                 </div>
               </div>
               <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
@@ -279,8 +310,39 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.reduce((sum, p) => sum + ((p as any).playCount || 0), 0)}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total Plays</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("totalPlays")}</div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Search + Filter Bar */}
+          {!loading && projects.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  className="w-full h-10 pl-10 pr-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+              </div>
+              <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden shrink-0">
+                {(["all", "published", "draft"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+                      statusFilter === f
+                        ? "bg-zinc-900 dark:bg-white text-white dark:text-black"
+                        : "bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {t(f === "all" ? "filterAll" : f === "published" ? "filterPublished" : "filterDraft")}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -313,7 +375,18 @@ export default function DashboardPage() {
                  </Button>
                )}
             </div>
-          ) : (
+          ) : (() => {
+            const filtered = projects.filter(p => {
+              const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
+              const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? p.published : !p.published);
+              return matchesSearch && matchesStatus;
+            });
+            return filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Search className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mb-4" />
+                <p className="text-zinc-500 font-medium">{t("noMatchingProjects")}</p>
+              </div>
+            ) : (
             <div className="w-full text-left">
               {/* Table Header */}
               <div className="grid grid-cols-[auto_1fr_auto] lg:grid-cols-[48px_2fr_100px_140px] items-center gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
@@ -325,7 +398,7 @@ export default function DashboardPage() {
 
               {/* Table Body (List) */}
               <div className="flex flex-col">
-                {projects.map((p, idx) => (
+                {filtered.map((p, idx) => (
                   <div key={p.$id} className="group grid grid-cols-[auto_1fr_auto] lg:grid-cols-[48px_2fr_100px_140px] items-center gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-900/50 transition-colors">
                     
                     {/* 1. Index */}
@@ -422,6 +495,27 @@ export default function DashboardPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
+                          {/* Add to Collection sub-menu */}
+                          {playlists.length > 0 && (
+                            <>
+                              {playlists.map(pl => (
+                                <DropdownMenuItem
+                                  key={pl.$id}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      await addProjectToPlaylist(pl.$id, p.$id);
+                                      toast.success(t("addedToCollection"));
+                                    } catch { toast.error("Failed"); }
+                                  }}
+                                  className="flex items-center gap-2 cursor-pointer text-xs"
+                                >
+                                  <FolderOpen className="w-3 h-3" /> {pl.name}
+                                </DropdownMenuItem>
+                              ))}
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                           <DropdownMenuItem
                             onClick={(e) => handleDelete(e as any, p.$id)}
                             disabled={deletingId === p.$id}
@@ -437,7 +531,8 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Quick Edit Modal */}
