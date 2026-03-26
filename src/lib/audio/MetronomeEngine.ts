@@ -241,6 +241,17 @@ export class MetronomeEngine {
       }
       if (measureDurationMs <= 0) measureDurationMs = 1;
 
+      // Use beatTimestamps for precise within-measure beat location
+      if (activeEvent.beatTimestamps && activeEvent.beatTimestamps.length > 1) {
+        const beats = activeEvent.beatTimestamps;
+        let beatIdx = 0;
+        for (let i = beats.length - 1; i >= 0; i--) {
+          if (songTimeMs >= beats[i]) { beatIdx = i; break; }
+        }
+        this.nextTick = { measure: activeEvent.measure, beat: beatIdx };
+        return;
+      }
+
       const msPerSubBeat = measureDurationMs / beatsInActive;
       
       if (songTimeMs < activeEvent.timeMs) {
@@ -331,6 +342,20 @@ export class MetronomeEngine {
         const mapEvent = this.timemap[idx];
         const beatsPerBar = this.getActualBeatsForMeasure(measureTarget);
 
+        // Use beatTimestamps for precise per-beat scheduling
+        if (mapEvent.beatTimestamps && mapEvent.beatTimestamps.length > 0) {
+          if (beatTarget < mapEvent.beatTimestamps.length) {
+            return mapEvent.beatTimestamps[beatTarget];
+          }
+          // Beat beyond recorded timestamps — extrapolate from last beat
+          const lastBeatMs = mapEvent.beatTimestamps[mapEvent.beatTimestamps.length - 1];
+          const nextMeasureMs = (idx + 1 < this.timemap.length) ? this.timemap[idx + 1].timeMs : null;
+          const avgBeatDuration = nextMeasureMs
+            ? (nextMeasureMs - mapEvent.timeMs) / mapEvent.beatTimestamps.length
+            : this.getMsPerBeatForMeasure(measureTarget);
+          return lastBeatMs + (beatTarget - mapEvent.beatTimestamps.length + 1) * avgBeatDuration;
+        }
+
         // If this measure has per-beat tempo data, compute precise beat offset
         if (mapEvent.tempoAtBeat && mapEvent.tempoAtBeat.length > 1 && beatTarget > 0) {
           // Calculate the time offset from measure start to the target beat
@@ -352,7 +377,7 @@ export class MetronomeEngine {
           return mapEvent.timeMs + beatOffsetMs;
         }
 
-        // Standard even division for measures without per-beat tempo data
+        // Standard even division for measures without per-beat data
         let measureDurationMs: number;
 
         // Use actual timemap time difference for measure duration

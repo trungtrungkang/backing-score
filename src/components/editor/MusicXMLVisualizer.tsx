@@ -463,7 +463,7 @@ export function MusicXMLVisualizer({
     const updatePlayhead = () => {
       const currentPosMs = positionMsRef.current;
       // Skip if position hasn't changed enough (throttle SVG queries during playback only)
-      if (isPlaying && Math.abs(currentPosMs - lastPlayheadMsRef.current) < 30) {
+      if (isPlaying && Math.abs(currentPosMs - lastPlayheadMsRef.current) < 8) {
         playheadRafRef.current = requestAnimationFrame(updatePlayhead);
         return;
       }
@@ -489,7 +489,24 @@ export function MusicXMLVisualizer({
         if (nextEvent) {
           const duration = nextEvent.timeMs - currentEvent.timeMs;
           if (duration > 0) {
-            progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
+            // Use beatTimestamps for sub-measure interpolation when available
+            const beats = currentEvent.beatTimestamps;
+            if (beats && beats.length > 1) {
+              // Find current beat segment
+              let beatIdx = 0;
+              for (let b = beats.length - 1; b >= 0; b--) {
+                if (currentPosMs >= beats[b]) { beatIdx = b; break; }
+              }
+              const beatStart = beats[beatIdx];
+              const beatEnd = beats[beatIdx + 1] ?? nextEvent.timeMs;
+              const beatFraction = beatEnd > beatStart ? (currentPosMs - beatStart) / (beatEnd - beatStart) : 0;
+              // Map beat position to linear progress across measure width
+              const segmentStart = (beats[beatIdx] - currentEvent.timeMs) / duration;
+              const segmentEnd = ((beats[beatIdx + 1] ?? nextEvent.timeMs) - currentEvent.timeMs) / duration;
+              progress = Math.max(0, Math.min(1, segmentStart + (segmentEnd - segmentStart) * beatFraction));
+            } else {
+              progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
+            }
           }
         } else {
           // Last measure: estimate duration from durationInQuarters or fallback

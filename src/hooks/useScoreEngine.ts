@@ -843,6 +843,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
 
     setPositionMs(prev => {
       const roundedPos = Math.round(currentPos);
+      // Always update the ref for zero-lag RAF consumers (MusicXMLVisualizer, TrackList)
+      positionMsRef.current = roundedPos;
       if (Math.abs(prev - roundedPos) < 16) return prev;
 
       // Detect loop iteration: position wrapped back to near startBar
