@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // ── Facebook-style icon tab ──────────────────────────────────────────────────
+// Icon-only on md (768–1023px), icon+label on lg+ (1024px+)
 function NavTab({
   href,
   icon: Icon,
@@ -44,24 +45,31 @@ function NavTab({
   danger?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className={`
-        relative h-full flex items-center justify-center gap-2 px-4 lg:px-5
-        whitespace-nowrap transition-colors group text-sm font-semibold
-        ${danger
-          ? active ? "text-red-500" : "text-red-400/50 hover:text-red-500"
-          : active ? "text-[#C8A856]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-        }
-      `}
-    >
-      <span className="absolute inset-x-1 inset-y-3 rounded-xl bg-zinc-100 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Icon className="w-[18px] h-[18px] relative z-10 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
-      <span className="relative z-10">{label}</span>
-      {active && (
-        <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full ${danger ? "bg-red-500" : "bg-[#C8A856]"}`} />
-      )}
-    </Link>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          href={href}
+          className={`
+            relative h-full flex items-center justify-center gap-2 px-5 lg:px-5
+            whitespace-nowrap transition-colors group text-sm font-semibold
+            ${danger
+              ? active ? "text-red-500" : "text-red-400/50 hover:text-red-500"
+              : active ? "text-[#C8A856]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+            }
+          `}
+        >
+          <span className="absolute inset-x-1 inset-y-3 rounded-xl bg-zinc-100 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Icon className="w-[18px] h-[18px] relative z-10 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
+          <span className="relative z-10 hidden lg:inline">{label}</span>
+          {active && (
+            <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full ${danger ? "bg-red-500" : "bg-[#C8A856]"}`} />
+          )}
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="font-semibold text-xs lg:hidden">
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
