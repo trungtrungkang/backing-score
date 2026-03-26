@@ -10,7 +10,7 @@ import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorit
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
 import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
-import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic, ArrowUpDown, Eye } from "lucide-react";
+import { Play, Bookmark, Music4, Search, Pencil, ListMusic, ArrowUpDown, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { ReportButton } from "@/components/ReportButton";
@@ -491,11 +491,11 @@ export default function DiscoverPage() {
                         title={favoritedIds.has(p.$id) ? t("removeFavorite") : t("addFavorite")}
                         className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
                           favoritedIds.has(p.$id) 
-                            ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20" 
-                            : "text-zinc-500 dark:text-zinc-400 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-white/5"
+                            ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" 
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-amber-500 hover:bg-zinc-100 dark:hover:bg-white/5"
                         }`}
                       >
-                         <Heart className={`w-[18px] h-[18px] transition-all ${favoritedIds.has(p.$id) ? 'fill-current scale-110' : ''}`} />
+                         <Bookmark className={`w-[18px] h-[18px] transition-all ${favoritedIds.has(p.$id) ? 'fill-current scale-110' : ''}`} />
                       </button>
                     )}
                     {user && user.$id === p.userId && (

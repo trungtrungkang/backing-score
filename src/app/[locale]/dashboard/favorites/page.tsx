@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Heart, PlaySquare, Globe,
+  Bookmark, PlaySquare, Globe,
   Trash2, Music4, ListMusic, ExternalLink
 } from "lucide-react";
 import {
@@ -136,10 +136,10 @@ export default function FavoritesPage() {
               </div>
             ) : favorites.length === 0 ? (
               <div className="col-span-full py-24 text-center">
-                <Heart className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
+                <Bookmark className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">No Favorites Yet</h3>
                 <p className="text-zinc-500 max-w-sm mx-auto mb-8">
-                  Browse the Global Discover feed and hit the heart icon to save tracks and playlists here.
+                  Browse the Global Discover feed and hit the bookmark icon to save tracks and playlists here.
                 </p>
                 <Link href="/discover">
                   <Button variant="outline" className="font-semibold rounded-full bg-white dark:bg-zinc-900">

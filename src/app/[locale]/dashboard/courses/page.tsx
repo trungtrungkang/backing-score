@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
-import { CloudUpload, Heart, FolderOpen, Globe, Plus, GraduationCap, PlaySquare, Settings, Trash2, BookOpen, X, Loader2 } from "lucide-react";
+import { CloudUpload, Bookmark, FolderOpen, Globe, Plus, GraduationCap, PlaySquare, Settings, Trash2, BookOpen, X, Loader2 } from "lucide-react";
 import { getCreatorCourses, deleteCourse, createCourse, CourseDoc } from "@/lib/appwrite/courses";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -120,7 +120,7 @@ export default function CreatorCoursesPage() {
               Collections
             </Link>
             <Link href="/dashboard/favorites" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Heart className="w-4 h-4" />
+              <Bookmark className="w-4 h-4" />
               Favorites
             </Link>
             

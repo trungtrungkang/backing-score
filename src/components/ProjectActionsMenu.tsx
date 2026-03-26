@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Heart, Plus, PlusSquare, 
+  Bookmark, Plus, PlusSquare, 
   Check, Loader2
 } from "lucide-react";
 import {
@@ -149,11 +149,11 @@ export function ProjectActionsMenu({ projectId, className = "", hideFavorite = f
                 disabled={isTogglingFav}
                 className={`w-10 h-10 rounded-full border-none shadow-sm transition-all focus:outline-none bg-white dark:bg-zinc-800 backdrop-blur-md hover:scale-105 active:scale-95 ${
                   isFavorited 
-                    ? "text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10" 
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-rose-500 hover:bg-zinc-50 dark:hover:bg-white/5"
+                    ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10" 
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-amber-500 hover:bg-zinc-50 dark:hover:bg-white/5"
                 }`}
               >
-                <Heart className={`w-[18px] h-[18px] transition-all ${isFavorited ? "fill-current scale-110" : ""}`} />
+                <Bookmark className={`w-[18px] h-[18px] transition-all ${isFavorited ? "fill-current scale-110" : ""}`} />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs font-semibold">

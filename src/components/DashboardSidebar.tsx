@@ -3,7 +3,7 @@
 import { Link } from "@/i18n/routing";
 import { usePathname } from "next/navigation";
 import {
-  CloudUpload, Heart, FolderOpen, Globe,
+  CloudUpload, Bookmark, FolderOpen, Globe,
   GraduationCap, Crown, BarChart3,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 const NAV_ITEMS = [
   { href: "/dashboard", icon: CloudUpload, labelKey: "myUploadsNav", iconColor: "text-blue-400" },
   { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
-  { href: "/dashboard/favorites", icon: Heart, labelKey: "favorites", iconColor: "" },
+  { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },
 ];
 
