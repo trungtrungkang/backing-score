@@ -166,8 +166,8 @@ export default function AdminDashboardPage() {
             <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
               {users.map((u) => {
                 const isCreator = u.labels.includes("creator");
-                const isContentManager = u.labels.includes("content_manager");
-                const isWikiEditor = u.labels.includes("wiki_editor");
+                const isContentManager = u.labels.includes("contentmanager");
+                const isWikiEditor = u.labels.includes("wikieditor");
                 const isAdmin = u.labels.includes("admin");
                 
                 return (
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
                     </td>
                     <td className="px-6 py-5 text-center">
                       <button
-                        onClick={() => handleToggle(u.id, "content_manager", isContentManager)}
+                        onClick={() => handleToggle(u.id, "contentmanager", isContentManager)}
                         className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-zinc-900 ${
                           isContentManager ? "bg-purple-500" : "bg-zinc-300 dark:bg-zinc-700"
                         }`}
@@ -203,7 +203,7 @@ export default function AdminDashboardPage() {
                     </td>
                     <td className="px-6 py-5 text-center">
                       <button
-                        onClick={() => handleToggle(u.id, "wiki_editor", isWikiEditor)}
+                        onClick={() => handleToggle(u.id, "wikieditor", isWikiEditor)}
                         className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-zinc-900 ${
                           isWikiEditor ? "bg-amber-500" : "bg-zinc-300 dark:bg-zinc-700"
                         }`}

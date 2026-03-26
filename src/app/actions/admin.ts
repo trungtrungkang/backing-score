@@ -41,7 +41,7 @@ export async function requireAdmin(jwt: string) {
 
 /** Shorthand: require admin or content_manager role. */
 export async function requireContentManager(jwt: string) {
-  return requireRole(jwt, ["admin", "content_manager"]);
+  return requireRole(jwt, ["admin", "contentmanager"]);
 }
 
 /**

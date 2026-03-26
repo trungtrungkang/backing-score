@@ -5,7 +5,7 @@ import { Client as ServerClient, Databases, ID, Permission, Role, Account } from
 const DB = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
 
 /**
- * Validates that the JWT belongs to a user with "admin" or "wiki_editor" label.
+ * Validates that the JWT belongs to a user with "admin" or "wikieditor" label.
  */
 async function requireWikiEditor(jwt: string) {
   if (!process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || !process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID) {
@@ -17,8 +17,8 @@ async function requireWikiEditor(jwt: string) {
     .setJWT(jwt);
   const user = await new Account(jwtClient).get();
   const labels = user.labels || [];
-  if (!labels.includes("admin") && !labels.includes("wiki_editor")) {
-    throw new Error("Unauthorized: You need admin or wiki_editor role.");
+  if (!labels.includes("admin") && !labels.includes("wikieditor")) {
+    throw new Error("Unauthorized: You need admin or wikieditor role.");
   }
 }
 

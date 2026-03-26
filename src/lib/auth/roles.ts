@@ -9,10 +9,10 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type UserRole = "admin" | "content_manager" | "creator" | "wiki_editor";
+export type UserRole = "admin" | "contentmanager" | "creator" | "wikieditor";
 
 /** All recognized roles in priority order (highest first). */
-export const ALL_ROLES: UserRole[] = ["admin", "content_manager", "creator", "wiki_editor"];
+export const ALL_ROLES: UserRole[] = ["admin", "contentmanager", "creator", "wikieditor"];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,22 +34,22 @@ export function hasAnyRole(labels: string[] | undefined, roles: UserRole[]): boo
 
 /** Can access /admin/* routes (Admin or Content Manager). */
 export function canAccessAdmin(labels: string[] | undefined): boolean {
-  return hasAnyRole(labels, ["admin", "content_manager"]);
+  return hasAnyRole(labels, ["admin", "contentmanager"]);
 }
 
 /** Can manage (edit/delete/publish) ANY project/collection. */
 export function canManageContent(labels: string[] | undefined): boolean {
-  return hasAnyRole(labels, ["admin", "content_manager"]);
+  return hasAnyRole(labels, ["admin", "contentmanager"]);
 }
 
 /** Can create new projects (Admin, Content Manager, or Creator). */
 export function canCreate(labels: string[] | undefined): boolean {
-  return hasAnyRole(labels, ["admin", "content_manager", "creator"]);
+  return hasAnyRole(labels, ["admin", "contentmanager", "creator"]);
 }
 
 /** Can edit wiki content (Admin or Wiki Editor). */
 export function canEditWiki(labels: string[] | undefined): boolean {
-  return hasAnyRole(labels, ["admin", "wiki_editor"]);
+  return hasAnyRole(labels, ["admin", "wikieditor"]);
 }
 
 /** Is a full Admin (highest privilege). */
@@ -63,9 +63,9 @@ export function isAdmin(labels: string[] | undefined): boolean {
 
 const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
   admin: "Admin",
-  content_manager: "Content Manager",
+  contentmanager: "Content Manager",
   creator: "Creator",
-  wiki_editor: "Wiki Editor",
+  wikieditor: "Wiki Editor",
 };
 
 /** Get a human-readable display name for a role. */
