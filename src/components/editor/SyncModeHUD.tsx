@@ -5,6 +5,12 @@ import { Button } from "@/components/ui/button";
 
 /** Map KeyboardEvent.code to display label */
 function keyLabel(code: string): string {
+  if (code === "Enter") return "ENTER";
+  if (code === "ShiftLeft" || code === "ShiftRight") return "SHIFT";
+  if (code === "ArrowLeft") return "←";
+  if (code === "ArrowRight") return "→";
+  if (code === "ArrowUp") return "↑";
+  if (code === "ArrowDown") return "↓";
   if (code === "Space") return "SPACE";
   if (code.startsWith("Key")) return code.slice(3); // "KeyD" → "D"
   if (code.startsWith("Digit")) return code.slice(5);
@@ -17,6 +23,7 @@ interface SyncModeHUDProps {
   onCancel: () => void;
   onSave: () => void;
   downbeatKey: string;
+  midMeasureKey: string;
   upbeatKey: string;
   syncCurrentMeasureRef: React.RefObject<number>;
   syncCurrentBeatRef: React.RefObject<number>;
@@ -28,6 +35,7 @@ export const SyncModeHUD = React.memo(function SyncModeHUD({
   onCancel,
   onSave,
   downbeatKey,
+  midMeasureKey,
   upbeatKey,
   syncCurrentMeasureRef,
   syncCurrentBeatRef,
@@ -38,6 +46,7 @@ export const SyncModeHUD = React.memo(function SyncModeHUD({
   );
 
   const downLabel = keyLabel(downbeatKey);
+  const midLabel = keyLabel(midMeasureKey);
   const upLabel = keyLabel(upbeatKey);
 
   return (
@@ -61,9 +70,12 @@ export const SyncModeHUD = React.memo(function SyncModeHUD({
             : <span className="text-red-50">
               <kbd className="bg-black/20 border border-black/30 px-1.5 py-0.5 rounded text-xs font-mono font-bold shadow-sm mx-0.5">{downLabel}</kbd>
               <span className="opacity-70">= new measure</span>
-              <span className="opacity-40 mx-1.5">|</span>
+              <span className="opacity-40 mx-1">|</span>
+              <kbd className="bg-black/20 border border-black/30 px-1.5 py-0.5 rounded text-xs font-mono font-bold shadow-sm mx-0.5">{midLabel}</kbd>
+              <span className="opacity-70">= half-bar</span>
+              <span className="opacity-40 mx-1">|</span>
               <kbd className="bg-black/20 border border-black/30 px-1.5 py-0.5 rounded text-xs font-mono font-bold shadow-sm mx-0.5">{upLabel}</kbd>
-              <span className="opacity-70">= next beat</span>
+              <span className="opacity-70">= beat</span>
             </span>
         }
       </div>

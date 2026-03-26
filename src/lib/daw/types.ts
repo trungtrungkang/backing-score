@@ -35,9 +35,11 @@ export interface FileMetadata {
   scoreSynthOffsetMs?: number;
   scoreMidiInstrumentOverrides?: Record<number, number>; // trackIndex → GM program (1-indexed)
   scoreMidiPerTrackVolume?: Record<number, number>; // trackIndex → volume (0-1)
-  /** Configurable key code for sync mode downbeat (measure start). Default: "Space" */
+  /** Configurable key code for sync mode downbeat (measure start). Default: "Enter" */
   syncDownbeatKey?: string;
-  /** Configurable key code for sync mode upbeat (subsequent beats). Default: "KeyD" */
+  /** Configurable key code for sync mode mid-measure beat (half-bar). Default: "ShiftLeft" */
+  syncMidMeasureKey?: string;
+  /** Configurable key code for sync mode upbeat (single beat). Default: "ArrowLeft" */
   syncUpbeatKey?: string;
 }
 

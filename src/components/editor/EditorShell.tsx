@@ -230,9 +230,10 @@ export function EditorShell({
   const syncCurrentBeatRef = useRef(0);
   const syncCurrentMeasureRef = useRef(0);
 
-  // Configurable sync keys (read from project metadata, default Space + D)
-  const syncDownbeatKey = payload.metadata?.syncDownbeatKey || "Space";
-  const syncUpbeatKey = payload.metadata?.syncUpbeatKey || "KeyD";
+  // Configurable sync keys (read from project metadata, default Enter + Shift + ArrowLeft)
+  const syncDownbeatKey = payload.metadata?.syncDownbeatKey || "Enter";
+  const syncMidMeasureKey = payload.metadata?.syncMidMeasureKey || "ShiftLeft";
+  const syncUpbeatKey = payload.metadata?.syncUpbeatKey || "ArrowLeft";
 
   // Spacebar Play/Pause & Sync Mode Listener (2-key beat-level tapping)
   useEffect(() => {
@@ -241,9 +242,10 @@ export function EditorShell({
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA" || document.activeElement?.hasAttribute("contenteditable")) return;
 
       const isDownbeat = e.code === syncDownbeatKey;
+      const isMidMeasure = e.code === syncMidMeasureKey || e.key === "Shift";
       const isUpbeat = e.code === syncUpbeatKey;
 
-      if (isDownbeat || (isSyncMode && isUpbeat)) {
+      if (isDownbeat || (isSyncMode && (isMidMeasure || isUpbeat))) {
         e.preventDefault();
         e.stopPropagation();
         // Blur focused buttons to prevent native click on keyup
@@ -274,6 +276,36 @@ export function EditorShell({
                 syncTotalBeatCountRef.current++;
                 return [...prev, { measure: prev.length + 1, timeMs: roundedTime, beatTimestamps: [roundedTime] }];
               });
+            } else if (isMidMeasure) {
+              // MID-MEASURE: insert beat at half-bar position
+              // In 4/4 this is beat 3, in 6/4 or 6/8 this is beat 4
+              setRecordedTimemap(prev => {
+                if (prev.length === 0) return prev;
+                const roundedTime = Math.round(preciseTime);
+                const last = prev[prev.length - 1];
+                const lastBeat = last.beatTimestamps?.[last.beatTimestamps.length - 1] ?? last.timeMs;
+                if (roundedTime - lastBeat < 100) return prev; // debounce
+                const updated = [...prev];
+                // Calculate how many beats to fill up to mid-bar
+                const timeSig = payload.metadata?.timeSignature || "4/4";
+                const beatsPerBar = parseInt(timeSig.split("/")[0], 10) || 4;
+                const midBeat = Math.floor(beatsPerBar / 2); // 4/4→2, 6/4→3, 3/4→1
+                const currentBeats = [...(last.beatTimestamps || [last.timeMs])];
+                // Fill any missing beats between current position and mid-beat with even spacing
+                if (currentBeats.length < midBeat) {
+                  const startMs = currentBeats[currentBeats.length - 1];
+                  const gap = roundedTime - startMs;
+                  const missing = midBeat - currentBeats.length;
+                  for (let i = 1; i <= missing; i++) {
+                    currentBeats.push(Math.round(startMs + (gap * i / (missing + 1))));
+                  }
+                }
+                currentBeats.push(roundedTime);
+                updated[updated.length - 1] = { ...last, beatTimestamps: currentBeats };
+                syncCurrentBeatRef.current = currentBeats.length;
+                syncTotalBeatCountRef.current += (currentBeats.length - (last.beatTimestamps?.length ?? 1));
+                return updated;
+              });
             } else if (isUpbeat) {
               // UPBEAT: add beat to current measure's beatTimestamps
               setRecordedTimemap(prev => {
@@ -301,7 +333,7 @@ export function EditorShell({
     };
     // Prevent keyup from triggering native button click (for both keys)
     const handleKeyUp = (e: KeyboardEvent) => {
-      if ((e.code === syncDownbeatKey || e.code === syncUpbeatKey) && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if ((e.code === syncDownbeatKey || e.code === syncMidMeasureKey || e.key === "Shift" || e.code === syncUpbeatKey) && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -676,9 +708,10 @@ export function EditorShell({
         disabled={loadingAudio}
         title={projectName || "Untitled"}
         syncDownbeatKey={syncDownbeatKey}
+        syncMidMeasureKey={syncMidMeasureKey}
         syncUpbeatKey={syncUpbeatKey}
-        onSyncKeyChange={onPayloadChange ? (d, u) => {
-          onPayloadChange({ ...payload, metadata: { ...payload.metadata, syncDownbeatKey: d, syncUpbeatKey: u } });
+        onSyncKeyChange={onPayloadChange ? (d, m, u) => {
+          onPayloadChange({ ...payload, metadata: { ...payload.metadata, syncDownbeatKey: d, syncMidMeasureKey: m, syncUpbeatKey: u } });
         } : undefined}
       />
       {/* Action Sub-Bar */}
@@ -729,6 +762,7 @@ export function EditorShell({
           onCancel={handleCancelSync}
           onSave={handleSaveSyncMap}
           downbeatKey={syncDownbeatKey}
+          midMeasureKey={syncMidMeasureKey}
           upbeatKey={syncUpbeatKey}
           syncCurrentMeasureRef={syncCurrentMeasureRef}
           syncCurrentBeatRef={syncCurrentBeatRef}
