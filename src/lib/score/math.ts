@@ -38,6 +38,56 @@ export function getMeasureForTime(timemap: { timeMs: number; measure: number }[]
 }
 
 /**
+ * Returns sub-measure beat position from a continuous timemap with optional beatTimestamps.
+ * When beatTimestamps are present, uses recorded per-beat timestamps for accurate interpolation.
+ * Falls back to even division by beatsPerMeasure when beatTimestamps are absent.
+ */
+export function getBeatForTime(
+  timemap: { timeMs: number; measure: number; beatTimestamps?: number[] }[],
+  timeMs: number,
+  beatsPerMeasure = 4
+): { measure: number; beatIndex: number; fraction: number } {
+  if (!timemap || timemap.length === 0) return { measure: 0, beatIndex: 0, fraction: 0 };
+
+  // Find the timemap index for the current measure
+  let tmIdx = 0;
+  for (let i = 0; i < timemap.length; i++) {
+    if (i === timemap.length - 1) { tmIdx = i; break; }
+    if (timeMs >= timemap[i].timeMs && timeMs < timemap[i + 1].timeMs) { tmIdx = i; break; }
+  }
+
+  const entry = timemap[tmIdx];
+  const beats = entry.beatTimestamps;
+
+  if (beats && beats.length > 0) {
+    // Use recorded beat timestamps
+    for (let i = beats.length - 1; i >= 0; i--) {
+      if (timeMs >= beats[i]) {
+        const beatStart = beats[i];
+        const beatEnd = beats[i + 1] ?? timemap[tmIdx + 1]?.timeMs ?? beatStart;
+        const duration = beatEnd - beatStart;
+        const fraction = duration > 0 ? Math.min(1, (timeMs - beatStart) / duration) : 0;
+        return { measure: entry.measure, beatIndex: i, fraction };
+      }
+    }
+    return { measure: entry.measure, beatIndex: 0, fraction: 0 };
+  }
+
+  // Fallback: even division
+  const measureStart = entry.timeMs;
+  const measureEnd = timemap[tmIdx + 1]?.timeMs ?? measureStart;
+  const measureDuration = measureEnd - measureStart;
+  if (measureDuration <= 0) return { measure: entry.measure, beatIndex: 0, fraction: 0 };
+
+  const elapsed = timeMs - measureStart;
+  const beatDuration = measureDuration / beatsPerMeasure;
+  const beatIndex = Math.min(beatsPerMeasure - 1, Math.floor(elapsed / beatDuration));
+  const beatStart = beatIndex * beatDuration;
+  const fraction = Math.min(1, (elapsed - beatStart) / beatDuration);
+  return { measure: entry.measure, beatIndex, fraction };
+}
+
+/**
  * Validates hardware active MIDI pitches against parsed Tone.js AST matrices.
  * Evaluates Lenient/Strict threshold intersections alongside repeated identical-chord release-latching.
  */

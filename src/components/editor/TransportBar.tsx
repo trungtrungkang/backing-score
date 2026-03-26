@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Pause, Square, Repeat, Activity, Clock, RefreshCw, Minus, Plus, Grid, Edit3 } from "lucide-react";
+import { Play, Pause, Square, Repeat, Activity, Clock, RefreshCw, Minus, Plus, Grid, Edit3, Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRef, useState, useEffect } from "react";
@@ -54,6 +54,10 @@ export interface TransportBarProps {
   disabled?: boolean;
   className?: string;
   title?: string;
+  /** Sync key bindings */
+  syncDownbeatKey?: string;
+  syncUpbeatKey?: string;
+  onSyncKeyChange?: (downbeat: string, upbeat: string) => void;
 }
 
 function formatTime(ms: number): string {
@@ -144,6 +148,90 @@ function formatMeasure(ms: number, bpm: number, timeSignature: string, timemap?:
 
 const DEFAULT_LOOP: LoopState = { enabled: false, startBar: 1, endBar: 4 };
 
+/** Map KeyboardEvent.code to display label */
+function keyCodeLabel(code: string): string {
+  if (code === "Space") return "SPACE";
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  if (code === "Enter") return "ENTER";
+  return code;
+}
+
+function SyncKeyConfigPopover({ downbeatKey, upbeatKey, onKeyChange, disabled }: {
+  downbeatKey: string; upbeatKey: string; onKeyChange: (d: string, u: string) => void; disabled?: boolean;
+}) {
+  const [capturing, setCapturing] = useState<"downbeat" | "upbeat" | null>(null);
+
+  useEffect(() => {
+    if (!capturing) return;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const code = e.code;
+      // Validate: can't be the same as the other key
+      if (capturing === "downbeat" && code !== upbeatKey) {
+        onKeyChange(code, upbeatKey);
+      } else if (capturing === "upbeat" && code !== downbeatKey) {
+        onKeyChange(downbeatKey, code);
+      }
+      setCapturing(null);
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [capturing, downbeatKey, upbeatKey, onKeyChange]);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          disabled={disabled}
+          className="h-9 px-2 flex flex-col items-center justify-center rounded-[4px] border border-transparent hover:border-zinc-300 dark:hover:border-zinc-700/50 hover:bg-zinc-200 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+          title="Configure Sync Key Bindings"
+        >
+          <Keyboard className="w-4 h-4 mb-0.5" />
+          <span className="text-[9px] uppercase font-bold tracking-wider">Keys</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 bg-white dark:bg-[#1A1A1E] border-zinc-300 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-3 shadow-xl" sideOffset={8}>
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Sync Key Bindings</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">Downbeat</span>
+              <button
+                onClick={() => setCapturing("downbeat")}
+                className={cn(
+                  "px-3 py-1 rounded border text-xs font-mono font-bold transition-colors min-w-[60px] text-center",
+                  capturing === "downbeat"
+                    ? "bg-red-100 dark:bg-red-900/40 border-red-400 text-red-600 animate-pulse"
+                    : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400"
+                )}
+              >
+                {capturing === "downbeat" ? "Press..." : keyCodeLabel(downbeatKey)}
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">Upbeat</span>
+              <button
+                onClick={() => setCapturing("upbeat")}
+                className={cn(
+                  "px-3 py-1 rounded border text-xs font-mono font-bold transition-colors min-w-[60px] text-center",
+                  capturing === "upbeat"
+                    ? "bg-red-100 dark:bg-red-900/40 border-red-400 text-red-600 animate-pulse"
+                    : "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-blue-400"
+                )}
+              >
+                {capturing === "upbeat" ? "Press..." : keyCodeLabel(upbeatKey)}
+              </button>
+            </div>
+          </div>
+          <p className="text-[10px] text-zinc-400 leading-tight">Click a button, then press the key you want to use.</p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function TransportBar({
   bpm = 120,
   onBpmChange,
@@ -176,6 +264,9 @@ export function TransportBar({
   disabled = false,
   className,
   title = "Untitled",
+  syncDownbeatKey = "Space",
+  syncUpbeatKey = "KeyD",
+  onSyncKeyChange,
 }: TransportBarProps) {
   // During playback, read from positionMsRef via internal RAF to avoid parent re-renders
   const [displayMs, setDisplayMs] = useState(positionMs);
@@ -461,6 +552,16 @@ export function TransportBar({
           <RefreshCw className="w-4 h-4 mb-0.5" />
           <span className="text-[9px] uppercase font-bold tracking-wider">Map</span>
         </button>
+
+        {/* Sync Key Config */}
+        {onSyncKeyChange && (
+          <SyncKeyConfigPopover
+            downbeatKey={syncDownbeatKey}
+            upbeatKey={syncUpbeatKey}
+            onKeyChange={onSyncKeyChange}
+            disabled={disabled}
+          />
+        )}
         
         <button
           onClick={onToggleElasticGrid}

@@ -6,8 +6,9 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Waveform } from "./Waveform";
 import { PianoRollRegion } from "./PianoRollRegion";
+import { TempoMapTrack } from "./TempoMapTrack";
 import { AudioManager } from "@/lib/audio/AudioManager";
-import { ChevronDown, ChevronUp, MoveRight, Trash2, Plus, Info, Music } from "lucide-react";
+import { ChevronDown, ChevronUp, MoveRight, Trash2, Plus, Info, Music, Map } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Midi } from "@tonejs/midi";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -90,6 +91,7 @@ export function TrackList({
   const [openInstTrackId, setOpenInstTrackId] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [showTempoMap, setShowTempoMap] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const playheadRef = useRef<HTMLDivElement>(null);
@@ -208,6 +210,23 @@ export function TrackList({
             AUTO SCROLL
           </button>
 
+          {/* Tempo Map Toggle */}
+          {timemap.length > 0 && (
+            <button
+              onClick={() => setShowTempoMap(!showTempoMap)}
+              className={cn(
+                "flex items-center justify-center h-5 px-2 rounded-sm transition-colors border text-[10px] font-bold tracking-wider",
+                showTempoMap
+                  ? "bg-amber-100 text-amber-600 border-amber-200 hover:bg-amber-200 dark:bg-amber-600/30 dark:text-amber-400 dark:border-amber-500/50 dark:hover:bg-amber-600/40"
+                  : "bg-zinc-100 text-zinc-500 border-zinc-200 hover:text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-500 dark:border-zinc-700 dark:hover:text-zinc-300 dark:hover:bg-zinc-700"
+              )}
+              title={showTempoMap ? "Hide Tempo Map" : "Show Tempo Map"}
+            >
+              <Map className="w-3 h-3 mr-1" />
+              TEMPO MAP
+            </button>
+          )}
+
           {/* Zoom Controls */}
           {isExpanded && (
             <div className="flex items-center gap-2 border border-zinc-200 dark:border-zinc-700/50 rounded-md px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-900/50 transition-colors">
@@ -283,6 +302,25 @@ export function TrackList({
           {tracks.length === 0 && (
             <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium flex-1 flex items-center justify-center p-4 sticky left-0 w-full min-h-[100px] border-b border-zinc-200 dark:border-zinc-800/50 transition-colors">
               No audio tracks loaded. You can use the Metronome to practice with the timeline grid.
+            </div>
+          )}
+
+          {/* Tempo Map Track Row */}
+          {isExpanded && showTempoMap && timemap.length > 0 && (
+            <div className="flex items-center h-[40px] bg-zinc-800 dark:bg-[#1a1a20] border-b border-zinc-900/80 dark:border-zinc-800/50">
+              <div className="w-64 h-full flex items-center px-3 gap-2 border-r border-zinc-900 dark:border-zinc-800/50 bg-[#161619] shrink-0 sticky left-0 z-20">
+                <Map className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Tempo Map</span>
+                <span className="ml-auto text-[9px] text-zinc-500 font-mono">{timemap.length}m</span>
+              </div>
+              <div className="flex-1 h-full relative">
+                <TempoMapTrack
+                  timemap={timemap}
+                  durationMs={durationMs}
+                  positionMs={positionMs}
+                  onSeek={onSeek}
+                />
+              </div>
             </div>
           )}
 

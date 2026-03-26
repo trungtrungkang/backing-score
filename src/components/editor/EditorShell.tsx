@@ -126,7 +126,7 @@ export function EditorShell({
 
   // Sync Mode State
   const [isSyncMode, setIsSyncMode] = useState(false);
-  const [recordedTimemap, setRecordedTimemap] = useState<{ measure: number; timeMs: number }[]>([]);
+  const [recordedTimemap, setRecordedTimemap] = useState<{ measure: number; timeMs: number; beatTimestamps?: number[] }[]>([]);
   const [showMapEditor, setShowMapEditor] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -225,39 +225,83 @@ export function EditorShell({
   const handleCancelSync = useCallback(() => { setIsSyncMode(false); setRecordedTimemap([]); }, []);
 
 
-  // Spacebar Play/Pause & Sync Mode Listener
+  // Sync Mode: total beat count across all measures for HUD display
+  const syncTotalBeatCountRef = useRef(0);
+  const syncCurrentBeatRef = useRef(0);
+  const syncCurrentMeasureRef = useRef(0);
+
+  // Configurable sync keys (read from project metadata, default Space + D)
+  const syncDownbeatKey = payload.metadata?.syncDownbeatKey || "Space";
+  const syncUpbeatKey = payload.metadata?.syncUpbeatKey || "KeyD";
+
+  // Spacebar Play/Pause & Sync Mode Listener (2-key beat-level tapping)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA" || document.activeElement?.hasAttribute("contenteditable")) return;
-      if (e.code === "Space") {
+
+      const isDownbeat = e.code === syncDownbeatKey;
+      const isUpbeat = e.code === syncUpbeatKey;
+
+      if (isDownbeat || (isSyncMode && isUpbeat)) {
         e.preventDefault();
         e.stopPropagation();
-        // Blur focused buttons to prevent native click on keyup (e.g. Stop button)
+        // Blur focused buttons to prevent native click on keyup
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+
         if (isSyncMode) {
           if (!isPlayingRef.current) {
-            if (recordedTimemapRef.current.length === 0 && audioManagerRef.current) {
+            // Not playing yet — first downbeat starts playback + records measure 1 at t=0
+            if (isDownbeat && recordedTimemapRef.current.length === 0 && audioManagerRef.current) {
               if (audioManagerRef.current.getCurrentPositionMs() !== 0) audioManagerRef.current.seek(0);
               await audioManagerRef.current.play();
-              setRecordedTimemap([{ measure: 1, timeMs: 0 }]);
+              setRecordedTimemap([{ measure: 1, timeMs: 0, beatTimestamps: [0] }]);
+              syncTotalBeatCountRef.current = 1;
+              syncCurrentBeatRef.current = 1;
+              syncCurrentMeasureRef.current = 1;
             }
           } else {
             const preciseTime = audioManagerRef.current?.getCurrentPositionMs() ?? 0;
-            setRecordedTimemap(prev => {
-              const lastTap = prev[prev.length - 1];
-              if (lastTap && (preciseTime - lastTap.timeMs < 200)) return prev;
-              return [...prev, { measure: prev.length + 1, timeMs: Math.round(preciseTime) }];
-            });
+
+            if (isDownbeat) {
+              // DOWNBEAT: start a new measure
+              setRecordedTimemap(prev => {
+                const lastTap = prev[prev.length - 1];
+                if (lastTap && (preciseTime - lastTap.timeMs < 200)) return prev;
+                const roundedTime = Math.round(preciseTime);
+                syncCurrentMeasureRef.current = prev.length + 1;
+                syncCurrentBeatRef.current = 1;
+                syncTotalBeatCountRef.current++;
+                return [...prev, { measure: prev.length + 1, timeMs: roundedTime, beatTimestamps: [roundedTime] }];
+              });
+            } else if (isUpbeat) {
+              // UPBEAT: add beat to current measure's beatTimestamps
+              setRecordedTimemap(prev => {
+                if (prev.length === 0) return prev;
+                const roundedTime = Math.round(preciseTime);
+                const last = prev[prev.length - 1];
+                const lastBeat = last.beatTimestamps?.[last.beatTimestamps.length - 1] ?? last.timeMs;
+                if (roundedTime - lastBeat < 100) return prev; // debounce
+                const updated = [...prev];
+                const currentBeats = [...(last.beatTimestamps || [last.timeMs]), roundedTime];
+                updated[updated.length - 1] = { ...last, beatTimestamps: currentBeats };
+                syncCurrentBeatRef.current = currentBeats.length;
+                syncTotalBeatCountRef.current++;
+                return updated;
+              });
+            }
           }
         } else {
-          isPlayingRef.current ? handlePause() : handlePlay();
+          // Normal mode: Space = play/pause toggle
+          if (isDownbeat) {
+            isPlayingRef.current ? handlePause() : handlePlay();
+          }
         }
       }
     };
-    // Prevent Space keyup from triggering native button click (Chromium captures target on keydown)
+    // Prevent keyup from triggering native button click (for both keys)
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if ((e.code === syncDownbeatKey || e.code === syncUpbeatKey) && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
         e.preventDefault();
         e.stopPropagation();
       }
@@ -265,7 +309,7 @@ export function EditorShell({
     window.addEventListener("keydown", handleKeyDown, true);
     window.addEventListener("keyup", handleKeyUp, true);
     return () => { window.removeEventListener("keydown", handleKeyDown, true); window.removeEventListener("keyup", handleKeyUp, true); };
-  }, [isSyncMode, handlePlay, handlePause, audioManagerRef, isPlayingRef]);
+  }, [isSyncMode, handlePlay, handlePause, audioManagerRef, isPlayingRef, syncDownbeatKey, syncUpbeatKey]);
 
 
   const activeLoopPoints = useMemo(() => {
@@ -631,6 +675,11 @@ export function EditorShell({
         onToggleMapEditor={() => setShowMapEditor(!showMapEditor)}
         disabled={loadingAudio}
         title={projectName || "Untitled"}
+        syncDownbeatKey={syncDownbeatKey}
+        syncUpbeatKey={syncUpbeatKey}
+        onSyncKeyChange={onPayloadChange ? (d, u) => {
+          onPayloadChange({ ...payload, metadata: { ...payload.metadata, syncDownbeatKey: d, syncUpbeatKey: u } });
+        } : undefined}
       />
       {/* Action Sub-Bar */}
       <EditorActionBar
@@ -679,6 +728,10 @@ export function EditorShell({
           recordedTimemap={recordedTimemap}
           onCancel={handleCancelSync}
           onSave={handleSaveSyncMap}
+          downbeatKey={syncDownbeatKey}
+          upbeatKey={syncUpbeatKey}
+          syncCurrentMeasureRef={syncCurrentMeasureRef}
+          syncCurrentBeatRef={syncCurrentBeatRef}
         />
       )}
 

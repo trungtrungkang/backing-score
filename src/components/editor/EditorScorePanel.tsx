@@ -176,6 +176,7 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
           positionMs={positionMs}
           onPayloadChange={onPayloadChange}
           onClose={onCloseMapEditor}
+          onSeek={onSeek}
         />
       )}
     </div>

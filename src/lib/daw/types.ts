@@ -35,11 +35,19 @@ export interface FileMetadata {
   scoreSynthOffsetMs?: number;
   scoreMidiInstrumentOverrides?: Record<number, number>; // trackIndex → GM program (1-indexed)
   scoreMidiPerTrackVolume?: Record<number, number>; // trackIndex → volume (0-1)
+  /** Configurable key code for sync mode downbeat (measure start). Default: "Space" */
+  syncDownbeatKey?: string;
+  /** Configurable key code for sync mode upbeat (subsequent beats). Default: "KeyD" */
+  syncUpbeatKey?: string;
 }
 
 export interface TimemapEntry {
   timeMs: number;
   measure: number;
+  /** Per-beat timestamps recorded via beat-level tapping [beat1Ms, beat2Ms, ...].
+   *  beatTimestamps[0] === timeMs (the downbeat). When present, playhead uses these
+   *  for sub-measure interpolation instead of even division by BPM. */
+  beatTimestamps?: number[];
   timeSignature?: string; // Optional dynamic meter override (e.g. "6/8")
   tempo?: number; // Optional dynamic tempo override (BPM) at this measure
   durationInQuarters?: number; // Actual duration of this measure in quarter notes (for pickups/anacrusis)

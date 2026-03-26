@@ -5,19 +5,22 @@ import Draggable from "react-draggable";
 import type { DAWPayload } from "@/lib/daw/types";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
+import { BeatTimelineEditor } from "./BeatTimelineEditor";
 
 interface MeasureMapEditorProps {
   payload: DAWPayload;
   positionMs: number;
   onPayloadChange: (payload: DAWPayload) => void;
   onClose: () => void;
+  onSeek?: (timeMs: number) => void;
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
 
-export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose }: MeasureMapEditorProps) {
+export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose, onSeek }: MeasureMapEditorProps) {
   const { confirm, prompt } = useDialogs();
   const currentMap = payload.notationData?.measureMap || {};
+  const [selectedBeatMeasure, setSelectedBeatMeasure] = useState<number | null>(null);
   
   // Convert object { "60": 50 } to array [{ latent: 60, physical: 50 }] for rendering
   const entriesList = Object.entries(currentMap)
@@ -83,6 +86,7 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
     setNewPhysical(currentPhysical.toString());
     setSigLatent(latent.toString());
     if (currentSig) setSigValue(currentSig);
+    setSelectedBeatMeasure(prev => prev === latent ? null : latent);
   };
 
   const handleAdd = () => {
@@ -235,6 +239,7 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
                 const hasSig = t.timeSignature !== undefined;
                 const hasTempo = t.tempo !== undefined;
                 const isActive = latent === activeLatent;
+                const isSelected = latent === selectedBeatMeasure;
 
                 return (
                   <button
@@ -242,10 +247,10 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
                     onClick={() => handleMeasureClick(latent, physical, t.timeSignature)}
                     className={`
                       relative flex flex-col items-center justify-center p-1 rounded border text-xs cursor-pointer transition-colors
-                      ${isActive ? 'bg-blue-100 border-blue-400 text-blue-900 shadow-sm' : 'bg-background border-border hover:bg-muted/50'}
-                      ${isAnchor ? 'ring-1 ring-orange-400 border-orange-400' : ''}
-                      ${hasSig && !isAnchor ? 'ring-1 ring-purple-400 border-purple-400' : ''}
-                      ${hasTempo && !isAnchor && !hasSig ? 'ring-1 ring-red-400 border-red-400' : ''}
+                      ${isSelected ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-900 dark:text-green-200 shadow-sm ring-2 ring-green-400' : isActive ? 'bg-blue-100 border-blue-400 text-blue-900 shadow-sm' : 'bg-background border-border hover:bg-muted/50'}
+                      ${isAnchor && !isSelected ? 'ring-1 ring-orange-400 border-orange-400' : ''}
+                      ${hasSig && !isAnchor && !isSelected ? 'ring-1 ring-purple-400 border-purple-400' : ''}
+                      ${hasTempo && !isAnchor && !hasSig && !isSelected ? 'ring-1 ring-red-400 border-red-400' : ''}
                     `}
                     title={`Audio Measure ${latent} ➔ Sheet Measure ${physical} ${hasSig ? `(${t.timeSignature})` : ''} ${hasTempo ? `[♩=${t.tempo}]` : ''}`}
                   >
@@ -260,6 +265,14 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
             </div>
           </div>
         )}
+
+        {/* Beat Timeline Editor */}
+        <BeatTimelineEditor
+          timemap={timemap}
+          selectedMeasure={selectedBeatMeasure}
+          onTimemapChange={updatePayloadTimemap}
+          onSeek={onSeek}
+        />
       </div>
 
       <div className="p-3 bg-muted/30 border-t border-border mt-auto flex flex-col gap-3">
