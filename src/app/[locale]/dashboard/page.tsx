@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, Heart, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +26,9 @@ import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { useSearchParams } from "next/navigation";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { canCreate } from "@/lib/auth/roles";
+import { QuickEditModal } from "@/components/QuickEditModal";
 
 function formatDate(iso: string) {
   try {
@@ -55,6 +57,7 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectDocument | null>(null);
   const { confirm } = useDialogs();
   const searchParams = useSearchParams();
 
@@ -185,39 +188,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-6 hidden md:flex flex-col gap-8 sticky top-16 h-[calc(100vh-4rem)]">
-        <div>
-          <h2 className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-4">{t("yourLibrary")}</h2>
-          <nav className="flex flex-col gap-1">
-            <button className="flex items-center gap-3 px-3 py-2 rounded-md bg-zinc-800/80 text-white font-medium transition-colors">
-              <CloudUpload className="w-4 h-4 text-blue-400" />
-              {t("myUploadsNav")}
-            </button>
-            <Link href="/dashboard/collections" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <FolderOpen className="w-4 h-4" />
-              {t("collections")}
-            </Link>
-            <Link href="/dashboard/favorites" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Heart className="w-4 h-4" />
-              {t("favorites")}
-            </Link>
-            
-            <Link href="/dashboard/courses" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors border-t border-zinc-800/50 pt-3">
-              <GraduationCap className="w-4 h-4 text-[#C8A856]" />
-              {t("creatorCourses")}
-            </Link>
-            
-            <Link href="/guide" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Globe className="w-4 h-4" />
-              {t("userGuide")}
-            </Link>
-            <Link href="/pricing" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Crown className="w-4 h-4 text-[#C8A856]" />
-              Premium
-            </Link>
-          </nav>
-        </div>
-      </aside>
+      <DashboardSidebar />
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
@@ -280,6 +251,39 @@ export default function DashboardPage() {
               )}
             </div>
           </header>
+
+          {/* Stats Summary */}
+          {!loading && projects.length > 0 && (
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                  <Music4 className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.length}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total</div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
+                  <Globe className="w-4 h-4 text-green-500" />
+                </div>
+                <div>
+                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.filter(p => p.published).length}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Published</div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                  <Play className="w-4 h-4 text-purple-500" />
+                </div>
+                <div>
+                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.reduce((sum, p) => sum + ((p as any).playCount || 0), 0)}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total Plays</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-8 p-4 bg-red-950/50 border border-red-900 rounded-xl text-red-400 text-center backdrop-blur-sm">
@@ -400,6 +404,13 @@ export default function DashboardPage() {
                               {t("edit")}
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); setEditingProject(p); }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            Quick Edit
+                          </DropdownMenuItem>
                           {canCreate(user.labels) && (
                             <DropdownMenuItem
                               onClick={(e) => handlePublishToggle(e as any, p)}
@@ -428,6 +439,17 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Quick Edit Modal */}
+        {editingProject && (
+          <QuickEditModal
+            project={editingProject}
+            onClose={() => setEditingProject(null)}
+            onSaved={(updated) => {
+              setProjects(prev => prev.map(p => p.$id === updated.$id ? { ...p, ...updated } : p));
+            }}
+          />
+        )}
       </main>
     </div>
   );

@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  CloudUpload, Heart, Globe, PlaySquare, FolderOpen, 
+  Heart, PlaySquare, Globe,
   Trash2, Music4, ListMusic, ExternalLink
 } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import {
   PlaylistDocument
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
 
 type EnrichedFavorite = FavoriteDocument & {
   projectDetails?: ProjectDocument;
@@ -109,30 +110,7 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex border-t border-zinc-200 dark:border-zinc-900">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-6 hidden md:flex flex-col gap-8 sticky top-16 h-[calc(100vh-4rem)]">
-        <div>
-          <h2 className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-4">Your Library</h2>
-          <nav className="flex flex-col gap-1">
-            <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <CloudUpload className="w-4 h-4" />
-              My Uploads
-            </Link>
-            <Link href="/dashboard/collections" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <FolderOpen className="w-4 h-4" />
-              Collections
-            </Link>
-            <button className="flex items-center gap-3 px-3 py-2 rounded-md bg-zinc-800/80 text-white font-medium transition-colors">
-              <Heart className="w-4 h-4 text-rose-500" />
-              Favorites
-            </button>
-            
-            <Link href="/discover" className="flex items-center gap-3 px-3 py-2 mt-4 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Globe className="w-4 h-4" />
-              Global Discover
-            </Link>
-          </nav>
-        </div>
-      </aside>
+      <DashboardSidebar />
 
       {/* Main Content */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
