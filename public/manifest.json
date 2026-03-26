@@ -1,0 +1,27 @@
+{
+  "name": "Backing & Score",
+  "short_name": "BackingScore",
+  "description": "Interactive sheet music & play-along library with real-time pitch detection",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E0E11",
+  "theme_color": "#C8A856",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["music", "education", "entertainment"],
+  "lang": "en",
+  "dir": "ltr"
+}
