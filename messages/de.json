@@ -53,7 +53,10 @@
     "addFavorite": "Zu Favoriten hinzufügen",
     "removeFavorite": "Aus Favoriten entfernen",
     "editProject": "Stück bearbeiten",
-    "duplicateProject": "Stück duplizieren"
+    "duplicateProject": "Duplicate Piece",
+    "recentlyAdded": "Recently Added",
+    "trending": "Trending",
+    "popularFavorites": "Popular Favorites"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score Akademie",

@@ -56,7 +56,10 @@
     "addFavorite": "Thêm vào Yêu thích",
     "removeFavorite": "Bỏ Yêu thích",
     "editProject": "Chỉnh sửa tác phẩm",
-    "duplicateProject": "Nhân bản tác phẩm"
+    "duplicateProject": "Nhân bản tác phẩm",
+    "recentlyAdded": "Mới thêm gần đây",
+    "trending": "Thịnh hành",
+    "popularFavorites": "Được yêu thích nhất"
   },
   "Academy": {
     "welcomeTitle": "Học viện Backing & Score",

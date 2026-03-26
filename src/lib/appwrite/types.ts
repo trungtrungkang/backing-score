@@ -34,6 +34,11 @@ export interface ProjectDocument {
   wikiComposerIds?: string[];
   /** Play count for discovery ranking (Sprint 1) */
   playCount?: number;
+  /** Admin-curated featured flag for Discover page */
+  featured?: boolean;
+  featuredAt?: string;
+  /** Denormalized favorite count for sorting */
+  favoriteCount?: number;
 }
 
 export type ProjectPayload = Record<string, any>;

@@ -53,7 +53,10 @@
     "addFavorite": "즐겨찾기에 추가",
     "removeFavorite": "즐겨찾기에서 제거",
     "editProject": "곡 수정",
-    "duplicateProject": "곡 복제"
+    "duplicateProject": "Duplicate Piece",
+    "recentlyAdded": "Recently Added",
+    "trending": "Trending",
+    "popularFavorites": "Popular Favorites"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score 아카데미",

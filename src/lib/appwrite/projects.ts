@@ -320,3 +320,61 @@ export async function listProjectsByArtist(artistId: string, limit = 20): Promis
   return documents as unknown as ProjectDocument[];
 }
 
+// ==========================================
+// Discovery Section Queries
+// ==========================================
+
+/** List admin-curated featured projects for Discover hero section. */
+export async function listFeatured(limit = 6): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.equal("featured", true),
+    Query.orderDesc("featuredAt"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+
+/** List most recently published projects. */
+export async function listRecentlyPublished(limit = 8): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.orderDesc("publishedAt"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+
+/** List trending projects by play count. */
+export async function listTrending(limit = 8): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.orderDesc("playCount"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+
+/** List most favorited projects. */
+export async function listMostFavorited(limit = 8): Promise<ProjectDocument[]> {
+  const queries = [
+    Query.equal("published", true),
+    Query.orderDesc("favoriteCount"),
+    Query.limit(limit),
+  ];
+  const { documents } = await databases.listDocuments(dbId, collId, queries);
+  return documents as unknown as ProjectDocument[];
+}
+
+/** Admin: toggle featured status on a project. */
+export async function setFeatured(projectId: string, featured: boolean): Promise<ProjectDocument> {
+  const body: Record<string, unknown> = {
+    featured,
+    featuredAt: featured ? new Date().toISOString() : null,
+  };
+  const doc = await databases.updateDocument(dbId, collId, projectId, body);
+  return doc as unknown as ProjectDocument;
+}

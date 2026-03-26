@@ -53,7 +53,10 @@
     "addFavorite": "添加到收藏",
     "removeFavorite": "取消收藏",
     "editProject": "编辑作品",
-    "duplicateProject": "复制作品"
+    "duplicateProject": "Duplicate Piece",
+    "recentlyAdded": "Recently Added",
+    "trending": "Trending",
+    "popularFavorites": "Popular Favorites"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score 学院",

@@ -37,6 +37,11 @@ export {
   copyProjectToMine,
   incrementPlayCount,
   publishMyProject,
+  listFeatured,
+  listRecentlyPublished,
+  listTrending,
+  listMostFavorited,
+  setFeatured,
 } from "./projects";
 export {
   uploadProjectFile,

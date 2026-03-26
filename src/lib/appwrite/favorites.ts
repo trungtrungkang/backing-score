@@ -4,7 +4,7 @@
  */
 
 import { account, databases, ID, Query, Permission, Role } from "./client";
-import { APPWRITE_DATABASE_ID, APPWRITE_FAVORITES_COLLECTION_ID } from "./constants";
+import { APPWRITE_DATABASE_ID, APPWRITE_FAVORITES_COLLECTION_ID, APPWRITE_PROJECTS_COLLECTION_ID } from "./constants";
 import type { FavoriteDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -31,6 +31,10 @@ export async function toggleFavorite(
   if (documents.length > 0) {
     // Already favorited, so unfavorite it
     await databases.deleteDocument(dbId, collId, documents[0].$id);
+    // Decrement favoriteCount on target (fire-and-forget)
+    if (targetType === "project") {
+      syncFavoriteCount(targetId, -1);
+    }
     return false; // Now unfavorited
   } else {
     // Add favorite
@@ -48,8 +52,24 @@ export async function toggleFavorite(
         Permission.delete(Role.user(user.$id))
       ]
     );
+    // Increment favoriteCount on target (fire-and-forget)
+    if (targetType === "project") {
+      syncFavoriteCount(targetId, 1);
+    }
     return true; // Now favorited
   }
+}
+
+/** Fire-and-forget helper to sync favoriteCount on a project document. */
+function syncFavoriteCount(projectId: string, delta: number) {
+  databases.getDocument(dbId, APPWRITE_PROJECTS_COLLECTION_ID, projectId)
+    .then((doc) => {
+      const current = (doc as any).favoriteCount ?? 0;
+      return databases.updateDocument(dbId, APPWRITE_PROJECTS_COLLECTION_ID, projectId, {
+        favoriteCount: Math.max(0, current + delta),
+      });
+    })
+    .catch(() => { /* non-critical */ });
 }
 
 /** Check if the current user has favorited a specific item. */

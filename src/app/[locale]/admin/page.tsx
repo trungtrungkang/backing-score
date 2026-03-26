@@ -5,7 +5,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { listAllUsers, toggleUserLabel } from "@/app/actions/admin";
 import { toast } from "sonner";
-import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight, ClipboardList, Sparkles } from "lucide-react";
+import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight, ClipboardList, Sparkles, Star } from "lucide-react";
 import { canAccessAdmin } from "@/lib/auth/roles";
 
 interface UserInfo {
@@ -136,6 +136,17 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-zinc-400">Enrich projects with AI descriptions & tags</p>
           </div>
           <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-violet-500 transition-colors" />
+        </Link>
+
+        <Link href="/admin/featured" className="group bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 rounded-2xl p-5 flex items-center gap-4 hover:border-amber-400/50 hover:shadow-lg hover:shadow-amber-400/5 transition-all">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+            <Star className="w-6 h-6 text-amber-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-zinc-900 dark:text-white text-sm group-hover:text-amber-500 transition-colors">Featured Content</h2>
+            <p className="text-xs text-zinc-400">Curate Discover page featured section</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-amber-500 transition-colors" />
         </Link>
       </div>
 
