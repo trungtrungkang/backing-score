@@ -3,17 +3,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Bell, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import {
   listMyNotifications,
   markAllNotificationsRead,
+  markNotificationRead,
   type NotificationDoc,
 } from "@/lib/appwrite/notifications";
 
 export function NotificationBell() {
   const { user } = useAuth();
   const t = useTranslations("Notifications");
+  const router = useRouter();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +52,6 @@ export function NotificationBell() {
   }, [loadNotifications]);
 
   // Poll for new notifications every 30 seconds
-  // (Appwrite Realtime requires WebSocket support which may not always be available)
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(loadNotifications, 30_000);
@@ -59,6 +63,38 @@ export function NotificationBell() {
     if (!user) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     await markAllNotificationsRead(user.$id);
+  };
+
+  // Build navigation URL for a notification
+  const getNotificationUrl = (n: NotificationDoc): string | null => {
+    switch (n.type) {
+      case "follow":
+        return n.sourceUserId ? `/${locale}/u/${n.sourceUserId}` : null;
+      case "comment":
+      case "like":
+        if (n.targetType === "project" && n.targetId) {
+          return `/${locale}/play/${n.targetId}`;
+        }
+        if (n.targetType === "post" && n.targetId) {
+          return `/${locale}/feed/post/${n.targetId}`;
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  // Handle click on notification item
+  const handleNotificationClick = (n: NotificationDoc) => {
+    const url = getNotificationUrl(n);
+    if (!n.read) {
+      markNotificationRead(n.$id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((item) => (item.$id === n.$id ? { ...item, read: true } : item))
+      );
+    }
+    setOpen(false);
+    if (url) router.push(url);
   };
 
   if (!user) return null;
@@ -145,33 +181,39 @@ export function NotificationBell() {
                 </div>
               ) : (
                 <div className="flex flex-col">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.$id}
-                      className={`px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0 transition-colors ${
-                        !n.read
-                          ? "bg-blue-50/50 dark:bg-blue-500/5"
-                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Unread dot */}
-                        <div className="mt-1.5 shrink-0">
-                          {!n.read && (
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-zinc-900 dark:text-white leading-snug">
-                            {formatMessage(n)}
-                          </p>
-                          <p className="text-[10px] text-zinc-400 mt-1">
-                            {timeAgo(n.$createdAt)}
-                          </p>
+                  {notifications.map((n) => {
+                    const hasLink = !!getNotificationUrl(n);
+                    return (
+                      <div
+                        key={n.$id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0 transition-colors ${
+                          hasLink ? "cursor-pointer" : ""
+                        } ${
+                          !n.read
+                            ? "bg-blue-50/50 dark:bg-blue-500/5 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Unread dot */}
+                          <div className="mt-1.5 shrink-0">
+                            {!n.read && (
+                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-zinc-900 dark:text-white leading-snug">
+                              {formatMessage(n)}
+                            </p>
+                            <p className="text-[10px] text-zinc-400 mt-1">
+                              {timeAgo(n.$createdAt)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -181,3 +223,4 @@ export function NotificationBell() {
     </>
   );
 }
+

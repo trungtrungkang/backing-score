@@ -10,7 +10,7 @@
  *   read         (boolean) — default false
  */
 
-import { databases, Query, ID } from "./client";
+import { databases, Query, ID, Permission, Role } from "./client";
 import {
   APPWRITE_DATABASE_ID,
   APPWRITE_NOTIFICATIONS_COLLECTION_ID,
@@ -26,6 +26,7 @@ export interface NotificationDoc {
   type: "like" | "follow" | "comment" | "report_resolved";
   sourceUserName: string;
   sourceUserId: string;
+  targetType?: string; // 'post' | 'project' | 'user'
   targetName?: string;
   targetId?: string;
   read: boolean;
@@ -55,6 +56,7 @@ export async function createNotification(data: {
   type: NotificationDoc["type"];
   sourceUserName: string;
   sourceUserId: string;
+  targetType?: string;
   targetName?: string;
   targetId?: string;
 }) {
@@ -62,10 +64,18 @@ export async function createNotification(data: {
   if (data.recipientId === data.sourceUserId) return null;
 
   try {
-    return await databases.createDocument(DB, COLL, ID.unique(), {
-      ...data,
-      read: false,
-    });
+    return await databases.createDocument(
+      DB,
+      COLL,
+      ID.unique(),
+      { ...data, read: false },
+      [
+        // Any authenticated user can read/update — query filters by recipientId
+        Permission.read(Role.users()),
+        Permission.update(Role.users()),
+        Permission.delete(Role.users()),
+      ]
+    );
   } catch (err) {
     console.warn("[notifications] Failed to create notification:", err);
     return null;

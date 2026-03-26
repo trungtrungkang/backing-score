@@ -13,6 +13,7 @@ import {
   APPWRITE_COMMENTS_COLLECTION_ID,
   APPWRITE_REACTIONS_COLLECTION_ID,
   APPWRITE_FOLLOWS_COLLECTION_ID,
+  APPWRITE_PROJECTS_COLLECTION_ID,
   isAppwriteConfigured
 } from "./constants";
 import { createNotification } from "./notifications";
@@ -142,6 +143,7 @@ export async function followUser(targetUserId: string): Promise<boolean> {
       type: "follow",
       sourceUserName: user.name || user.email?.split("@")[0] || "Someone",
       sourceUserId: user.$id,
+      targetType: "user",
     }).catch(() => {});
     return true;
   } catch (e: any) {
@@ -194,6 +196,21 @@ export async function checkIsFollowing(targetUserId: string): Promise<boolean> {
   }
 }
 
+/** Fetch a single post by ID */
+export async function getPost(postId: string): Promise<PostDocument | null> {
+  if (!isAppwriteConfigured()) return null;
+  try {
+    const doc = await databases.getDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_POSTS_COLLECTION_ID,
+      postId
+    );
+    return doc as unknown as PostDocument;
+  } catch {
+    return null;
+  }
+}
+
 // ==========================================
 // COMMENTS & REACTIONS
 // ==========================================
@@ -217,6 +234,23 @@ export async function addComment(postId: string, content: string): Promise<Comme
       clientPermission.delete(clientRole.user(user.$id)),
     ]
   );
+
+  // Notify the post author about the comment
+  try {
+    const post = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_POSTS_COLLECTION_ID, postId);
+    if (post.authorId && post.authorId !== user.$id) {
+      createNotification({
+        recipientId: post.authorId,
+        type: "comment",
+        sourceUserName: user.name || user.email?.split("@")[0] || "Someone",
+        sourceUserId: user.$id,
+        targetType: "post",
+        targetName: (post.content || "").slice(0, 50) || "a post",
+        targetId: postId,
+      }).catch(() => {});
+    }
+  } catch { /* post lookup failed, skip notification */ }
+
   return doc as unknown as CommentDocument;
 }
 
@@ -278,8 +312,33 @@ export async function toggleReaction(targetType: "post"|"comment"|"project"|"pla
       ]
     );
     // Fire-and-forget notification for likes
-    // Note: targetOwnerId would need to be resolved by the caller or a lookup
-    // For now, we skip notification here — it will be triggered by the UI component
+    // Look up the target owner to send notification
+    (async () => {
+      try {
+        let ownerId: string | null = null;
+        let targetName = "";
+        if (targetType === "post") {
+          const post = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_POSTS_COLLECTION_ID, targetId);
+          ownerId = post.authorId;
+          targetName = (post.content || "").slice(0, 50) || "a post";
+        } else if (targetType === "project") {
+          const proj = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_PROJECTS_COLLECTION_ID, targetId);
+          ownerId = proj.userId || proj.ownerId;
+          targetName = proj.name || proj.title || "a project";
+        }
+        if (ownerId && ownerId !== user.$id) {
+          await createNotification({
+            recipientId: ownerId,
+            type: "like",
+            sourceUserName: user.name || user.email?.split("@")[0] || "Someone",
+            sourceUserId: user.$id,
+            targetType,
+            targetName,
+            targetId,
+          });
+        }
+      } catch { /* owner lookup failed, skip notification */ }
+    })();
     return true; // Reacted
   }
 }

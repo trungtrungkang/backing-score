@@ -167,6 +167,7 @@ async function main() {
     { key: "type", type: "string", required: true, size: 64 }, // 'like', 'follow', 'comment', 'report_resolved'
     { key: "sourceUserName", type: "string", required: true, size: 512 },
     { key: "sourceUserId", type: "string", required: true, size: 256 },
+    { key: "targetType", type: "string", required: false, size: 64 }, // 'post', 'project', 'user'
     { key: "targetName", type: "string", required: false, size: 512 },
     { key: "targetId", type: "string", required: false, size: 256 },
     { key: "read", type: "boolean", required: true },
