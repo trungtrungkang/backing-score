@@ -1,7 +1,7 @@
 # Backing & Score — Product Feature Specification
 
-**Version:** 3.0 (Public Beta)  
-**Last Updated:** 2026-03-23  
+**Version:** 4.0 (Public Beta)  
+**Last Updated:** 2026-03-27  
 **Platform:** Web (Next.js) & Mobile-responsive  
 **Backend:** Appwrite (Database, Auth, Storage)
 
@@ -22,10 +22,11 @@
 11. [Embeddable Player](#11-embeddable-player)
 12. [Internationalization (i18n)](#12-internationalization-i18n)
 13. [Authentication & User Profiles](#13-authentication--user-profiles)
-14. [Planned Features — Music Encyclopedia](#14-planned-features--music-encyclopedia)
-15. [Planned Features — Advanced Analytics](#15-planned-features--advanced-analytics)
-16. [Planned Features — Adaptive Learning](#16-planned-features--adaptive-learning)
-17. [Planned Features — Monetization Infrastructure](#17-planned-features--monetization-infrastructure)
+14. [Music Encyclopedia](#14-music-encyclopedia)
+15. [Monetization & Subscription](#15-monetization--subscription)
+16. [Notifications](#16-notifications)
+17. [Planned Features — Advanced Analytics](#17-planned-features--advanced-analytics)
+18. [Planned Features — Adaptive Learning](#18-planned-features--adaptive-learning)
 
 ---
 
@@ -195,10 +196,23 @@ Wait Mode implements the **Deliberate Practice** model:
 ## 6. Discovery & Content Library
 
 ### 6.1 Discover Page (`/discover`)
-- Grid view of all published projects
-- Filter by tags (genre, instrument, difficulty)
-- Filter by author
-- Project cards: cover image, title, author, tags, duration
+
+The Discover page features a **curated, sectioned layout** (similar to Spotify/Netflix) with horizontal scroll sections:
+
+| Section | Icon | Data Source | Sort |
+|---|---|---|---|
+| **Featured** | ⭐ | Admin-curated (`featured=true`) | `featuredAt` DESC |
+| **Recently Added** | 🆕 | All published projects | `publishedAt` DESC |
+| **Trending** | 🔥 | High play-count projects | `playCount` DESC |
+| **Popular Favorites** | 🔖 | Most favorited projects | `favoriteCount` DESC |
+| **Collections** | 📚 | Published playlists | Latest |
+| **All Scores** | 📖 | Full filterable grid | Multiple sort options |
+
+**Hybrid Dedup Strategy:** Featured items are exclusive to the Featured section and filtered out of other sections. Other sections may share content.
+
+**Search behavior:** When a search query is active, curated sections are hidden and only the filterable "All Scores" grid is shown.
+
+**Reusable components:** `HorizontalScroll` — touch-friendly, snap-scrolling container with auto-hiding navigation arrows and edge-fade gradients.
 
 ### 6.2 Collections / Playlists (`/collection/[playlistId]`)
 - User-curated collections of projects
@@ -335,6 +349,10 @@ Wait Mode implements the **Deliberate Practice** model:
 ### 13.2 Admin Panel (`/admin`)
 - Administrative dashboard for platform management
 - Content moderation tools
+- **Featured Content Manager** (`/admin/featured`) — toggle `featured` flag on published projects with search and optimistic UI
+- **AI Enrichment** (`/admin/review`) — auto-analyze projects with Gemini API for metadata
+- **Batch MusicXML Import** (`/admin/import`) — import multiple scores from MusicXML files
+- **Wiki CMS** (`/admin/wiki`) — manage encyclopedia content
 
 ---
 
@@ -451,16 +469,73 @@ API helpers:
 
 ---
 
-## 15. Planned Features — Advanced Analytics
+## 15. Monetization & Subscription ✅
+
+> **Status:** Implemented | **Payment Provider:** LemonSqueezy
+
+### 15.1 Revenue Model (Current)
+- **Free Tier:** Browse freely, play up to 3 pieces per day
+- **Premium Subscription:** Unlimited plays, Wait Mode, PDF/MusicXML exports, full Academy access, ad-free experience
+- Monthly ($4.99) and Yearly ($39.99, save 33%) pricing
+
+### 15.2 Technical Implementation
+
+| Component | Description |
+|---|---|
+| Checkout API | `/api/checkout` — creates LemonSqueezy checkout session |
+| Webhook | `/api/webhooks/lemonsqueezy` — handles subscription events |
+| Subscription Sync | `/api/subscription/sync` — syncs status with Appwrite |
+| Gating | `UpgradePrompt` component — triggered on play limit or Wait Mode toggle for free users |
+| Dashboard | `SubscriptionCard` — shows plan status, manage billing link |
+| Pricing Page | `/pricing` — Free vs Premium comparison with toggle (monthly/yearly) |
+
+### 15.3 Subscription Data (Appwrite)
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | string | Appwrite user ID |
+| `lemonSqueezyCustomerId` | string | LS customer ID |
+| `lemonSqueezySubscriptionId` | string | LS subscription ID |
+| `status` | string | `active`, `cancelled`, `expired` |
+| `planType` | string | `monthly`, `yearly` |
+| `currentPeriodEnd` | datetime | End of current billing period |
+
+---
+
+## 16. Notifications ✅
+
+> **Status:** Implemented
+
+### 16.1 In-App Notification Bell
+- Real-time notification bell in the global header
+- Notification types: like, follow, comment, report_resolved
+- Mark all read functionality
+- "Just now" relative timestamps
+- Clicking a notification navigates to the relevant content
+
+### 16.2 Data Model
+
+| Field | Type | Description |
+|---|---|---|
+| `userId` | string | Recipient user ID |
+| `type` | enum | `like`, `follow`, `comment`, `report_resolved` |
+| `actorId` | string | User who triggered the notification |
+| `targetId` | string | ID of the target content |
+| `targetName` | string | Display name of the target |
+| `read` | boolean | Read status |
+
+---
+
+## 17. Planned Features — Advanced Analytics
 
 > **Status:** Concept | **Target:** Q4 2026
 
-### 15.1 Creator Analytics Dashboard
+### 17.1 Creator Analytics Dashboard
 - Per-course: enrollment count, lesson completion rates, drop-off points
 - Per-project: play count, average practice duration, favorite rate
 - User engagement: time-spent heatmaps
 
-### 15.2 Learner Progress Analytics
+### 17.2 Learner Progress Analytics
 - Personal practice history
 - Note-by-note accuracy reports from Wait Mode sessions
 - Skill progression over time (chart visualization)
@@ -468,36 +543,20 @@ API helpers:
 
 ---
 
-## 16. Planned Features — Adaptive Learning
+## 18. Planned Features — Adaptive Learning
 
 > **Status:** Concept | **Target:** 2027
 
-### 16.1 Models Under Evaluation
+### 18.1 Models Under Evaluation
 - **Strict Linear Progression** — current model (sequential lesson unlocking)
 - **Free-path** — learner chooses any lesson in any order
 - **Adaptive** — system recommends next lesson based on performance data
 
-### 16.2 Gamification Extensions
+### 18.2 Gamification Extensions
 - Practice streaks (daily login + practice rewards)
 - Leaderboards (opt-in, per-course or per-instrument)
 - Achievement badges (first song completed, 7-day streak, etc.)
 - `GamificationProvider` context already scaffolded in codebase
-
----
-
-## 17. Planned Features — Monetization Infrastructure
-
-> **Status:** Concept | **Target:** Q4 2026
-
-### 17.1 Revenue Model
-- **B2C Subscription:** monthly/annual plan for premium library access
-- **A-la-carte:** individual project or album purchases
-- **B2B2C Creator Revenue Share:** creators price and sell courses; platform collects commission (20-30%)
-
-### 17.2 Payment Integration
-- Stripe (or regional alternatives) for transaction processing
-- Creator payout management
-- Free tier with limited catalog access
 
 ---
 
@@ -517,4 +576,13 @@ API helpers:
 | Registered User | Play projects, enroll in courses, create projects, manage favorites/playlists, social features |
 | Creator | All user features + publish projects, create/sell courses |
 | Wiki Editor | Create, edit, delete wiki content via Admin CMS |
-| Admin | Full platform management, content moderation, assign roles |
+| Admin | Full platform management, content moderation, featured content curation, assign roles |
+
+## Appendix C: Project Schema Fields (v4.0 additions)
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `featured` | boolean | `false` | Admin-curated featured flag |
+| `featuredAt` | datetime | — | Timestamp when featured |
+| `favoriteCount` | integer | `0` | Synced count of favorites |
+| `playCount` | integer | `0` | Incremented on each play |

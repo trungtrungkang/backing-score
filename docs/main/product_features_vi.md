@@ -1,7 +1,7 @@
 # Backing & Score — Đặc Tả Tính Năng Sản Phẩm
 
-**Phiên bản:** 3.0 (Public Beta)  
-**Cập nhật lần cuối:** 2026-03-23  
+**Phiên bản:** 4.0 (Public Beta)  
+**Cập nhật lần cuối:** 2026-03-27  
 **Nền tảng:** Web (Next.js) & Responsive trên di động  
 **Backend:** Appwrite (Cơ Sở Dữ Liệu, Xác Thực, Lưu Trữ)
 
@@ -23,9 +23,10 @@
 12. [Đa Ngôn Ngữ (i18n)](#12-đa-ngôn-ngữ-i18n)
 13. [Xác Thực & Hồ Sơ Người Dùng](#13-xác-thực--hồ-sơ-người-dùng)
 14. [Bách Khoa Toàn Thư Âm Nhạc ✅](#14-bách-khoa-toàn-thư-âm-nhạc-)
-15. [Tính Năng Dự Kiến — Phân Tích Nâng Cao](#15-tính-năng-dự-kiến--phân-tích-nâng-cao)
-16. [Tính Năng Dự Kiến — Học Tập Thích Ứng](#16-tính-năng-dự-kiến--học-tập-thích-ứng)
-17. [Tính Năng Dự Kiến — Hạ Tầng Kiếm Tiền](#17-tính-năng-dự-kiến--hạ-tầng-kiếm-tiền)
+15. [Thanh Toán & Thuê Bao](#15-thanh-toán--thuê-bao)
+16. [Thông Báo](#16-thông-báo)
+17. [Tính Năng Dự Kiến — Phân Tích Nâng Cao](#17-tính-năng-dự-kiến--phân-tích-nâng-cao)
+18. [Tính Năng Dự Kiến — Học Tập Thích Ứng](#18-tính-năng-dự-kiến--học-tập-thích-ứng)
 
 ---
 
@@ -195,10 +196,23 @@ Wait Mode triển khai mô hình **Thực Hành Có Chủ Đích** (Deliberate P
 ## 6. Khám Phá & Thư Viện Nội Dung
 
 ### 6.1 Trang Khám Phá (`/discover`)
-- Hiển thị dạng lưới tất cả dự án đã xuất bản
-- Lọc theo thẻ (thể loại, nhạc cụ, độ khó)
-- Lọc theo tác giả
-- Thẻ dự án: ảnh bìa, tiêu đề, tác giả, thẻ tag, thời lượng
+
+Trang Discover sử dụng **giao diện phân loại theo mục** (tương tự Spotify/Netflix) với các section cuộn ngang:
+
+| Mục | Icon | Nguồn dữ liệu | Sắp xếp |
+|---|---|---|---|
+| **Nổi bật** | ⭐ | Admin chọn (`featured=true`) | `featuredAt` giảm dần |
+| **Mới thêm gần đây** | 🆕 | Tất cả project đã publish | `publishedAt` giảm dần |
+| **Thịnh hành** | 🔥 | Lượt phát cao | `playCount` giảm dần |
+| **Được yêu thích nhất** | 🔖 | Nhiều favorite nhất | `favoriteCount` giảm dần |
+| **Bộ sưu tập** | 📚 | Playlist đã publish | Mới nhất |
+| **Tất cả bản nhạc** | 📖 | Grid đầy đủ + bộ lọc | Nhiều tùy chọn sắp xếp |
+
+**Chiến lược chống trùng lặp:** Các bài Featured chỉ hiện ở section Featured, tự động loại khỏi các section khác. Các section còn lại có thể có bài trùng.
+
+**Khi tìm kiếm:** Các section được ẩn, chỉ hiện grid "Tất cả bản nhạc" với kết quả tìm kiếm.
+
+**Component tái sử dụng:** `HorizontalScroll` — container cuộn ngang hỗ trợ cảm ứng, snap cuộn, mũi tên điều hướng tự ẩn và gradient mờ dần ở 2 đầu.
 
 ### 6.2 Bộ Sưu Tập / Playlist (`/collection/[playlistId]`)
 - Bộ sưu tập dự án do người dùng tạo
@@ -335,6 +349,10 @@ Wait Mode triển khai mô hình **Thực Hành Có Chủ Đích** (Deliberate P
 ### 13.2 Bảng Quản Trị (`/admin`)
 - Bảng điều khiển quản trị nền tảng
 - Công cụ kiểm duyệt nội dung
+- **Quản lý nội dung nổi bật** (`/admin/featured`) — bật/tắt cờ `featured` trên các project đã publish, có tìm kiếm và UI tối ưu
+- **Làm giàu dữ liệu AI** (`/admin/review`) — tự động phân tích project bằng Gemini API
+- **Nhập MusicXML hàng loạt** (`/admin/import`) — nhập nhiều bản nhạc từ file MusicXML
+- **Wiki CMS** (`/admin/wiki`) — quản lý nội dung bách khoa toàn thư
 
 ---
 
@@ -451,16 +469,51 @@ API helpers:
 
 ---
 
-## 15. Tính Năng Dự Kiến — Phân Tích Nâng Cao
+## 15. Thanh Toán & Thuê Bao ✅
+
+> **Trạng thái:** Đã triển khai | **Nhà cung cấp thanh toán:** LemonSqueezy
+
+### 15.1 Mô Hình Doanh Thu (Hiện tại)
+- **Gói Miễn phí:** Duyệt thoải mái, phát tối đa 3 bài/ngày
+- **Thuê bao Premium:** Phát không giới hạn, Wait Mode, xuất PDF/MusicXML, truy cập đầy đủ Academy, không quảng cáo
+- Gói Tháng ($4.99) và Năm ($39.99, tiết kiệm 33%)
+
+### 15.2 Triển Khai Kỹ Thuật
+
+| Thành phần | Mô tả |
+|---|---|
+| Checkout API | `/api/checkout` — tạo phiên thanh toán LemonSqueezy |
+| Webhook | `/api/webhooks/lemonsqueezy` — xử lý sự kiện thuê bao |
+| Đồng bộ thuê bao | `/api/subscription/sync` — đồng bộ trạng thái với Appwrite |
+| Chặn tính năng | `UpgradePrompt` — hiện khi hết lượt phát hoặc bật Wait Mode (gói miễn phí) |
+| Dashboard | `SubscriptionCard` — hiện trạng thái gói, link quản lý thanh toán |
+| Trang giá | `/pricing` — so sánh Free vs Premium, chuyển đổi tháng/năm |
+
+---
+
+## 16. Thông Báo ✅
+
+> **Trạng thái:** Đã triển khai
+
+### 16.1 Chuông Thông Báo Trong Ứng Dụng
+- Chuông thông báo thời gian thực trên header
+- Loại thông báo: thích, theo dõi, bình luận, báo cáo đã xử lý
+- Đánh dấu đã đọc tất cả
+- Thời gian tương đối ("Vừa xong")
+- Nhấn vào để chuyển đến nội dung liên quan
+
+---
+
+## 17. Tính Năng Dự Kiến — Phân Tích Nâng Cao
 
 > **Trạng thái:** Ý tưởng | **Mục tiêu:** Q4 2026
 
-### 15.1 Bảng Phân Tích Cho Creator
+### 17.1 Bảng Phân Tích Cho Creator
 - Theo khóa học: số lượt đăng ký, tỷ lệ hoàn thành bài học, điểm bỏ học
 - Theo dự án: lượt phát, thời lượng luyện tập trung bình, tỷ lệ yêu thích
 - Tương tác người dùng: bản đồ nhiệt thời gian sử dụng
 
-### 15.2 Phân Tích Tiến Trình Học Viên
+### 17.2 Phân Tích Tiến Trình Học Viên
 - Lịch sử luyện tập cá nhân
 - Báo cáo độ chính xác từng nốt từ các phiên Wait Mode
 - Tiến trình kỹ năng theo thời gian (biểu đồ trực quan)
@@ -468,36 +521,20 @@ API helpers:
 
 ---
 
-## 16. Tính Năng Dự Kiến — Học Tập Thích Ứng
+## 18. Tính Năng Dự Kiến — Học Tập Thích Ứng
 
 > **Trạng thái:** Ý tưởng | **Mục tiêu:** 2027
 
-### 16.1 Các Mô Hình Đang Đánh Giá
+### 18.1 Các Mô Hình Đang Đánh Giá
 - **Tiến trình Tuyến tính Nghiêm ngặt** — mô hình hiện tại (mở khóa bài học tuần tự)
 - **Tự do Lựa chọn** — học viên chọn bất kỳ bài học nào theo thứ tự tùy ý
 - **Thích ứng** — hệ thống đề xuất bài học tiếp theo dựa trên dữ liệu hiệu suất
 
-### 16.2 Mở Rộng Gamification
+### 18.2 Mở Rộng Gamification
 - Chuỗi ngày luyện tập (streak) với phần thưởng đăng nhập + luyện tập hàng ngày
 - Bảng xếp hạng (tùy chọn tham gia, theo khóa học hoặc theo nhạc cụ)
 - Huy hiệu thành tích (hoàn thành bài đầu tiên, chuỗi 7 ngày, v.v.)
 - `GamificationProvider` đã được khung sẵn trong mã nguồn
-
----
-
-## 17. Tính Năng Dự Kiến — Hạ Tầng Kiếm Tiền
-
-> **Trạng thái:** Ý tưởng | **Mục tiêu:** Q4 2026
-
-### 17.1 Mô Hình Doanh Thu
-- **Thuê bao B2C:** gói tháng / năm để truy cập thư viện premium
-- **Bán lẻ (A-la-carte):** mua bản nhạc hoặc album riêng lẻ
-- **Chia sẻ Doanh thu B2B2C:** creator tự định giá và bán khóa học; nền tảng thu hoa hồng (20-30%)
-
-### 17.2 Tích Hợp Thanh Toán
-- Stripe (hoặc cổng khu vực thay thế) cho xử lý giao dịch
-- Quản lý chi trả cho creator
-- Gói miễn phí với quyền truy cập thư viện giới hạn
 
 ---
 
@@ -517,4 +554,13 @@ API helpers:
 | Người dùng Đã đăng ký | Phát dự án, đăng ký khóa học, tạo dự án, quản lý yêu thích / playlist, tính năng xã hội |
 | Creator | Tất cả quyền người dùng + xuất bản dự án, tạo / bán khóa học |
 | Wiki Editor | Tạo, sửa, xóa nội dung wiki qua Admin CMS |
-| Quản trị viên | Quản lý toàn bộ nền tảng, kiểm duyệt nội dung, gán vai trò |
+| Quản trị viên | Quản lý toàn bộ nền tảng, kiểm duyệt nội dung, quản lý nội dung nổi bật, gán vai trò |
+
+## Phụ Lục C: Các Trường Mới Trong Schema Dự Án (v4.0)
+
+| Trường | Kiểu | Mặc định | Mô tả |
+|---|---|---|---|
+| `featured` | boolean | `false` | Cờ nổi bật do admin đặt |
+| `featuredAt` | datetime | — | Thời điểm được đánh dấu nổi bật |
+| `favoriteCount` | integer | `0` | Số lượt yêu thích (đồng bộ tự động) |
+| `playCount` | integer | `0` | Số lượt phát (tăng mỗi lần phát) |
