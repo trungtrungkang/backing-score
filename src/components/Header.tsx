@@ -45,31 +45,32 @@ function NavTab({
   danger?: boolean;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          href={href}
-          className={`
-            relative h-full flex items-center justify-center gap-2 px-5 lg:px-5
-            whitespace-nowrap transition-colors group text-sm font-semibold
-            ${danger
-              ? active ? "text-red-500" : "text-red-400/50 hover:text-red-500"
-              : active ? "text-[#C8A856]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-            }
-          `}
-        >
-          <span className="absolute inset-x-1 inset-y-3 rounded-xl bg-zinc-100 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <Icon className="w-[18px] h-[18px] relative z-10 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
-          <span className="relative z-10 hidden lg:inline">{label}</span>
-          {active && (
-            <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full ${danger ? "bg-red-500" : "bg-[#C8A856]"}`} />
-          )}
-        </Link>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="font-semibold text-xs lg:hidden">
-        {label}
-      </TooltipContent>
-    </Tooltip>
+    <div className="relative h-full flex items-center">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            href={href}
+            className={`
+              flex items-center justify-center gap-2 px-7 xl:px-5
+              whitespace-nowrap transition-colors group text-sm font-semibold
+              ${danger
+                ? active ? "text-red-500" : "text-red-400/50 hover:text-red-500"
+                : active ? "text-[#C8A856]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              }
+            `}
+          >
+            <Icon className="w-[24px] h-[24px] xl:w-[18px] xl:h-[18px] relative z-10 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
+            <span className="relative z-10 hidden xl:inline">{label}</span>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="font-semibold text-xs xl:hidden">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+      {active && (
+        <span className={`absolute bottom-0 left-2 right-2 h-[3px] rounded-t-full ${danger ? "bg-red-500" : "bg-[#C8A856]"}`} />
+      )}
+    </div>
   );
 }
 
@@ -129,8 +130,8 @@ export function Header() {
   return (
     <TooltipProvider delayDuration={0}>
       {/* ── Main Header ── */}
-      <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1A1A1E] border-b border-black/5 dark:border-white/5 text-black dark:text-white h-[60px] overflow-hidden">
-        <div className="grid grid-cols-[auto_1fr_auto] h-full w-full max-w-[1400px] mx-auto">
+      <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1A1A1E] border-b border-black/5 dark:border-white/5 text-black dark:text-white h-[60px]">
+        <div className="flex items-center justify-between h-full w-full max-w-[1400px] mx-auto">
 
           {/* Col 1 — Logo + hamburger (mobile) */}
           <div className="flex items-center gap-2 px-3 sm:px-5">
@@ -149,14 +150,14 @@ export function Header() {
           </div>
 
           {/* Col 2 — Icon tab nav (md+ only) */}
-          <nav className="hidden md:flex items-stretch justify-center overflow-hidden">
-            <NavTab href="/"          icon={Home}          label={t("home")}      active={pathname === "/"} />
-            <NavTab href="/dashboard" icon={Library}       label={t("library")}   active={pathname.startsWith("/dashboard")} />
-            <NavTab href="/discover"  icon={Compass}       label={t("explore")}   active={pathname.startsWith("/discover")} />
-            <NavTab href="/academy"   icon={GraduationCap} label={t("academy")}   active={pathname.startsWith("/academy")} />
-            <NavTab href="/wiki"      icon={BookOpen}      label={t("wiki")}      active={pathname.startsWith("/wiki")} />
+          <nav className="hidden md:flex items-stretch justify-center overflow-hidden h-full">
+            <NavTab href="/" icon={Home} label={t("home")} active={pathname === "/"} />
+            <NavTab href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} />
+            <NavTab href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} />
+            <NavTab href="/academy" icon={GraduationCap} label={t("academy")} active={pathname.startsWith("/academy")} />
+            <NavTab href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} />
             {user && (
-              <NavTab href="/feed"    icon={Users}         label={t("community")} active={pathname.startsWith("/feed")} />
+              <NavTab href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} />
             )}
           </nav>
 
@@ -281,16 +282,16 @@ export function Header() {
 
         {/* Sidebar nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          <SidebarItem href="/"          icon={Home}          label={t("home")}      active={pathname === "/"}                  onClick={closeSidebar} />
-          <SidebarItem href="/dashboard" icon={Library}       label={t("library")}   active={pathname.startsWith("/dashboard")} onClick={closeSidebar} />
-          <SidebarItem href="/discover"  icon={Compass}       label={t("explore")}   active={pathname.startsWith("/discover")}  onClick={closeSidebar} />
-          <SidebarItem href="/academy"   icon={GraduationCap} label={t("academy")}   active={pathname.startsWith("/academy")}   onClick={closeSidebar} />
-          <SidebarItem href="/wiki"      icon={BookOpen}      label={t("wiki")}      active={pathname.startsWith("/wiki")}      onClick={closeSidebar} />
+          <SidebarItem href="/" icon={Home} label={t("home")} active={pathname === "/"} onClick={closeSidebar} />
+          <SidebarItem href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} onClick={closeSidebar} />
+          <SidebarItem href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} onClick={closeSidebar} />
+          <SidebarItem href="/academy" icon={GraduationCap} label={t("academy")} active={pathname.startsWith("/academy")} onClick={closeSidebar} />
+          <SidebarItem href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} onClick={closeSidebar} />
           {user && (
-            <SidebarItem href="/feed"    icon={Users}         label={t("community")} active={pathname.startsWith("/feed")}      onClick={closeSidebar} />
+            <SidebarItem href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} onClick={closeSidebar} />
           )}
           {canAccessAdmin(user?.labels) && (
-            <SidebarItem href="/admin"   icon={ShieldAlert}   label={t("admin")}     active={pathname.startsWith("/admin")}     onClick={closeSidebar} danger />
+            <SidebarItem href="/admin" icon={ShieldAlert} label={t("admin")} active={pathname.startsWith("/admin")} onClick={closeSidebar} danger />
           )}
         </nav>
 
