@@ -158,6 +158,7 @@ export default function AdminDashboardPage() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Email</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Joined</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Creator Role</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Content Mgr</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Wiki Editor</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs text-center">Admin Role</th>
               </tr>
@@ -165,6 +166,7 @@ export default function AdminDashboardPage() {
             <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
               {users.map((u) => {
                 const isCreator = u.labels.includes("creator");
+                const isContentManager = u.labels.includes("content_manager");
                 const isWikiEditor = u.labels.includes("wiki_editor");
                 const isAdmin = u.labels.includes("admin");
                 
@@ -184,6 +186,18 @@ export default function AdminDashboardPage() {
                       >
                         <span className={`inline-block w-4 h-4 bg-white rounded-full transition-transform shadow ${
                           isCreator ? "translate-x-7" : "translate-x-1"
+                        }`} />
+                      </button>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <button
+                        onClick={() => handleToggle(u.id, "content_manager", isContentManager)}
+                        className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-zinc-900 ${
+                          isContentManager ? "bg-purple-500" : "bg-zinc-300 dark:bg-zinc-700"
+                        }`}
+                      >
+                        <span className={`inline-block w-4 h-4 bg-white rounded-full transition-transform shadow ${
+                          isContentManager ? "translate-x-7" : "translate-x-1"
                         }`} />
                       </button>
                     </td>
@@ -219,7 +233,7 @@ export default function AdminDashboardPage() {
               
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
                     No users found in the system.
                   </td>
                 </tr>

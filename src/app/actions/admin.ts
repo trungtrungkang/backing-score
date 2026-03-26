@@ -98,3 +98,64 @@ export async function toggleUserLabel(jwt: string, targetUserId: string, label: 
   await usersService.updateLabels(targetUserId, labels);
   return { success: true, newLabels: labels };
 }
+
+/**
+ * Publish or unpublish any project. Requires Content Manager or Admin role.
+ * Uses the Admin API Key to bypass document-level permissions.
+ */
+export async function adminPublishProject(jwt: string, projectId: string, publish: boolean) {
+  await requireContentManager(jwt);
+
+  const { Databases, Permission, Role } = await import("node-appwrite");
+  const adminClient = getAdminClient();
+  const db = new Databases(adminClient);
+
+  const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
+  const COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECTS_COLLECTION_ID || "projects";
+
+  // Read current doc to get userId for permissions
+  const doc = await db.getDocument(DATABASE_ID, COLLECTION_ID, projectId);
+  const ownerId = (doc as any).userId;
+
+  const body: Record<string, unknown> = {
+    published: publish,
+  };
+  if (publish && !(doc as any).publishedAt) {
+    body.publishedAt = new Date().toISOString();
+  }
+
+  // When publishing: add read(any) so Discovery can see it
+  const permissions = publish
+    ? [
+        Permission.read(Role.any()),
+        Permission.read(Role.user(ownerId)),
+        Permission.update(Role.user(ownerId)),
+        Permission.delete(Role.user(ownerId)),
+      ]
+    : [
+        Permission.read(Role.user(ownerId)),
+        Permission.update(Role.user(ownerId)),
+        Permission.delete(Role.user(ownerId)),
+      ];
+
+  await db.updateDocument(DATABASE_ID, COLLECTION_ID, projectId, body, permissions);
+  return { success: true, published: publish };
+}
+
+/**
+ * Delete any project. Requires Admin role only.
+ * Uses the Admin API Key to bypass document-level permissions.
+ */
+export async function adminDeleteProject(jwt: string, projectId: string) {
+  await requireAdmin(jwt);
+
+  const { Databases } = await import("node-appwrite");
+  const adminClient = getAdminClient();
+  const db = new Databases(adminClient);
+
+  const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
+  const COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECTS_COLLECTION_ID || "projects";
+
+  await db.deleteDocument(DATABASE_ID, COLLECTION_ID, projectId);
+  return { success: true };
+}

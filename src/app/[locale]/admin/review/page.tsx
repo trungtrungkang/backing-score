@@ -10,7 +10,8 @@ import {
   Sparkles, Wand2, X, Save, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { canAccessAdmin, canEditWiki } from "@/lib/auth/roles";
+import { canAccessAdmin, canEditWiki, isAdmin } from "@/lib/auth/roles";
+import { adminPublishProject, adminDeleteProject } from "@/app/actions/admin";
 import {
   databases,
   Permission,
@@ -44,7 +45,7 @@ const PAGE_SIZE = 20;
 // ── Main Page ──────────────────────────────────────────────────────────
 
 export default function AdminReviewPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, getJWT } = useAuth();
   const router = useRouter();
 
   const [projects, setProjects] = useState<ReviewProject[]>([]);
@@ -150,20 +151,8 @@ export default function AdminReviewPage() {
   async function handlePublish(projectId: string) {
     setActionLoading(projectId + ":publish");
     try {
-      await databases.updateDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_PROJECTS_COLLECTION_ID,
-        projectId,
-        {
-          published: true,
-          publishedAt: new Date().toISOString(),
-        },
-        [
-          Permission.read(Role.any()),
-          Permission.update(Role.label("admin")),
-          Permission.delete(Role.label("admin")),
-        ],
-      );
+      const jwt = await getJWT();
+      await adminPublishProject(jwt, projectId, true);
       toast.success("Published ✓");
       setProjects(prev => prev.filter(p => p.$id !== projectId));
       setTotal(t => t - 1);
@@ -178,11 +167,8 @@ export default function AdminReviewPage() {
     if (!confirm("Delete this draft permanently?")) return;
     setActionLoading(projectId + ":reject");
     try {
-      await databases.deleteDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_PROJECTS_COLLECTION_ID,
-        projectId,
-      );
+      const jwt = await getJWT();
+      await adminDeleteProject(jwt, projectId);
       toast.success("Deleted");
       setProjects(prev => prev.filter(p => p.$id !== projectId));
       setTotal(t => t - 1);
@@ -278,17 +264,8 @@ export default function AdminReviewPage() {
   async function handleUnpublish(projectId: string) {
     setActionLoading(projectId + ":unpublish");
     try {
-      await databases.updateDocument(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_PROJECTS_COLLECTION_ID,
-        projectId,
-        { published: false },
-        [
-          Permission.read(Role.label("admin")),
-          Permission.update(Role.label("admin")),
-          Permission.delete(Role.label("admin")),
-        ],
-      );
+      const jwt = await getJWT();
+      await adminPublishProject(jwt, projectId, false);
       toast.success("Unpublished");
       loadProjects();
     } catch (err: any) {
