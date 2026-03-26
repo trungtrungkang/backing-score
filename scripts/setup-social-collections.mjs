@@ -75,7 +75,9 @@ async function main() {
     { id: "comments", name: "Comments" },
     { id: "reactions", name: "Reactions" },
     { id: "follows", name: "Follows" },
-    { id: "favorites", name: "Favorites" }
+    { id: "favorites", name: "Favorites" },
+    { id: "notifications", name: "Notifications" },
+    { id: "reports", name: "Reports" }
   ];
 
   for (const col of collections) {
@@ -159,6 +161,27 @@ async function main() {
     { key: "targetId", type: "string", required: true, size: 256 },
   ]);
 
+  console.log("Creating attributes for Notifications...");
+  await createAttributes(databases, "notifications", [
+    { key: "recipientId", type: "string", required: true, size: 256 },
+    { key: "type", type: "string", required: true, size: 64 }, // 'like', 'follow', 'comment', 'report_resolved'
+    { key: "sourceUserName", type: "string", required: true, size: 512 },
+    { key: "sourceUserId", type: "string", required: true, size: 256 },
+    { key: "targetName", type: "string", required: false, size: 512 },
+    { key: "targetId", type: "string", required: false, size: 256 },
+    { key: "read", type: "boolean", required: true },
+  ]);
+
+  console.log("Creating attributes for Reports...");
+  await createAttributes(databases, "reports", [
+    { key: "targetType", type: "string", required: true, size: 64 },
+    { key: "targetId", type: "string", required: true, size: 256 },
+    { key: "reason", type: "string", required: true, size: 512 },
+    { key: "details", type: "string", required: false, size: 4096 },
+    { key: "reporterId", type: "string", required: true, size: 256 },
+    { key: "status", type: "string", required: true, size: 64 },
+  ]);
+
   console.log("Creating Indexes...");
   const indexes = [
     { collection: "playlists", key: "owner_index", type: IndexType.Key, attributes: ["ownerId", "$createdAt"], orders: [OrderBy.Desc] },
@@ -178,6 +201,12 @@ async function main() {
 
     { collection: "favorites", key: "user_target_unique", type: IndexType.Unique, attributes: ["userId", "targetType", "targetId"], orders: [] },
     { collection: "favorites", key: "user_favorites_index", type: IndexType.Key, attributes: ["userId", "targetType", "$createdAt"], orders: [OrderBy.Desc] },
+
+    { collection: "notifications", key: "recipient_read_index", type: IndexType.Key, attributes: ["recipientId", "read", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Asc, OrderBy.Desc] },
+    { collection: "notifications", key: "recipient_created_index", type: IndexType.Key, attributes: ["recipientId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
+
+    { collection: "reports", key: "status_created_index", type: IndexType.Key, attributes: ["status", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
+    { collection: "reports", key: "reporter_index", type: IndexType.Key, attributes: ["reporterId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
   ];
 
   for (const idx of indexes) {
