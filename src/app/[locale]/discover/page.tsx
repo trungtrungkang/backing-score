@@ -13,6 +13,7 @@ import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
 import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic, ArrowUpDown, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
+import { ReportButton } from "@/components/ReportButton";
 import { getArtistNamesByIds } from "@/lib/appwrite/artists";
 
 function formatDate(iso: string | undefined) {
@@ -516,6 +517,9 @@ export default function DiscoverPage() {
                            <Bookmark className="w-[18px] h-[18px]" />
                         </button>
                       </>
+                    )}
+                    {user && user.$id !== p.userId && (
+                      <ReportButton targetType="project" targetId={p.$id} />
                     )}
                   </div>
                 </div>

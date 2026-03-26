@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -12,24 +13,28 @@ interface Notification {
   read: boolean;
 }
 
-/**
- * NotificationBell — displays a bell icon with unread count badge.
- * Currently shows mock data; in production, connect to a real notifications API.
- */
 export function NotificationBell() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [notifications] = useState<Notification[]>([
-    // Mock notifications — replace with real data from API
-  ]);
+  const [notifications] = useState<Notification[]>([]);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+
+  useEffect(() => {
+    if (open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+  }, [open]);
 
   if (!user) return null;
 
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="relative">
+    <>
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
         aria-label="Notifications"
@@ -42,11 +47,13 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
-      {open && (
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl z-50">
+          <div className="fixed inset-0 z-[200]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed w-80 max-h-96 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl z-[201]"
+            style={{ top: pos.top, right: pos.right }}
+          >
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
               <h3 className="font-bold text-sm">Notifications</h3>
             </div>
@@ -71,8 +78,10 @@ export function NotificationBell() {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Flag, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -68,8 +69,8 @@ export function ReportButton({ targetType, targetId, className }: ReportButtonPr
         <span className="hidden sm:inline">Report</span>
       </button>
 
-      {/* Report Modal */}
-      {open && (
+      {/* Report Modal — portaled to body to escape transform context */}
+      {open && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
@@ -141,7 +142,8 @@ export function ReportButton({ targetType, targetId, className }: ReportButtonPr
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

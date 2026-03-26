@@ -11,6 +11,7 @@ import {
 import { WikiSearchDialog } from "@/components/WikiSearchDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useTranslations } from "next-intl";
 import { canAccessAdmin } from "@/lib/auth/roles";
 import {
@@ -164,6 +165,7 @@ export function Header() {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="font-semibold text-xs">Search Wiki</TooltipContent>
             </Tooltip>
+            {user && <NotificationBell />}
             <DropdownMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
