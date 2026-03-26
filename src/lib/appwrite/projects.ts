@@ -262,6 +262,22 @@ export async function listProjectsByComposition(compositionId: string, limit = 2
   return documents as unknown as ProjectDocument[];
 }
 
+/**
+ * Increment the play count for a published project.
+ * Called client-side when a user plays a score. Non-blocking, fire-and-forget.
+ */
+export async function incrementPlayCount(projectId: string): Promise<void> {
+  try {
+    const doc = await databases.getDocument(dbId, collId, projectId);
+    const currentCount = (doc as any).playCount ?? 0;
+    await databases.updateDocument(dbId, collId, projectId, {
+      playCount: currentCount + 1,
+    });
+  } catch {
+    // Non-critical — silently fail
+  }
+}
+
 /** List published projects linked to a specific wiki artist (as composer). */
 export async function listProjectsByArtist(artistId: string, limit = 20): Promise<ProjectDocument[]> {
   const queries = [

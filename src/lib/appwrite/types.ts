@@ -32,6 +32,8 @@ export interface ProjectDocument {
   wikiInstrumentIds?: string[];
   wikiCompositionId?: string;
   wikiComposerIds?: string[];
+  /** Play count for discovery ranking (Sprint 1) */
+  playCount?: number;
 }
 
 export type ProjectPayload = Record<string, any>;

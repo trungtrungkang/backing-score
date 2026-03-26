@@ -35,6 +35,7 @@ export {
   listPublished,
   deleteProject,
   copyProjectToMine,
+  incrementPlayCount,
 } from "./projects";
 export {
   uploadProjectFile,

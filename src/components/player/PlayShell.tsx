@@ -10,9 +10,11 @@ import { PlayerControls } from "./PlayerControls";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
+import { ShareButton } from "@/components/ShareButton";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import { useAuth } from "@/contexts/AuthContext";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite/projects";
 
 const FREE_DAILY_PLAY_LIMIT = 999;
 
@@ -73,6 +75,7 @@ export function PlayShell({
   const gatedHandlePlay = useCallback(() => {
     if (isPremium) {
       actions.handlePlay();
+      incrementServerPlayCount(projectId); // fire-and-forget
       return;
     }
     const { count } = getPlayCount();
@@ -81,8 +84,9 @@ export function PlayShell({
       return;
     }
     incrementPlayCount();
+    incrementServerPlayCount(projectId); // fire-and-forget
     actions.handlePlay();
-  }, [isPremium, actions]);
+  }, [isPremium, actions, projectId]);
 
   // Gated Wait Mode toggle
   const gatedWaitModeToggle = useCallback((enabled: boolean) => {
@@ -133,6 +137,7 @@ export function PlayShell({
           </div>
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
+          <ShareButton title={projectName} />
           <ProjectActionsMenu projectId={projectId} />
           <ThemeToggle hideBg className="p-2 w-10 h-10 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all border-none" />
         </div>

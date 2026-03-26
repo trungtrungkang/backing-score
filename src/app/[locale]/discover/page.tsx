@@ -10,7 +10,7 @@ import { listPublished, listPublishedPlaylists, copyProjectToMine, toggleFavorit
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
 import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
-import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic, ArrowUpDown } from "lucide-react";
+import { Play, Bookmark, Music4, Search, Pencil, Heart, ListMusic, ArrowUpDown, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { getArtistNamesByIds } from "@/lib/appwrite/artists";
@@ -49,7 +49,7 @@ export default function DiscoverPage() {
   const [activeInstrumentIds, setActiveInstrumentIds] = useState<string[]>([]);
   const [activeGenreId, setActiveGenreId] = useState<string | undefined>();
   const [activeDifficulty, setActiveDifficulty] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<"newest" | "az" | "oldest">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "az" | "oldest" | "popular">("newest");
   const [composerNames, setComposerNames] = useState<Map<string, string>>(new Map());
   const [visibleCount, setVisibleCount] = useState(12);
 
@@ -178,6 +178,8 @@ export default function DiscoverPage() {
         return new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime();
       case "az":
         return a.name.localeCompare(b.name);
+      case "popular":
+        return (b.playCount ?? 0) - (a.playCount ?? 0);
       default:
         return 0;
     }
@@ -369,6 +371,7 @@ export default function DiscoverPage() {
               className="bg-transparent text-sm font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer focus:outline-none appearance-none pr-1"
             >
               <option value="newest">Newest</option>
+              <option value="popular">Most Played</option>
               <option value="az">A → Z</option>
               <option value="oldest">Oldest</option>
             </select>
@@ -469,7 +472,15 @@ export default function DiscoverPage() {
                 <div className="w-full h-px bg-white/5 mb-4 pointer-events-none"></div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end w-full px-4 pb-4 relative z-10">
+                <div className="flex items-center justify-between w-full px-4 pb-4 relative z-10">
+                  <div className="flex items-center gap-1.5 text-zinc-400 dark:text-zinc-500">
+                    {(p.playCount ?? 0) > 0 && (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold">
+                        <Play className="w-3 h-3 fill-current" />
+                        {(p.playCount ?? 0).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <ProjectActionsMenu projectId={p.$id} hideFavorite={true} />
                     {user && (
