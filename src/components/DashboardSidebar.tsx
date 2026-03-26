@@ -46,11 +46,10 @@ export function DashboardSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                  active
-                    ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
-                    : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
-                }`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${active
+                  ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
               >
                 <Icon className={`w-4 h-4 ${active && item.iconColor ? item.iconColor : ""}`} />
                 {t(item.labelKey)}
@@ -65,16 +64,14 @@ export function DashboardSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                  item.divider ? "mt-4 border-t border-zinc-200 dark:border-zinc-800/50 pt-3" : ""
-                } ${
-                  active
+                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${item.divider ? "mt-4 border-t border-zinc-200 dark:border-zinc-800/50 pt-3" : ""
+                  } ${active
                     ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
                     : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 <Icon className={`w-4 h-4 ${item.iconColor || ""}`} />
-                {item.label || t(item.labelKey)}
+                {item.label || t(item.labelKey || "")}
               </Link>
             );
           })}
