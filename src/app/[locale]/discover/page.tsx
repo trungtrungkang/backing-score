@@ -260,14 +260,19 @@ export default function DiscoverPage() {
   useEffect(() => {
     async function loadSections() {
       try {
+        // Each query is wrapped individually so missing Appwrite attributes
+        // (e.g. featured, favoriteCount) don't crash the whole page
+        const safe = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+          p.catch(() => fallback);
+
         const [featured, recent, trending, popular, collections, myFavs] =
           await Promise.all([
-            listFeatured(6),
-            listRecentlyPublished(12),
-            listTrending(12),
-            listMostFavorited(12),
-            listPublishedPlaylists(),
-            user ? listMyFavorites("project") : Promise.resolve([]),
+            safe(listFeatured(6), []),
+            safe(listRecentlyPublished(12), []),
+            safe(listTrending(12), []),
+            safe(listMostFavorited(12), []),
+            safe(listPublishedPlaylists(), []),
+            user ? safe(listMyFavorites("project"), []) : Promise.resolve([]),
           ]);
 
         setFeaturedProjects(featured);
