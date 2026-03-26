@@ -39,20 +39,15 @@ export function LanguageSwitcher() {
       <DropdownMenuTrigger className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-[#C8A856]">
         <Languages className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+      <DropdownMenuContent align="end" className="min-w-0 w-auto bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code)}
-            className={`font-medium cursor-pointer flex items-center gap-2.5 ${
-              locale === lang.code ? "text-[#C8A856] font-semibold" : "text-zinc-700 dark:text-zinc-300"
-            }`}
+            className={`px-4 font-medium cursor-pointer ${locale === lang.code ? "text-[#C8A856] font-semibold" : "text-zinc-700 dark:text-zinc-300"
+              }`}
           >
-            <span className="text-base leading-none">{lang.flag}</span>
-            <span className="flex-1">{lang.label}</span>
-            {locale === lang.code && (
-              <span className="text-[#C8A856] text-xs">✓</span>
-            )}
+            {lang.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
