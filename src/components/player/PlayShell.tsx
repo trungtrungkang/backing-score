@@ -2,19 +2,88 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { Link } from "@/i18n/routing";
-import { ArrowLeft, Music } from "lucide-react";
+import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import type { DAWPayload } from "@/lib/daw/types";
 import { cn } from "@/lib/utils";
 import { PlayerControls } from "./PlayerControls";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { toggleFavorite, checkIsFavorited } from "@/lib/appwrite";
+import { useEffect } from "react";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { ShareButton } from "@/components/ShareButton";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import { useAuth } from "@/contexts/AuthContext";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite/projects";
+
+// Mobile-only consolidated actions menu for Play page header
+function MobileActionsMenu({ projectId, projectName }: { projectId: string; projectName: string }) {
+  const { user } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    checkIsFavorited("project", projectId).then(setIsFavorited).catch(() => {});
+  }, [user, projectId]);
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { }
+  };
+
+  const handleFavorite = async () => {
+    if (!user) return;
+    setIsFavorited(prev => !prev);
+    try {
+      const res = await toggleFavorite("project", projectId);
+      setIsFavorited(res);
+    } catch {
+      setIsFavorited(prev => !prev);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="p-2 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all focus:outline-none">
+        <MoreVertical className="w-5 h-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 shadow-2xl z-[200]">
+        <DropdownMenuItem onClick={handleShare} className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+          {copied ? <Check className="w-4 h-4 text-green-500" /> : <Share2 className="w-4 h-4" />}
+          {copied ? "Copied!" : "Share Link"}
+        </DropdownMenuItem>
+        {user && (
+          <DropdownMenuItem onClick={handleFavorite} className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+            <Bookmark className={`w-4 h-4 ${isFavorited ? "fill-amber-500 text-amber-500" : ""}`} />
+            {isFavorited ? "Remove Favorite" : "Add to Favorites"}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          className="flex items-center gap-3 text-sm font-medium cursor-pointer"
+        >
+          {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 const FREE_DAILY_PLAY_LIMIT = 999;
 
@@ -137,9 +206,16 @@ export function PlayShell({
           </div>
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
-          <ShareButton title={projectName} />
-          <ProjectActionsMenu projectId={projectId} />
-          <ThemeToggle hideBg className="p-2 w-10 h-10 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all border-none" />
+          {/* Desktop: show all buttons */}
+          <div className="hidden sm:flex items-center gap-2">
+            <ShareButton title={projectName} />
+            <ProjectActionsMenu projectId={projectId} />
+            <ThemeToggle hideBg className="p-2 w-10 h-10 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all border-none" />
+          </div>
+          {/* Mobile: consolidated three-dot menu */}
+          <div className="sm:hidden">
+            <MobileActionsMenu projectId={projectId} projectName={projectName} />
+          </div>
         </div>
       </header>
 
