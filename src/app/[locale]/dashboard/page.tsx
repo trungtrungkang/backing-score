@@ -247,13 +247,13 @@ export default function DashboardPage() {
           <SubscriptionCard />
 
           {/* Header Row */}
-          <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+          <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
             <div>
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
               <p className="text-zinc-400">{t("manageProjects")}</p>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0">
               <Link href={`/u/${user.$id}`}>
                 <Button
                   variant="outline"
