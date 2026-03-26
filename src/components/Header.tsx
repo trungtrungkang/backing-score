@@ -160,7 +160,7 @@ export function Header() {
             )}
           </nav>
 
-          {/* Col 3 — Search + Options dropdown */}
+          {/* Col 3 — Search + Theme + Notifications + Avatar dropdown */}
           <div className="flex items-center gap-1.5 px-3 sm:px-5">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -173,6 +173,7 @@ export function Header() {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="font-semibold text-xs">Search Wiki</TooltipContent>
             </Tooltip>
+            <LanguageSwitcher />
             {user && <NotificationBell />}
             <DropdownMenu>
               <Tooltip>
@@ -213,11 +214,7 @@ export function Header() {
                   </>
                 )}
 
-                {/* Language & Theme */}
-                <div className="px-2 py-1.5 flex items-center justify-between">
-                  <span className="text-xs text-zinc-500 font-medium">Language</span>
-                  <LanguageSwitcher />
-                </div>
+                {/* Theme */}
                 <div className="px-2 py-1.5 flex items-center justify-between">
                   <span className="text-xs text-zinc-500 font-medium">Theme</span>
                   <ThemeToggle hideBg className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white" />
