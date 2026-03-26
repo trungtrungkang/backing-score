@@ -249,11 +249,11 @@ export default function DashboardPage() {
           {/* Header Row */}
           <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
               <p className="text-zinc-400">{t("manageProjects")}</p>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <Link href={`/u/${user.$id}`}>
                 <Button
                   variant="outline"

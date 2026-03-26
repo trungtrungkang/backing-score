@@ -214,7 +214,7 @@ export default function DiscoverPage() {
         <div className="flex flex-col gap-6 pb-6 mb-8 w-full border-b border-zinc-200 dark:border-white/5">
           {/* General Row */}
           <div className="flex items-start gap-4 w-full">
-            <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+            <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2 hidden sm:inline-block">
               {t("filters")}
             </span>
             <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
@@ -234,7 +234,7 @@ export default function DiscoverPage() {
           {/* Instruments Row (from wiki) */}
           {wikiInstruments.length > 0 && (
             <div className="flex items-start gap-4 w-full">
-              <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+              <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2 hidden sm:inline-block">
                 Instruments
               </span>
               <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
@@ -258,7 +258,7 @@ export default function DiscoverPage() {
           {/* Genres Row (from wiki) */}
           {wikiGenres.length > 0 && (
             <div className="flex items-start gap-4 w-full">
-              <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+              <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2 hidden sm:inline-block">
                 Genres
               </span>
               <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
@@ -281,7 +281,7 @@ export default function DiscoverPage() {
 
           {/* Difficulty Row */}
           <div className="flex items-start gap-4 w-full">
-            <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2">
+            <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 w-[100px] mt-2 hidden sm:inline-block">
               Difficulty
             </span>
             <div className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none pb-1">
