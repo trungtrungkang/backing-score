@@ -211,6 +211,8 @@ export interface ClassroomMemberDocument {
   $updatedAt: string;
   classroomId: string;
   userId: string;
+  /** Display name (snapshotted at join time) */
+  userName: string;
   /** "teacher" or "student" */
   role: string;
   joinedAt: string;

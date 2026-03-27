@@ -134,6 +134,7 @@ async function main() {
   await createAttributes(databases, "classroom_members", [
     { key: "classroomId", type: "string", required: true, size: 256 },
     { key: "userId", type: "string", required: true, size: 256 },
+    { key: "userName", type: "string", required: false, size: 512 },
     { key: "role", type: "string", required: true, size: 32 }, // "teacher" or "student"
     { key: "joinedAt", type: "string", required: true, size: 64 },
     { key: "status", type: "string", required: true, size: 32 }, // "active" or "removed"

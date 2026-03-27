@@ -298,11 +298,11 @@ export default function ClassroomDetailPage() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
-                    {m.userId.slice(0, 2).toUpperCase()}
+                    {(m.userName || m.userId).slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className="text-sm font-medium text-zinc-900 dark:text-white">
-                      {m.userId}
+                      {m.userName || m.userId}
                     </div>
                     <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">
                       {m.role}

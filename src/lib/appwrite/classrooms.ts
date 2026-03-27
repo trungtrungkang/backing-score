@@ -56,7 +56,8 @@ export async function createClassroom(params: {
       status: "active",
     },
     [
-      Permission.read(Role.user(user.$id)),
+      // Any logged-in user can read (needed for join-by-code query)
+      Permission.read(Role.users()),
       Permission.update(Role.user(user.$id)),
       Permission.delete(Role.user(user.$id)),
     ]
@@ -70,12 +71,13 @@ export async function createClassroom(params: {
     {
       classroomId: doc.$id,
       userId: user.$id,
+      userName: user.name || user.email || "Teacher",
       role: "teacher",
       joinedAt: new Date().toISOString(),
       status: "active",
     },
     [
-      Permission.read(Role.user(user.$id)),
+      Permission.read(Role.users()),
       Permission.update(Role.user(user.$id)),
       Permission.delete(Role.user(user.$id)),
     ]
@@ -184,7 +186,7 @@ export async function joinClassroom(classCode: string): Promise<ClassroomDocumen
     return classroom;
   }
 
-  // Add as student member — grant read to the user AND the teacher
+  // Add as student member
   await databases.createDocument(
     dbId,
     membersCol,
@@ -192,13 +194,13 @@ export async function joinClassroom(classCode: string): Promise<ClassroomDocumen
     {
       classroomId: classroom.$id,
       userId: user.$id,
+      userName: user.name || user.email || "Student",
       role: "student",
       joinedAt: new Date().toISOString(),
       status: "active",
     },
     [
-      Permission.read(Role.user(user.$id)),
-      Permission.read(Role.user(classroom.teacherId)),
+      Permission.read(Role.users()),
       Permission.update(Role.user(classroom.teacherId)),
       Permission.delete(Role.user(classroom.teacherId)),
     ]
