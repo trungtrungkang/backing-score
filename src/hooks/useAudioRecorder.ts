@@ -1,13 +1,10 @@
 /**
- * useAudioRecorder — Browser-based audio recording hook using MediaRecorder API.
- * Used in Play Mode for students to record their practice sessions.
- *
- * Fixes the WebM duration bug (MediaRecorder outputs WebM without duration metadata)
- * using fix-webm-duration. Also enforces a max recording time.
+ * useAudioRecorder — Browser-based audio recording hook using mp3-mediarecorder.
+ * Outputs high-quality MP3 using WASM LAME encoder (vs native MediaRecorder's low-quality WebM).
+ * MP3 has proper duration metadata → no seekbar bugs.
  */
 
 import { useState, useRef, useCallback } from "react";
-import fixWebmDuration from "fix-webm-duration";
 
 export interface AudioRecorderState {
   isRecording: boolean;
@@ -65,43 +62,40 @@ export function useAudioRecorder() {
       });
       streamRef.current = stream;
 
-      // Use webm/opus if available, fallback to whatever browser supports
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "audio/mp4";
+      // Dynamically import mp3-mediarecorder (WASM-based, loads worker)
+      let RecorderClass: typeof MediaRecorder;
+      try {
+        const { Mp3MediaRecorder } = await import("mp3-mediarecorder");
+        const workerUrl = new URL(
+          "mp3-mediarecorder/worker",
+          import.meta.url
+        );
+        RecorderClass = class extends Mp3MediaRecorder {
+          constructor(s: MediaStream, opts?: MediaRecorderOptions) {
+            super(s, { worker: new Worker(workerUrl, { type: "module" }), ...opts });
+          }
+        } as unknown as typeof MediaRecorder;
+      } catch {
+        // Fallback to native MediaRecorder if mp3-mediarecorder fails
+        RecorderClass = MediaRecorder;
+      }
 
-      const isWebm = mimeType.includes("webm");
-
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-        audioBitsPerSecond: 128000, // 128 kbps for better quality
-      });
+      const recorder = new RecorderClass(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       startTimeRef.current = Date.now();
 
-      recorder.ondataavailable = (e) => {
+      recorder.ondataavailable = (e: BlobEvent) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
 
-      recorder.onstop = async () => {
-        const duration = Date.now() - startTimeRef.current;
-        let blob = new Blob(chunksRef.current, { type: mimeType });
-
-        // Fix WebM duration metadata (MediaRecorder doesn't set it)
-        if (isWebm) {
-          try {
-            blob = await fixWebmDuration(blob, duration, { logger: false });
-          } catch {
-            // If fix fails, use the original blob — playback works, just no seekbar
-          }
-        }
-
+      recorder.onstop = () => {
+        const mimeType = chunksRef.current[0]?.type || "audio/mpeg";
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
+        const duration = Date.now() - startTimeRef.current;
 
         setState((prev) => ({
           ...prev,

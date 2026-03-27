@@ -310,50 +310,54 @@ export default function AssignmentDetailPage() {
               <div className="space-y-2">
                 {allSubmissions.map((sub) => (
                   <div key={sub.$id}
-                    className="flex items-center justify-between bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3"
+                    className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 space-y-2"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
-                        {(sub.studentName || sub.studentId).slice(0, 2).toUpperCase()}
+                    {/* Top row: student info + stats */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
+                          {(sub.studentName || sub.studentId).slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-zinc-900 dark:text-white">
+                            {sub.studentName || sub.studentId}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">
+                            {sub.submittedAt && new Date(sub.submittedAt).toLocaleString()}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-zinc-900 dark:text-white">
-                          {sub.studentName || sub.studentId}
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-lg font-black text-zinc-900 dark:text-white">{sub.accuracy ?? 0}%</div>
+                          <div className="text-[10px] text-zinc-500">accuracy</div>
                         </div>
-                        <div className="text-[10px] text-zinc-400">
-                          {sub.submittedAt && new Date(sub.submittedAt).toLocaleString()}
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-zinc-400">{sub.attempts}x</div>
                         </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                          sub.status === "submitted"
+                            ? "bg-green-50 dark:bg-green-500/10 text-green-500"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                        }`}>
+                          {sub.status}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      {sub.recordingFileId && (
-                        <div className="flex items-center gap-2">
-                          <audio src={getRecordingUrl(sub.recordingFileId)} controls className="h-7 w-32" />
-                          <a
-                            href={getRecordingDownloadUrl(sub.recordingFileId)}
-                            download
-                            className="text-zinc-400 hover:text-zinc-200 transition-colors"
-                            title="Download recording"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                      )}
-                      <div className="text-right">
-                        <div className="text-lg font-black text-zinc-900 dark:text-white">{sub.accuracy ?? 0}%</div>
-                        <div className="text-[10px] text-zinc-500">accuracy</div>
+                    {/* Audio row — full width */}
+                    {sub.recordingFileId && (
+                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                        <audio src={getRecordingUrl(sub.recordingFileId)} controls className="flex-1 h-8" />
+                        <a
+                          href={getRecordingDownloadUrl(sub.recordingFileId)}
+                          download
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+                          title="Download recording"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-zinc-400">{sub.attempts}x</div>
-                      </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
-                        sub.status === "submitted"
-                          ? "bg-green-50 dark:bg-green-500/10 text-green-500"
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
-                      }`}>
-                        {sub.status}
-                      </span>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

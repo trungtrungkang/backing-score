@@ -27,7 +27,7 @@ const recordingsBucket = APPWRITE_UPLOADS_BUCKET_ID;
 async function uploadRecording(blob: Blob, assignmentId: string): Promise<string> {
   const user = await account.get();
   const fileId = ID.unique();
-  const ext = blob.type.includes("webm") ? "webm" : blob.type.includes("mp4") ? "m4a" : "webm";
+  const ext = blob.type.includes("mpeg") || blob.type.includes("mp3") ? "mp3" : blob.type.includes("webm") ? "webm" : blob.type.includes("mp4") ? "m4a" : "mp3";
   const file = new File([blob], `recording_${assignmentId}_${user.$id}.${ext}`, { type: blob.type });
 
   await storage.createFile(
