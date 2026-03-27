@@ -1,9 +1,13 @@
 /**
  * useAudioRecorder — Browser-based audio recording hook using MediaRecorder API.
  * Used in Play Mode for students to record their practice sessions.
+ *
+ * Fixes the WebM duration bug (MediaRecorder outputs WebM without duration metadata)
+ * using fix-webm-duration. Also enforces a max recording time.
  */
 
 import { useState, useRef, useCallback } from "react";
+import fixWebmDuration from "fix-webm-duration";
 
 export interface AudioRecorderState {
   isRecording: boolean;
@@ -13,6 +17,8 @@ export interface AudioRecorderState {
   durationMs: number;
   error: string | null;
 }
+
+export const MAX_RECORDING_MS = 5 * 60 * 1000; // 5 minutes
 
 export function useAudioRecorder() {
   const [state, setState] = useState<AudioRecorderState>({
@@ -28,6 +34,20 @@ export function useAudioRecorder() {
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
+  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopRecording = useCallback(() => {
+    if (autoStopTimerRef.current) {
+      clearTimeout(autoStopTimerRef.current);
+      autoStopTimerRef.current = null;
+    }
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
@@ -52,7 +72,12 @@ export function useAudioRecorder() {
         ? "audio/webm"
         : "audio/mp4";
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const isWebm = mimeType.includes("webm");
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000, // 128 kbps for better quality
+      });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
       startTimeRef.current = Date.now();
@@ -63,10 +88,20 @@ export function useAudioRecorder() {
         }
       };
 
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
+      recorder.onstop = async () => {
         const duration = Date.now() - startTimeRef.current;
+        let blob = new Blob(chunksRef.current, { type: mimeType });
+
+        // Fix WebM duration metadata (MediaRecorder doesn't set it)
+        if (isWebm) {
+          try {
+            blob = await fixWebmDuration(blob, duration, { logger: false });
+          } catch {
+            // If fix fails, use the original blob — playback works, just no seekbar
+          }
+        }
+
+        const url = URL.createObjectURL(blob);
 
         setState((prev) => ({
           ...prev,
@@ -83,6 +118,11 @@ export function useAudioRecorder() {
       };
 
       recorder.start(1000); // Collect data every second
+
+      // Auto-stop after MAX_RECORDING_MS
+      autoStopTimerRef.current = setTimeout(() => {
+        stopRecording();
+      }, MAX_RECORDING_MS);
 
       setState((prev) => ({
         ...prev,
@@ -101,16 +141,7 @@ export function useAudioRecorder() {
 
       setState((prev) => ({ ...prev, error: message }));
     }
-  }, [state.recordingUrl]);
-
-  const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
-    }
-  }, []);
+  }, [state.recordingUrl, stopRecording]);
 
   const discardRecording = useCallback(() => {
     if (state.recordingUrl) {

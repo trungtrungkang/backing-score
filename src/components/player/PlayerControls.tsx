@@ -162,7 +162,13 @@ export function PlayerControls({
 
   if (isCollapsed) {
     return (
-      <div className="absolute bottom-4 md:bottom-0 left-1/2 -translate-x-1/2 z-[120] pointer-events-none pb-[env(safe-area-inset-bottom)] md:pb-0">
+      <div className="absolute bottom-4 md:bottom-0 left-1/2 -translate-x-1/2 z-[120] pointer-events-none pb-[env(safe-area-inset-bottom)] md:pb-0 flex flex-col items-center gap-2">
+        {isRecording && (
+          <div className="pointer-events-auto flex items-center gap-2 bg-red-500/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-white" />
+            REC
+          </div>
+        )}
         <button
           onClick={() => onCollapseToggle?.(false)}
           className="w-24 h-8 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl md:rounded-b-none rounded-xl flex flex-col items-center justify-center gap-0.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl pointer-events-auto group"
@@ -263,7 +269,7 @@ export function PlayerControls({
                 )}
                 title={isRecording ? "Stop Recording" : "Start Recording"}
               >
-                {isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-4 h-4" />}
+                {isRecording ? <Square className="w-4 h-4 fill-current" /> : <span className="w-4 h-4 rounded-full bg-red-500 inline-block" />}
               </button>
             )}
             {playlistId && (
