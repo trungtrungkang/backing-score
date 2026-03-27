@@ -233,14 +233,14 @@ export default function ClassroomDetailPage() {
         </Link>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 mb-6 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-black mb-1">{classroom.name}</h1>
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 sm:p-6 mb-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black mb-1 truncate">{classroom.name}</h1>
               {classroom.description && (
-                <p className="text-white/70 text-sm mb-3">{classroom.description}</p>
+                <p className="text-white/70 text-sm mb-3 line-clamp-2">{classroom.description}</p>
               )}
-              <div className="flex items-center gap-4 text-sm text-white/60">
+              <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/60 flex-wrap">
                 {classroom.instrumentFocus && (
                   <span className="flex items-center gap-1">
                     <Music4 className="w-3.5 h-3.5" /> {classroom.instrumentFocus}
@@ -255,7 +255,7 @@ export default function ClassroomDetailPage() {
 
             <button
               onClick={handleCopyCode}
-              className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 text-center transition-all"
+              className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 text-center transition-all shrink-0 self-start"
             >
               <div className="text-[10px] uppercase tracking-widest text-white/50 mb-1">{t("classCode")}</div>
               <div className="text-xl font-mono font-black tracking-[0.2em] flex items-center gap-2">
@@ -271,19 +271,19 @@ export default function ClassroomDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="flex gap-1 mb-6 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? "border-indigo-500 text-indigo-500"
-                  : "border-transparent text-zinc-400 hover:text-zinc-200"
+                  : "border-transparent text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -500,10 +500,11 @@ export default function ClassroomDetailPage() {
 
             {/* Per-Assignment Breakdown */}
             {assignments.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden mb-6">
+              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl mb-6">
                 <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
                   <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{t("assignmentBreakdown")}</h3>
                 </div>
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-zinc-200 dark:border-zinc-800">
@@ -549,6 +550,7 @@ export default function ClassroomDetailPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
 
@@ -565,10 +567,11 @@ export default function ClassroomDetailPage() {
               }
               const allSubs = Array.from(progressData.values()).flat();
               return (
-                <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl">
                   <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
                     <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{t("studentSummary")}</h3>
                   </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-zinc-200 dark:border-zinc-800">
@@ -621,6 +624,7 @@ export default function ClassroomDetailPage() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               );
             })()}
