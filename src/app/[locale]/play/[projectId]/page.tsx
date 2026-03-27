@@ -6,6 +6,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   getProject,
   getPlaylist,
+  submitAssignment,
   type ProjectDocument,
 } from "@/lib/appwrite";
 import { PlayShell } from "@/components/player/PlayShell";
@@ -14,6 +15,7 @@ import {
   defaultDAWPayload,
   type DAWPayload,
 } from "@/lib/daw/types";
+import { toast } from "sonner";
 
 export default function PlayProjectPage() {
   const params = useParams();
@@ -22,6 +24,8 @@ export default function PlayProjectPage() {
   
   const projectId = params.projectId as string;
   const playlistId = searchParams.get("list");
+  const assignmentId = searchParams.get("assignmentId");
+  const classroomId = searchParams.get("classroomId");
 
   const [project, setProject] = useState<ProjectDocument | null>(null);
   const [composerName, setComposerName] = useState<string>("Loading...");
@@ -90,6 +94,24 @@ export default function PlayProjectPage() {
     load();
   }, [load]);
 
+  /** Handle recording submission from PlayShell */
+  const handleRecordingReady = useCallback(async (blob: Blob) => {
+    if (!assignmentId || !classroomId) return;
+    try {
+      await submitAssignment({
+        assignmentId,
+        classroomId,
+        accuracy: 0,
+        tempo: 0,
+        attempts: 1,
+        recordingBlob: blob,
+      });
+      toast.success("Recording submitted!");
+    } catch {
+      toast.error("Failed to submit recording");
+    }
+  }, [assignmentId, classroomId]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 h-[100dvh] w-full bg-[#fdfdfc] dark:bg-[#151518]">
@@ -128,6 +150,8 @@ export default function PlayProjectPage() {
         onNext={() => nextProjectId && router.push(`/play/${nextProjectId}?list=${playlistId}&autoplay=true`)}
         onPrev={() => prevProjectId && router.push(`/play/${prevProjectId}?list=${playlistId}&autoplay=true`)}
         autoplayOnLoad={searchParams.get("autoplay") === "true"}
+        enableRecording={!!assignmentId && !!classroomId}
+        onRecordingReady={handleRecordingReady}
       />
     </main>
   );

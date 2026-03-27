@@ -16,6 +16,8 @@ import {
   Loader2,
   Trophy,
   BarChart3,
+  Download,
+  Upload,
 } from "lucide-react";
 import {
   getAssignment,
@@ -25,6 +27,8 @@ import {
   submitAssignment,
   listSubmissions,
   getMySubmission,
+  getRecordingUrl,
+  getRecordingDownloadUrl,
   AssignmentDocument,
   ClassroomDocument,
   ProjectDocument,
@@ -191,13 +195,13 @@ export default function AssignmentDetailPage() {
             {/* Practice Button */}
             {project && (
               <Link
-                href={`/play/${project.$id}`}
+                href={`/play/${project.$id}?assignmentId=${assignment.$id}&classroomId=${classroomId}`}
                 className="flex items-center gap-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-5 text-white hover:opacity-90 transition-opacity"
               >
                 <Play className="w-8 h-8" />
                 <div>
                   <div className="font-bold text-lg">Practice: {project.name}</div>
-                  <div className="text-white/60 text-sm">Open in Play Mode to practice this assignment</div>
+                  <div className="text-white/60 text-sm">Open in Play Mode — Record & submit your performance</div>
                 </div>
               </Link>
             )}
@@ -228,19 +232,62 @@ export default function AssignmentDetailPage() {
                     Submitted: {new Date(mySubmission.submittedAt).toLocaleString()}
                   </p>
                 )}
+                {mySubmission.recordingFileId && (
+                  <div className="mt-3 pt-3 border-t border-green-500/20">
+                    <div className="text-xs text-zinc-500 mb-1">Your recording:</div>
+                    <audio src={getRecordingUrl(mySubmission.recordingFileId)} controls className="w-full h-8" />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center">
                 <Send className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
-                <p className="text-zinc-400 mb-4">Practice the score above, then submit your results.</p>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || !!isPastDeadline}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8"
-                >
-                  {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Submit Assignment
-                </Button>
+                <p className="text-zinc-400 mb-2">Practice the score above, then submit your results.</p>
+                <p className="text-xs text-zinc-500 mb-4">Use the 🎙 Record button in Play Mode to record & submit automatically.</p>
+                <div className="flex items-center gap-3 justify-center">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting || !!isPastDeadline}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8"
+                  >
+                    {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Submit Assignment
+                  </Button>
+                  <label className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                    <Upload className="w-4 h-4" />
+                    Upload Audio
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !assignment || !classroom) return;
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast.error("File too large. Max 10MB.");
+                          return;
+                        }
+                        setSubmitting(true);
+                        try {
+                          const sub = await submitAssignment({
+                            assignmentId: assignment.$id,
+                            classroomId,
+                            accuracy: 0,
+                            tempo: 0,
+                            attempts: 1,
+                            recordingBlob: file,
+                          });
+                          setMySubmission(sub);
+                          toast.success("Recording uploaded & submitted!");
+                        } catch {
+                          toast.error("Failed to upload");
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
             )}
           </div>
@@ -279,6 +326,19 @@ export default function AssignmentDetailPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      {sub.recordingFileId && (
+                        <div className="flex items-center gap-2">
+                          <audio src={getRecordingUrl(sub.recordingFileId)} controls className="h-7 w-32" />
+                          <a
+                            href={getRecordingDownloadUrl(sub.recordingFileId)}
+                            download
+                            className="text-zinc-400 hover:text-zinc-200 transition-colors"
+                            title="Download recording"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                      )}
                       <div className="text-right">
                         <div className="text-lg font-black text-zinc-900 dark:text-white">{sub.accuracy ?? 0}%</div>
                         <div className="text-[10px] text-zinc-500">accuracy</div>

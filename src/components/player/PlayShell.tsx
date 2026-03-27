@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback } from "react";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { Link } from "@/i18n/routing";
 import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
@@ -118,6 +119,10 @@ export interface PlayShellProps {
   onNext?: () => void;
   onPrev?: () => void;
   autoplayOnLoad?: boolean;
+  /** Enable the Record button in PlayerControls (assignment context) */
+  enableRecording?: boolean;
+  /** Callback when student has a recording ready to submit */
+  onRecordingReady?: (blob: Blob) => void;
 }
 
 export function PlayShell({
@@ -131,7 +136,9 @@ export function PlayShell({
   prevProjectId,
   onNext,
   onPrev,
-  autoplayOnLoad
+  autoplayOnLoad,
+  enableRecording = false,
+  onRecordingReady,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
@@ -139,6 +146,15 @@ export function PlayShell({
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
 
   const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
+  const recorder = useAudioRecorder();
+
+  const handleRecordToggle = useCallback((shouldRecord: boolean) => {
+    if (shouldRecord) {
+      recorder.startRecording();
+    } else {
+      recorder.stopRecording();
+    }
+  }, [recorder]);
 
   // Play handler — no limit for free users, just track server play count
   const gatedHandlePlay = useCallback(() => {
@@ -313,7 +329,55 @@ export function PlayShell({
         isMicInitialized={state.isMicInitialized}
         onInitializeMic={actions.initializeMic}
         onDisconnectMic={actions.disconnectMic}
+        {...(enableRecording ? {
+          isRecording: recorder.isRecording,
+          onRecordToggle: handleRecordToggle,
+        } : {})}
       />
+
+      {/* Recording Preview Overlay */}
+      {enableRecording && recorder.recordingUrl && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[130] w-full max-w-md px-4">
+          <div className="bg-white/95 dark:bg-[#1e1e24]/95 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700 rounded-2xl p-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center">
+                <span className="text-red-500 text-sm">🎙</span>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">Recording Ready</div>
+                <div className="text-xs text-zinc-500">{Math.round(recorder.durationMs / 1000)}s</div>
+              </div>
+            </div>
+            <audio src={recorder.recordingUrl} controls className="w-full h-8 mb-3" />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (recorder.recordingBlob && onRecordingReady) {
+                    onRecordingReady(recorder.recordingBlob);
+                  }
+                  recorder.discardRecording();
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg py-2 transition-colors"
+              >
+                Submit Recording
+              </button>
+              <button
+                onClick={recorder.discardRecording}
+                className="px-4 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm font-bold rounded-lg py-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recording Error Toast */}
+      {recorder.error && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[150] bg-red-500/90 text-white text-sm px-4 py-2 rounded-lg shadow-xl">
+          {recorder.error}
+        </div>
+      )}
 
       {/* Upgrade Prompt */}
       {showUpgrade && (

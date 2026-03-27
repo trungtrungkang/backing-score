@@ -33,6 +33,7 @@ export const APPWRITE_CLASSROOMS_COLLECTION_ID = "classrooms";
 export const APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID = "classroom_members";
 export const APPWRITE_ASSIGNMENTS_COLLECTION_ID = "assignments";
 export const APPWRITE_SUBMISSIONS_COLLECTION_ID = "submissions";
+export const APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID = "classroom_recordings";
 
 export function isAppwriteConfigured(): boolean {
   return !!(

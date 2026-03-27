@@ -158,6 +158,7 @@ async function main() {
     { key: "classroomId", type: "string", required: true, size: 256 },
     { key: "studentId", type: "string", required: true, size: 256 },
     { key: "studentName", type: "string", required: false, size: 512 },
+    { key: "recordingFileId", type: "string", required: false, size: 256 },
     { key: "accuracy", type: "float", required: false },
     { key: "tempo", type: "float", required: false },
     { key: "attempts", type: "integer", required: true },

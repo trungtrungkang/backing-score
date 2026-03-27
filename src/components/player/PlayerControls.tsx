@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -69,6 +69,9 @@ interface PlayerControlsProps {
   onInitializeMic?: () => Promise<boolean>;
   onDisconnectMic?: () => void;
   isPremium?: boolean;
+  // Recording
+  isRecording?: boolean;
+  onRecordToggle?: (recording: boolean) => void;
 }
 
 export function formatTime(ms: number) {
@@ -129,7 +132,9 @@ export function PlayerControls({
   isMicInitialized = false,
   onInitializeMic,
   onDisconnectMic,
-  isPremium = false
+  isPremium = false,
+  isRecording = false,
+  onRecordToggle,
 }: PlayerControlsProps) {
 
   const [localPos, setLocalPos] = useState(positionMs);
@@ -246,6 +251,21 @@ export function PlayerControls({
             >
               <Square className="w-4 h-4 fill-current" />
             </button>
+            {/* Record Button */}
+            {onRecordToggle && (
+              <button
+                onClick={() => onRecordToggle(!isRecording)}
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                  isRecording
+                    ? "bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+                    : "bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-600 dark:text-zinc-300 hover:text-red-500"
+                )}
+                title={isRecording ? "Stop Recording" : "Start Recording"}
+              >
+                {isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-4 h-4" />}
+              </button>
+            )}
             {playlistId && (
               <button
                 onClick={onNext}

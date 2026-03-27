@@ -112,4 +112,6 @@ export {
   listSubmissions,
   getMySubmission,
   listMySubmissions,
+  getRecordingUrl,
+  getRecordingDownloadUrl,
 } from "./submissions";

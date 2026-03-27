@@ -248,6 +248,8 @@ export interface SubmissionDocument {
   studentId: string;
   /** Display name (snapshotted at submit time) */
   studentName?: string;
+  /** Appwrite Storage file ID for practice recording */
+  recordingFileId?: string;
   /** Accuracy percentage 0-100 */
   accuracy?: number;
   /** Tempo achieved */
