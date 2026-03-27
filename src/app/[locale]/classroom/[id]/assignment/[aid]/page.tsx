@@ -113,8 +113,7 @@ export default function AssignmentDetailPage() {
           accuracy: 0, // Will be filled when integrated with Play Mode
           tempo: 0,
           attempts: 1,
-        },
-        classroom.teacherId
+        }
       );
       setMySubmission(sub);
       toast.success("Submission recorded!");

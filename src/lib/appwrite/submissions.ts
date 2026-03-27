@@ -27,7 +27,7 @@ export async function submitAssignment(params: {
   accuracy?: number;
   tempo?: number;
   attempts?: number;
-}, teacherId: string): Promise<SubmissionDocument> {
+}): Promise<SubmissionDocument> {
   const user = await account.get();
 
   // Check if student already has a submission for this assignment
@@ -65,11 +65,9 @@ export async function submitAssignment(params: {
       status: "submitted",
     },
     [
-      // Student and teacher can read
-      Permission.read(Role.user(user.$id)),
-      Permission.read(Role.user(teacherId)),
+      // Client-side SDK: can only set permissions for self or users/any
+      Permission.read(Role.users()),
       Permission.update(Role.user(user.$id)),
-      Permission.update(Role.user(teacherId)),
     ]
   );
 
