@@ -97,7 +97,7 @@ export default function ClassroomListPage() {
               type="text"
               placeholder={t("enterCode")}
               maxLength={6}
-              className="flex-1 h-10 px-4 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 uppercase tracking-widest font-mono"
+              className="flex-1 min-h-[48px] py-3 px-4 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 uppercase tracking-widest font-mono"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   const code = (e.target as HTMLInputElement).value.trim();
@@ -109,7 +109,7 @@ export default function ClassroomListPage() {
             />
             <Button
               variant="outline"
-              className="h-10 px-5 text-sm font-bold"
+              className="min-h-[48px] sm:h-10 px-5 text-sm font-bold"
               onClick={() => {
                 const input = document.querySelector(`input[placeholder="${t("enterCode")}"]`) as HTMLInputElement;
                 const code = input?.value?.trim();
@@ -154,15 +154,15 @@ export default function ClassroomListPage() {
                   href={`/classroom/${classroom.$id}`}
                   className="group bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 hover:border-indigo-500/50 dark:hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-                      <GraduationCap className="w-6 h-6 text-white" />
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+                      <GraduationCap className="w-5 sm:w-6 h-5 sm:h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-400 transition-colors">
+                      <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-400 transition-colors">
                         {classroom.name}
                       </h3>
-                      <div className="flex items-center gap-4 mt-1">
+                      <div className="flex items-center gap-2 sm:gap-4 mt-1 flex-wrap">
                         {classroom.instrumentFocus && (
                           <span className="text-xs text-zinc-400 flex items-center gap-1">
                             <Music4 className="w-3 h-3" />
@@ -181,8 +181,8 @@ export default function ClassroomListPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full hidden sm:inline ${
                         classroom.status === "active"
                           ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400"
                           : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
