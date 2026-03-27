@@ -115,3 +115,11 @@ export {
   getRecordingUrl,
   getRecordingDownloadUrl,
 } from "./submissions";
+export type { SubmissionFeedbackDocument } from "./types";
+export {
+  createFeedback,
+  listFeedback,
+  updateFeedback,
+  deleteFeedback,
+} from "./submission-feedback";
+

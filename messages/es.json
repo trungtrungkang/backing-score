@@ -540,6 +540,20 @@
     "waitModeRequired": "Modo espera requerido",
     "due": "Vence:",
     "downloadRecording": "Descargar grabación",
-    "failedLoadAssignment": "Error al cargar tarea"
+    "failedLoadAssignment": "Error al cargar tarea",
+    "grade": "Nota",
+    "gradeOutOf": "/ 100",
+    "feedback": "Comentario",
+    "feedbackPlaceholder": "Escribir comentario para este estudiante...",
+    "sendFeedback": "Enviar comentario",
+    "feedbackSent": "¡Comentario enviado!",
+    "failedFeedback": "Error al enviar comentario",
+    "noFeedbackYet": "Sin comentarios aún",
+    "teacherFeedback": "Comentario del profesor",
+    "recordingReady": "Grabación lista",
+    "submitRecording": "Enviar grabación",
+    "discardRecording": "Descartar",
+    "recordingSubmitted": "¡Grabación enviada!",
+    "failedSubmitRecording": "Error al enviar grabación"
   }
 }

@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { Link } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import type { DAWPayload } from "@/lib/daw/types";
@@ -143,6 +144,7 @@ export function PlayShell({
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
   const { isPremium } = useAuth();
+  const tc = useTranslations("Classroom");
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
 
   const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
@@ -344,7 +346,7 @@ export function PlayShell({
                 <span className="text-red-500 text-sm">🎙</span>
               </div>
               <div className="flex-1">
-                <div className="text-sm font-bold text-zinc-900 dark:text-white">Recording Ready</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white">{tc("recordingReady")}</div>
                 <div className="text-xs text-zinc-500">{Math.round(recorder.durationMs / 1000)}s</div>
               </div>
             </div>
@@ -359,13 +361,13 @@ export function PlayShell({
                 }}
                 className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg py-2 transition-colors"
               >
-                Submit Recording
+                {tc("submitRecording")}
               </button>
               <button
                 onClick={recorder.discardRecording}
                 className="px-4 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm font-bold rounded-lg py-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
               >
-                Discard
+                {tc("discardRecording")}
               </button>
             </div>
           </div>

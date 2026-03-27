@@ -575,6 +575,20 @@
     "waitModeRequired": "Wait Mode Required",
     "due": "Due:",
     "downloadRecording": "Download recording",
-    "failedLoadAssignment": "Failed to load assignment"
+    "failedLoadAssignment": "Failed to load assignment",
+    "grade": "Grade",
+    "gradeOutOf": "/ 100",
+    "feedback": "Feedback",
+    "feedbackPlaceholder": "Write feedback for this student...",
+    "sendFeedback": "Send Feedback",
+    "feedbackSent": "Feedback sent!",
+    "failedFeedback": "Failed to send feedback",
+    "noFeedbackYet": "No feedback yet",
+    "teacherFeedback": "Teacher Feedback",
+    "recordingReady": "Recording Ready",
+    "submitRecording": "Submit Recording",
+    "discardRecording": "Discard",
+    "recordingSubmitted": "Recording submitted!",
+    "failedSubmitRecording": "Failed to submit recording"
   }
 }

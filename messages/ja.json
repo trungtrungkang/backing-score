@@ -540,6 +540,20 @@
     "waitModeRequired": "待機モード必須",
     "due": "期限：",
     "downloadRecording": "録音をダウンロード",
-    "failedLoadAssignment": "課題の読み込みに失敗しました"
+    "failedLoadAssignment": "課題の読み込みに失敗しました",
+    "grade": "成績",
+    "gradeOutOf": "/ 100",
+    "feedback": "フィードバック",
+    "feedbackPlaceholder": "生徒へのフィードバックを書いてください...",
+    "sendFeedback": "フィードバックを送信",
+    "feedbackSent": "フィードバックを送信しました！",
+    "failedFeedback": "フィードバックの送信に失敗しました",
+    "noFeedbackYet": "フィードバックはまだありません",
+    "teacherFeedback": "先生のフィードバック",
+    "recordingReady": "録音完了",
+    "submitRecording": "録音を提出",
+    "discardRecording": "破棄",
+    "recordingSubmitted": "録音を提出しました！",
+    "failedSubmitRecording": "録音の提出に失敗しました"
   }
 }

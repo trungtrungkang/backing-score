@@ -540,6 +540,20 @@
     "waitModeRequired": "需要等待模式",
     "due": "截止：",
     "downloadRecording": "下载录音",
-    "failedLoadAssignment": "加载作业失败"
+    "failedLoadAssignment": "加载作业失败",
+    "grade": "成绩",
+    "gradeOutOf": "/ 100",
+    "feedback": "反馈",
+    "feedbackPlaceholder": "给学生写反馈...",
+    "sendFeedback": "发送反馈",
+    "feedbackSent": "反馈已发送！",
+    "failedFeedback": "发送反馈失败",
+    "noFeedbackYet": "暂无反馈",
+    "teacherFeedback": "老师反馈",
+    "recordingReady": "录音完成",
+    "submitRecording": "提交录音",
+    "discardRecording": "丢弃",
+    "recordingSubmitted": "录音已提交！",
+    "failedSubmitRecording": "提交录音失败"
   }
 }

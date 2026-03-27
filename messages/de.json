@@ -540,6 +540,20 @@
     "waitModeRequired": "Wartemodus erforderlich",
     "due": "Frist:",
     "downloadRecording": "Aufnahme herunterladen",
-    "failedLoadAssignment": "Aufgabe konnte nicht geladen werden"
+    "failedLoadAssignment": "Aufgabe konnte nicht geladen werden",
+    "grade": "Note",
+    "gradeOutOf": "/ 100",
+    "feedback": "Feedback",
+    "feedbackPlaceholder": "Feedback für diesen Schüler schreiben...",
+    "sendFeedback": "Feedback senden",
+    "feedbackSent": "Feedback gesendet!",
+    "failedFeedback": "Feedback senden fehlgeschlagen",
+    "noFeedbackYet": "Noch kein Feedback",
+    "teacherFeedback": "Lehrer-Feedback",
+    "recordingReady": "Aufnahme bereit",
+    "submitRecording": "Aufnahme einreichen",
+    "discardRecording": "Verwerfen",
+    "recordingSubmitted": "Aufnahme eingereicht!",
+    "failedSubmitRecording": "Aufnahme einreichen fehlgeschlagen"
   }
 }

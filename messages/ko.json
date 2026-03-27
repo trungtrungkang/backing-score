@@ -540,6 +540,20 @@
     "waitModeRequired": "대기 모드 필수",
     "due": "마감:",
     "downloadRecording": "녹음 다운로드",
-    "failedLoadAssignment": "과제 불러오기에 실패했습니다"
+    "failedLoadAssignment": "과제 불러오기에 실패했습니다",
+    "grade": "성적",
+    "gradeOutOf": "/ 100",
+    "feedback": "피드백",
+    "feedbackPlaceholder": "학생에게 피드백을 작성하세요...",
+    "sendFeedback": "피드백 보내기",
+    "feedbackSent": "피드백을 보냈습니다!",
+    "failedFeedback": "피드백 보내기에 실패했습니다",
+    "noFeedbackYet": "아직 피드백이 없습니다",
+    "teacherFeedback": "선생님 피드백",
+    "recordingReady": "녹음 완료",
+    "submitRecording": "녹음 제출",
+    "discardRecording": "삭제",
+    "recordingSubmitted": "녹음을 제출했습니다!",
+    "failedSubmitRecording": "녹음 제출에 실패했습니다"
   }
 }

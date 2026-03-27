@@ -80,6 +80,7 @@ async function main() {
     { id: "classroom_members", name: "Classroom Members" },
     { id: "assignments", name: "Assignments" },
     { id: "submissions", name: "Submissions" },
+    { id: "submission_feedback", name: "Submission Feedback" },
   ];
 
   const permissions = [
@@ -166,6 +167,15 @@ async function main() {
     { key: "status", type: "string", required: true, size: 32 }, // "draft", "submitted", "reviewed"
   ]);
 
+  console.log("\nCreating attributes for submission_feedback...");
+  await createAttributes(databases, "submission_feedback", [
+    { key: "submissionId", type: "string", required: true, size: 256 },
+    { key: "teacherId", type: "string", required: true, size: 256 },
+    { key: "teacherName", type: "string", required: false, size: 512 },
+    { key: "content", type: "string", required: true, size: 4096 },
+    { key: "grade", type: "float", required: false },
+  ]);
+
   // ==========================================
   // 3. Create Indexes
   // ==========================================
@@ -189,6 +199,9 @@ async function main() {
     { collection: "submissions", key: "idx_assignment_student", type: IndexType.Unique, attributes: ["assignmentId", "studentId"], orders: [] },
     { collection: "submissions", key: "idx_classroom_student", type: IndexType.Key, attributes: ["classroomId", "studentId"], orders: [] },
     { collection: "submissions", key: "idx_assignment", type: IndexType.Key, attributes: ["assignmentId", "submittedAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
+
+    // Submission Feedback
+    { collection: "submission_feedback", key: "idx_submission", type: IndexType.Key, attributes: ["submissionId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Asc] },
   ];
 
   for (const idx of indexes) {
@@ -210,8 +223,8 @@ async function main() {
   }
 
   console.log("\n🎉 Appwrite Classroom Setup Complete!");
-  console.log("   Collections: classrooms, classroom_members, assignments, submissions");
-  console.log("   Total indexes: 10");
+  console.log("   Collections: classrooms, classroom_members, assignments, submissions, submission_feedback");
+  console.log("   Total indexes: 11");
 }
 
 main().catch((err) => {

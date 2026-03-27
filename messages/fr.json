@@ -540,6 +540,20 @@
     "waitModeRequired": "Mode attente requis",
     "due": "Échéance :",
     "downloadRecording": "Télécharger l'enregistrement",
-    "failedLoadAssignment": "Échec du chargement du devoir"
+    "failedLoadAssignment": "Échec du chargement du devoir",
+    "grade": "Note",
+    "gradeOutOf": "/ 100",
+    "feedback": "Retour",
+    "feedbackPlaceholder": "Écrire un retour pour cet élève...",
+    "sendFeedback": "Envoyer le retour",
+    "feedbackSent": "Retour envoyé !",
+    "failedFeedback": "Échec de l'envoi du retour",
+    "noFeedbackYet": "Pas encore de retour",
+    "teacherFeedback": "Retour de l'enseignant",
+    "recordingReady": "Enregistrement prêt",
+    "submitRecording": "Soumettre l'enregistrement",
+    "discardRecording": "Supprimer",
+    "recordingSubmitted": "Enregistrement soumis !",
+    "failedSubmitRecording": "Échec de la soumission"
   }
 }

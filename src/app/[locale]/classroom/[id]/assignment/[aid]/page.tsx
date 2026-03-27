@@ -18,6 +18,7 @@ import {
   BarChart3,
   Download,
   Upload,
+  MessageCircle,
 } from "lucide-react";
 import {
   getAssignment,
@@ -29,13 +30,167 @@ import {
   getMySubmission,
   getRecordingUrl,
   getRecordingDownloadUrl,
+  createFeedback,
+  listFeedback,
   AssignmentDocument,
   ClassroomDocument,
   ProjectDocument,
   SubmissionDocument,
+  SubmissionFeedbackDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
+/** Inline feedback form for a single submission (teacher view) */
+function FeedbackSection({
+  submissionId,
+  t,
+}: {
+  submissionId: string;
+  t: ReturnType<typeof useTranslations<"Classroom">>;
+}) {
+  const [feedbacks, setFeedbacks] = useState<SubmissionFeedbackDocument[]>([]);
+  const [content, setContent] = useState("");
+  const [grade, setGrade] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    listFeedback(submissionId)
+      .then((list) => { setFeedbacks(list); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, [submissionId]);
+
+  const handleSend = async () => {
+    if (!content.trim() || sending) return;
+    setSending(true);
+    try {
+      const fb = await createFeedback({
+        submissionId,
+        content: content.trim(),
+        ...(grade ? { grade: parseFloat(grade) } : {}),
+      });
+      setFeedbacks((prev) => [...prev, fb]);
+      setContent("");
+      setGrade("");
+      toast.success(t("feedbackSent"));
+    } catch {
+      toast.error(t("failedFeedback"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+      {/* Existing feedback list */}
+      {feedbacks.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {feedbacks.map((fb) => (
+            <div key={fb.$id} className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                  {fb.teacherName || t("feedback")}
+                </span>
+                <div className="flex items-center gap-2">
+                  {fb.grade !== undefined && fb.grade !== null && (
+                    <span className="text-xs font-bold text-indigo-500">{fb.grade}{t("gradeOutOf")}</span>
+                  )}
+                  <span className="text-[10px] text-zinc-400">
+                    {new Date(fb.$createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">{fb.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* New feedback input */}
+      <div className="flex gap-2">
+        <div className="flex-1 flex gap-2">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={t("feedbackPlaceholder")}
+            rows={1}
+            className="flex-1 px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+          />
+          <input
+            type="number"
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            placeholder={t("grade")}
+            min={0}
+            max={100}
+            className="w-20 px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+          />
+        </div>
+        <Button
+          onClick={handleSend}
+          disabled={!content.trim() || sending}
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 shrink-0"
+        >
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Read-only feedback display for student view */
+function StudentFeedbackSection({
+  submissionId,
+  t,
+}: {
+  submissionId: string;
+  t: ReturnType<typeof useTranslations<"Classroom">>;
+}) {
+  const [feedbacks, setFeedbacks] = useState<SubmissionFeedbackDocument[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    listFeedback(submissionId)
+      .then((list) => { setFeedbacks(list); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, [submissionId]);
+
+  if (!loaded || feedbacks.length === 0) {
+    return feedbacks.length === 0 && loaded ? (
+      <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+        <p className="text-xs text-zinc-400 flex items-center gap-1">
+          <MessageCircle className="w-3 h-3" /> {t("noFeedbackYet")}
+        </p>
+      </div>
+    ) : null;
+  }
+
+  return (
+    <div className="mt-4 space-y-2">
+      <h4 className="text-sm font-bold text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+        <MessageCircle className="w-4 h-4 text-indigo-400" /> {t("teacherFeedback")}
+      </h4>
+      {feedbacks.map((fb) => (
+        <div key={fb.$id} className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-indigo-500">{fb.teacherName}</span>
+            <div className="flex items-center gap-2">
+              {fb.grade !== undefined && fb.grade !== null && (
+                <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{fb.grade}{t("gradeOutOf")}</span>
+              )}
+              <span className="text-[10px] text-zinc-400">
+                {new Date(fb.$createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-zinc-700 dark:text-zinc-300">{fb.content}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function AssignmentDetailPage() {
   const params = useParams();
@@ -234,6 +389,9 @@ export default function AssignmentDetailPage() {
                     <audio src={getRecordingUrl(mySubmission.recordingFileId)} controls className="w-full h-8" />
                   </div>
                 )}
+
+                {/* Student sees teacher feedback here */}
+                <StudentFeedbackSection submissionId={mySubmission.$id} t={t} />
               </div>
             ) : (
               <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center">
@@ -303,10 +461,10 @@ export default function AssignmentDetailPage() {
                 <p className="text-zinc-500">{t("noSubmissions")}</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {allSubmissions.map((sub) => (
                   <div key={sub.$id}
-                    className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 space-y-2"
+                    className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -333,14 +491,18 @@ export default function AssignmentDetailPage() {
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
                           sub.status === "submitted"
                             ? "bg-green-50 dark:bg-green-500/10 text-green-500"
+                            : sub.status === "reviewed"
+                            ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500"
                             : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
                         }`}>
                           {sub.status}
                         </span>
                       </div>
                     </div>
+
+                    {/* Audio player */}
                     {sub.recordingFileId && (
-                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                         <audio src={getRecordingUrl(sub.recordingFileId)} controls className="flex-1 h-8" />
                         <a
                           href={getRecordingDownloadUrl(sub.recordingFileId)}
@@ -352,6 +514,9 @@ export default function AssignmentDetailPage() {
                         </a>
                       </div>
                     )}
+
+                    {/* Teacher feedback section */}
+                    <FeedbackSection submissionId={sub.$id} t={t} />
                   </div>
                 ))}
               </div>

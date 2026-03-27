@@ -543,6 +543,20 @@
     "waitModeRequired": "Yêu cầu chế độ chờ",
     "due": "Hạn:",
     "downloadRecording": "Tải bản thu",
-    "failedLoadAssignment": "Không thể tải bài tập"
+    "failedLoadAssignment": "Không thể tải bài tập",
+    "grade": "Điểm",
+    "gradeOutOf": "/ 100",
+    "feedback": "Nhận xét",
+    "feedbackPlaceholder": "Viết nhận xét cho học sinh...",
+    "sendFeedback": "Gửi nhận xét",
+    "feedbackSent": "Đã gửi nhận xét!",
+    "failedFeedback": "Không thể gửi nhận xét",
+    "noFeedbackYet": "Chưa có nhận xét",
+    "teacherFeedback": "Nhận xét từ giáo viên",
+    "recordingReady": "Bản thu sẵn sàng",
+    "submitRecording": "Gửi bản thu",
+    "discardRecording": "Hủy",
+    "recordingSubmitted": "Đã gửi bản thu!",
+    "failedSubmitRecording": "Không thể gửi bản thu"
   }
 }

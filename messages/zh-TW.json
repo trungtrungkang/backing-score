@@ -540,6 +540,20 @@
     "waitModeRequired": "需要等待模式",
     "due": "截止：",
     "downloadRecording": "下載錄音",
-    "failedLoadAssignment": "載入作業失敗"
+    "failedLoadAssignment": "載入作業失敗",
+    "grade": "成績",
+    "gradeOutOf": "/ 100",
+    "feedback": "回饋",
+    "feedbackPlaceholder": "給學生寫回饋...",
+    "sendFeedback": "傳送回饋",
+    "feedbackSent": "回饋已傳送！",
+    "failedFeedback": "傳送回饋失敗",
+    "noFeedbackYet": "尚無回饋",
+    "teacherFeedback": "老師回饋",
+    "recordingReady": "錄音完成",
+    "submitRecording": "提交錄音",
+    "discardRecording": "捨棄",
+    "recordingSubmitted": "錄音已提交！",
+    "failedSubmitRecording": "提交錄音失敗"
   }
 }

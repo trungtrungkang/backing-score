@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   getProject,
   getPlaylist,
@@ -26,6 +27,7 @@ export default function PlayProjectPage() {
   const playlistId = searchParams.get("list");
   const assignmentId = searchParams.get("assignmentId");
   const classroomId = searchParams.get("classroomId");
+  const tc = useTranslations("Classroom");
 
   const [project, setProject] = useState<ProjectDocument | null>(null);
   const [composerName, setComposerName] = useState<string>("Loading...");
@@ -106,9 +108,9 @@ export default function PlayProjectPage() {
         attempts: 1,
         recordingBlob: blob,
       });
-      toast.success("Recording submitted!");
+      toast.success(tc("recordingSubmitted"));
     } catch {
-      toast.error("Failed to submit recording");
+      toast.error(tc("failedSubmitRecording"));
     }
   }, [assignmentId, classroomId]);
 

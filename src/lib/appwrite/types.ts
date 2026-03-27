@@ -260,3 +260,19 @@ export interface SubmissionDocument {
   /** "draft", "submitted", "reviewed" */
   status: string;
 }
+
+export interface SubmissionFeedbackDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  /** The submission this feedback belongs to */
+  submissionId: string;
+  /** Teacher who wrote the feedback */
+  teacherId: string;
+  /** Teacher display name (snapshotted) */
+  teacherName?: string;
+  /** Feedback text content */
+  content: string;
+  /** Optional grade 0-100 */
+  grade?: number;
+}
