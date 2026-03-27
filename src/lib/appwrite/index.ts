@@ -81,3 +81,35 @@ export {
   getReactionsCount,
   checkIsReacted,
 } from "./social";
+
+// Classroom
+export type {
+  ClassroomDocument,
+  ClassroomMemberDocument,
+  AssignmentDocument,
+  SubmissionDocument,
+} from "./types";
+export {
+  createClassroom,
+  getClassroom,
+  listMyClassrooms,
+  updateClassroom,
+  deleteClassroom,
+  joinClassroom,
+  leaveClassroom,
+  listClassroomMembers,
+  removeClassroomMember,
+  isClassroomMember,
+} from "./classrooms";
+export {
+  createAssignment,
+  listAssignments,
+  getAssignment,
+  deleteAssignment,
+} from "./assignments";
+export {
+  submitAssignment,
+  listSubmissions,
+  getMySubmission,
+  listMySubmissions,
+} from "./submissions";

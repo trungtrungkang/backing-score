@@ -181,3 +181,76 @@ export interface WikiTranslationDocument {
   field: string;
   value: string;
 }
+
+// ==========================================
+// Classroom Document Types
+// ==========================================
+
+export interface ClassroomDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  /** Teacher who owns this classroom */
+  teacherId: string;
+  name: string;
+  description?: string;
+  coverImage?: string;
+  /** Target instrument for the class, e.g. "piano" */
+  instrumentFocus?: string;
+  /** Target level, e.g. "beginner" */
+  level?: string;
+  /** 6-char code for students to join */
+  classCode: string;
+  /** active, archived */
+  status: string;
+}
+
+export interface ClassroomMemberDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  classroomId: string;
+  userId: string;
+  /** "teacher" or "student" */
+  role: string;
+  joinedAt: string;
+  /** active, removed */
+  status: string;
+}
+
+export interface AssignmentDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  classroomId: string;
+  title: string;
+  description?: string;
+  /** Where the exercise comes from: "library", "upload", "discover" */
+  sourceType: string;
+  /** ID of the project used as the exercise */
+  sourceId: string;
+  /** "practice", "assessment", or "performance" */
+  type: string;
+  /** ISO date string deadline */
+  deadline?: string;
+  /** Whether Wait Mode is required for this assignment */
+  waitModeRequired: boolean;
+}
+
+export interface SubmissionDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  assignmentId: string;
+  classroomId: string;
+  studentId: string;
+  /** Accuracy percentage 0-100 */
+  accuracy?: number;
+  /** Tempo achieved */
+  tempo?: number;
+  /** Number of practice attempts */
+  attempts: number;
+  submittedAt?: string;
+  /** "draft", "submitted", "reviewed" */
+  status: string;
+}

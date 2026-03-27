@@ -28,6 +28,12 @@ export const APPWRITE_WIKI_COMPOSITIONS_COLLECTION_ID = "wiki_compositions";
 export const APPWRITE_WIKI_GENRES_COLLECTION_ID = "wiki_genres";
 export const APPWRITE_WIKI_TRANSLATIONS_COLLECTION_ID = "wiki_translations";
 
+// Classroom collections
+export const APPWRITE_CLASSROOMS_COLLECTION_ID = "classrooms";
+export const APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID = "classroom_members";
+export const APPWRITE_ASSIGNMENTS_COLLECTION_ID = "assignments";
+export const APPWRITE_SUBMISSIONS_COLLECTION_ID = "submissions";
+
 export function isAppwriteConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT &&

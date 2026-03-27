@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
   { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },
+  { href: "/classroom", label: "My Classrooms", iconColor: "text-indigo-400", icon: GraduationCap },
 ];
 
 const EXTRA_ITEMS = [
