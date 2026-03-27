@@ -123,15 +123,4 @@ export {
   updateFeedback,
   deleteFeedback,
 } from "./submission-feedback";
-export type { ExerciseFolderDocument, ClassroomExerciseDocument } from "./types";
-export {
-  createExerciseFolder,
-  listExerciseFolders,
-  updateExerciseFolder,
-  deleteExerciseFolder,
-} from "./exercise-folders";
-export {
-  addClassroomExercise,
-  listClassroomExercises,
-  removeClassroomExercise,
-} from "./classroom-exercises";
+

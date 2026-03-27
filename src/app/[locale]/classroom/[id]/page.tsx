@@ -23,7 +23,6 @@ import {
   Music4,
   BarChart3,
   Save,
-  BookOpen,
 } from "lucide-react";
 import {
   getClassroom,
