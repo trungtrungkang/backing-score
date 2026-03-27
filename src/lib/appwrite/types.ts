@@ -286,4 +286,5 @@ export interface ProjectFolderDocument {
   userId: string;
   name: string;
   order: number;
+  parentFolderId?: string | null;
 }

@@ -75,6 +75,7 @@ async function main() {
     { key: "userId", type: "string", required: true, size: 256 },
     { key: "name", type: "string", required: true, size: 512 },
     { key: "order", type: "integer", required: false },
+    { key: "parentFolderId", type: "string", required: false, size: 256 },
   ];
   for (const attr of attrs) {
     try {
@@ -113,6 +114,7 @@ async function main() {
   console.log("\nCreating indexes...");
   const indexes = [
     { collection: "project_folders", key: "idx_user", type: IndexType.Key, attributes: ["userId", "order"], orders: [OrderBy.Asc, OrderBy.Asc] },
+    { collection: "project_folders", key: "idx_parent", type: IndexType.Key, attributes: ["userId", "parentFolderId"], orders: [] },
     { collection: "projects", key: "idx_folder", type: IndexType.Key, attributes: ["folderId"], orders: [] },
   ];
   for (const idx of indexes) {

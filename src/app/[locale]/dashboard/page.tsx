@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X, FolderPlus, Folder, Loader2 } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X, FolderPlus, Folder, Loader2, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,10 +74,11 @@ export default function DashboardPage() {
 
   // Folder state
   const [folders, setFolders] = useState<ProjectFolderDocument[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [moveModalProject, setMoveModalProject] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   // Load playlists + folders once
@@ -88,11 +89,36 @@ export default function DashboardPage() {
     }
   }, [user]);
 
+  // Folder helpers
+  const getChildFolders = (parentId: string | null) =>
+    folders.filter(f => (f.parentFolderId || null) === parentId);
+
+  const getBreadcrumb = (folderId: string | null): ProjectFolderDocument[] => {
+    const path: ProjectFolderDocument[] = [];
+    let id = folderId;
+    while (id) {
+      const folder = folders.find(f => f.$id === id);
+      if (!folder) break;
+      path.unshift(folder);
+      id = folder.parentFolderId || null;
+    }
+    return path;
+  };
+
+  // Collect all descendant folder IDs (for cascade local delete)
+  const getDescendantIds = (folderId: string): string[] => {
+    const children = folders.filter(f => f.parentFolderId === folderId);
+    return children.reduce<string[]>(
+      (acc, c) => [...acc, c.$id, ...getDescendantIds(c.$id)],
+      []
+    );
+  };
+
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || creatingFolder) return;
     setCreatingFolder(true);
     try {
-      const folder = await createProjectFolder(newFolderName.trim());
+      const folder = await createProjectFolder(newFolderName.trim(), currentFolderId);
       setFolders((prev) => [...prev, folder]);
       setNewFolderName("");
       setShowNewFolder(false);
@@ -108,10 +134,10 @@ export default function DashboardPage() {
     if (!(await confirm({ title: t("deleteFolder"), description: t("deleteFolderDesc"), confirmText: t("deleteConfirm"), cancelText: t("deleteCancel") }))) return;
     try {
       await deleteProjectFolder(folderId);
-      setFolders((prev) => prev.filter((f) => f.$id !== folderId));
-      // Unfile projects locally
-      setProjects((prev) => prev.map((p) => p.folderId === folderId ? { ...p, folderId: null } : p));
-      if (selectedFolder === folderId) setSelectedFolder(null);
+      const allDeletedIds = [folderId, ...getDescendantIds(folderId)];
+      setFolders((prev) => prev.filter((f) => !allDeletedIds.includes(f.$id)));
+      setProjects((prev) => prev.map((p) => allDeletedIds.includes(p.folderId || "") ? { ...p, folderId: null } : p));
+      if (allDeletedIds.includes(currentFolderId || "")) setCurrentFolderId(null);
       toast.success(t("folderDeleted"));
     } catch {
       toast.error(t("failedDeleteFolder"));
@@ -122,6 +148,7 @@ export default function DashboardPage() {
     try {
       await moveProjectToFolder(projectId, folderId);
       setProjects((prev) => prev.map((p) => p.$id === projectId ? { ...p, folderId } : p));
+      setMoveModalProject(null);
       toast.success(t("movedToFolder"));
     } catch {
       toast.error(t("failedMoveToFolder"));
@@ -402,40 +429,65 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Folder Filter Chips */}
+          {/* Breadcrumb + Folder Navigation */}
           {!loading && projects.length > 0 && (
-            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
-              <button
-                onClick={() => setSelectedFolder(null)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${selectedFolder === null ? "bg-zinc-900 dark:bg-white text-white dark:text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
-              >
-                {t("allProjects")} <span className="text-[10px] opacity-60">{projects.length}</span>
-              </button>
-              {folders.map((folder) => {
-                const count = projects.filter((p) => p.folderId === folder.$id).length;
-                return (
-                  <div key={folder.$id} className="group shrink-0 flex items-center">
+            <div className="mb-6">
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-1 text-sm mb-3 flex-wrap">
+                <button
+                  onClick={() => setCurrentFolderId(null)}
+                  className={`font-bold transition-colors ${currentFolderId === null ? "text-zinc-900 dark:text-white" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
+                >
+                  {t("myUploads")}
+                </button>
+                {getBreadcrumb(currentFolderId).map((folder) => (
+                  <span key={folder.$id} className="flex items-center gap-1">
+                    <ChevronRight className="w-3 h-3 text-zinc-400" />
                     <button
-                      onClick={() => setSelectedFolder(folder.$id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${selectedFolder === folder.$id ? "bg-zinc-900 dark:bg-white text-white dark:text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+                      onClick={() => setCurrentFolderId(folder.$id)}
+                      className={`font-bold transition-colors ${currentFolderId === folder.$id ? "text-zinc-900 dark:text-white" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
                     >
-                      <Folder className="w-3 h-3" /> {folder.name} <span className="text-[10px] opacity-60">{count}</span>
+                      {folder.name}
                     </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Sub-folder grid */}
+              {(() => {
+                const childFolders = getChildFolders(currentFolderId);
+                if (childFolders.length === 0 && !currentFolderId) return null;
+                return (
+                  <div className="flex items-center gap-2 flex-wrap mb-4">
+                    {childFolders.map((folder) => (
+                      <div key={folder.$id} className="group flex items-center">
+                        <button
+                          onClick={() => setCurrentFolderId(folder.$id)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 text-sm font-bold text-zinc-700 dark:text-zinc-300 hover:border-blue-500/30 transition-colors"
+                        >
+                          <Folder className="w-4 h-4 text-amber-500" />
+                          {folder.name}
+                          <span className="text-[10px] text-zinc-400">
+                            {projects.filter(p => p.folderId === folder.$id).length}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFolder(folder.$id)}
+                          className="opacity-0 group-hover:opacity-100 ml-1 p-1 text-zinc-400 hover:text-red-400 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                     <button
-                      onClick={() => handleDeleteFolder(folder.$id)}
-                      className="opacity-0 group-hover:opacity-100 ml-0.5 p-0.5 text-zinc-400 hover:text-red-400 transition-all"
+                      onClick={() => setShowNewFolder(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-sm font-bold text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <FolderPlus className="w-4 h-4" /> {t("newFolder")}
                     </button>
                   </div>
                 );
-              })}
-              <button
-                onClick={() => setShowNewFolder(true)}
-                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              >
-                <FolderPlus className="w-3 h-3" /> {t("newFolder")}
-              </button>
+              })()}
             </div>
           )}
 
@@ -490,7 +542,7 @@ export default function DashboardPage() {
             const filtered = projects.filter(p => {
               const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
               const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? p.published : !p.published);
-              const matchesFolder = selectedFolder === null || p.folderId === selectedFolder;
+              const matchesFolder = currentFolderId === null || p.folderId === currentFolderId;
               return matchesSearch && matchesStatus && matchesFolder;
             });
             return filtered.length === 0 ? (
@@ -609,29 +661,13 @@ export default function DashboardPage() {
                           <DropdownMenuSeparator />
                           {/* Move to Folder */}
                           {folders.length > 0 && (
-                            <>
-                              <DropdownMenuItem disabled className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
-                                {t("moveToFolder")}
-                              </DropdownMenuItem>
-                              {p.folderId && (
-                                <DropdownMenuItem
-                                  onClick={(e) => { e.stopPropagation(); handleMoveToFolder(p.$id, null); }}
-                                  className="flex items-center gap-2 cursor-pointer text-xs"
-                                >
-                                  <FolderOpen className="w-3 h-3" /> {t("unfiled")}
-                                </DropdownMenuItem>
-                              )}
-                              {folders.filter(f => f.$id !== p.folderId).map(f => (
-                                <DropdownMenuItem
-                                  key={f.$id}
-                                  onClick={(e) => { e.stopPropagation(); handleMoveToFolder(p.$id, f.$id); }}
-                                  className="flex items-center gap-2 cursor-pointer text-xs"
-                                >
-                                  <Folder className="w-3 h-3" /> {f.name}
-                                </DropdownMenuItem>
-                              ))}
-                              <DropdownMenuSeparator />
-                            </>
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); setMoveModalProject(p.$id); }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Folder className="w-4 h-4" />
+                              {t("moveToFolder")}
+                            </DropdownMenuItem>
                           )}
                           {/* Add to Collection sub-menu */}
                           {playlists.length > 0 && (
@@ -683,7 +719,101 @@ export default function DashboardPage() {
             }}
           />
         )}
+        {/* Move to Folder Tree-View Modal */}
+        {moveModalProject && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setMoveModalProject(null)}>
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm max-h-[60vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                <h3 className="font-black text-zinc-900 dark:text-white">{t("moveToFolder")}</h3>
+              </div>
+              <div className="p-3 overflow-y-auto max-h-[45vh]">
+                {/* Unfiled option */}
+                <button
+                  onClick={() => handleMoveToFolder(moveModalProject, null)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left mb-1"
+                >
+                  <FolderOpen className="w-4 h-4" /> {t("unfiled")}
+                </button>
+                {/* Root-level folder tree */}
+                {getChildFolders(null).map(folder => (
+                  <FolderTreeNode
+                    key={folder.$id}
+                    folder={folder}
+                    allFolders={folders}
+                    depth={0}
+                    onSelect={(folderId) => handleMoveToFolder(moveModalProject, folderId)}
+                    currentFolderId={projects.find(p => p.$id === moveModalProject)?.folderId || null}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+    </div>
+  );
+}
+
+/** Recursive tree node for folder picker */
+function FolderTreeNode({
+  folder,
+  allFolders,
+  depth,
+  onSelect,
+  currentFolderId,
+}: {
+  folder: ProjectFolderDocument;
+  allFolders: ProjectFolderDocument[];
+  depth: number;
+  onSelect: (folderId: string) => void;
+  currentFolderId: string | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const children = allFolders.filter(f => (f.parentFolderId || null) === folder.$id);
+  const isCurrent = currentFolderId === folder.$id;
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-1 rounded-lg transition-colors ${
+          isCurrent ? "bg-blue-500/10" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        }`}
+        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      >
+        {children.length > 0 ? (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors"
+          >
+            <ChevronRight className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
+        <button
+          onClick={() => onSelect(folder.$id)}
+          disabled={isCurrent}
+          className={`flex-1 flex items-center gap-2 py-2 pr-3 text-sm font-medium text-left transition-colors ${
+            isCurrent
+              ? "text-blue-500 cursor-default"
+              : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+          {folder.name}
+          {isCurrent && <span className="text-[10px] text-blue-400 ml-auto">• current</span>}
+        </button>
+      </div>
+      {expanded && children.map(child => (
+        <FolderTreeNode
+          key={child.$id}
+          folder={child}
+          allFolders={allFolders}
+          depth={depth + 1}
+          onSelect={onSelect}
+          currentFolderId={currentFolderId}
+        />
+      ))}
     </div>
   );
 }

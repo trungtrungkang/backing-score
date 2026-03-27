@@ -1,6 +1,6 @@
 /**
  * Project Folder CRUD for My Uploads.
- * Folders organize user's projects in the dashboard.
+ * Supports hierarchical (nested) folders via parentFolderId.
  */
 
 import {
@@ -22,14 +22,22 @@ const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_PROJECT_FOLDERS_COLLECTION_ID;
 const projectsCollId = APPWRITE_PROJECTS_COLLECTION_ID;
 
-/** Create a folder for the current user. */
-export async function createProjectFolder(name: string): Promise<ProjectFolderDocument> {
+/** Create a folder for the current user, optionally inside a parent folder. */
+export async function createProjectFolder(
+  name: string,
+  parentFolderId?: string | null
+): Promise<ProjectFolderDocument> {
   const user = await account.get();
   const doc = await databases.createDocument(
     dbId,
     collId,
     ID.unique(),
-    { userId: user.$id, name, order: 0 },
+    {
+      userId: user.$id,
+      name,
+      parentFolderId: parentFolderId || null,
+      order: 0,
+    },
     [
       Permission.read(Role.user(user.$id)),
       Permission.update(Role.user(user.$id)),
@@ -39,13 +47,13 @@ export async function createProjectFolder(name: string): Promise<ProjectFolderDo
   return doc as unknown as ProjectFolderDocument;
 }
 
-/** List folders belonging to the current user. */
+/** List ALL folders belonging to the current user (flat list, build tree client-side). */
 export async function listProjectFolders(): Promise<ProjectFolderDocument[]> {
   const user = await account.get();
   const { documents } = await databases.listDocuments(dbId, collId, [
     Query.equal("userId", user.$id),
     Query.orderAsc("order"),
-    Query.limit(100),
+    Query.limit(200),
   ]);
   return documents as unknown as ProjectFolderDocument[];
 }
@@ -59,7 +67,7 @@ export async function updateProjectFolder(
   return doc as unknown as ProjectFolderDocument;
 }
 
-/** Delete a folder. Projects inside are unfiled (folderId → null), not deleted. */
+/** Delete a folder and all sub-folders recursively. Projects are unfiled, not deleted. */
 export async function deleteProjectFolder(folderId: string): Promise<void> {
   // Unfile projects in this folder
   try {
@@ -70,6 +78,17 @@ export async function deleteProjectFolder(folderId: string): Promise<void> {
     await Promise.all(
       documents.map(p => databases.updateDocument(dbId, projectsCollId, p.$id, { folderId: null }))
     );
+  } catch { /* best-effort */ }
+
+  // Delete sub-folders recursively
+  try {
+    const { documents: subFolders } = await databases.listDocuments(dbId, collId, [
+      Query.equal("parentFolderId", folderId),
+      Query.limit(100),
+    ]);
+    for (const sub of subFolders) {
+      await deleteProjectFolder(sub.$id);
+    }
   } catch { /* best-effort */ }
 
   await databases.deleteDocument(dbId, collId, folderId);
