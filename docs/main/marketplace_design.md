@@ -188,10 +188,10 @@ flowchart TD
     D --> E[Upload video giới thiệu]
     E --> F[Đặt giá: Trial / Regular / Extended]
     F --> G[Thiết lập lịch trống - Availability]
-    G --> H[Kết nối Stripe Connect cho payout]
+    G --> H[Nhập PayPal email cho payout]
     H --> I[Submit → Admin review]
     I --> J{Approved?}
-    J -->|Có| K[Profile hiện trên /teachers]
+    J -->|Có| K[Profile hiện trên /teachers + B&S tự tạo LS product]
     J -->|Không| L[Feedback → sửa lại]
 ```
 
@@ -204,9 +204,9 @@ flowchart TD
     C --> D[Xem video intro, reviews, lịch trống]
     D --> E[Chọn ngày + giờ + loại buổi học]
     E --> F[Booking Confirmation page]
-    F --> G[Thanh toán qua Stripe]
+    F --> G[Thanh toán qua LemonSqueezy checkout]
     G --> H{Thanh toán OK?}
-    H -->|Có| I[Booking confirmed]
+    H -->|Có| I[Webhook order_created → Booking confirmed]
     I --> J[Email/Notification cho cả 2]
     J --> K[Trước buổi học: Reminder notification]
     K --> L[Đúng giờ: Join Live Lesson]
@@ -223,21 +223,21 @@ flowchart TD
     D --> E[Student nhận prompt: Rate & Review]
     E --> F[Student đánh giá 1-5 ⭐ + nhận xét]
     F --> G[Review hiện trên Teacher Profile]
-    D --> H[Tiền chuyển vào Teacher balance]
-    H --> I[Teacher rút tiền qua Stripe Connect]
+    D --> H[B&S ghi nhận earnings → teacher balance]
+    H --> I[Cuối tháng: B&S chuyển cho teacher qua PayPal]
 ```
 
 ### 3.4 Thanh toán & Payout
 
 ```mermaid
 flowchart LR
-    A[Student trả $30] --> B[Stripe giữ tiền]
+    A[Student trả $30] --> B[LemonSqueezy xử lý - B&S là MoR]
     B --> C{Buổi học hoàn thành?}
     C -->|Có| D[B&S giữ 15% = $4.50]
     D --> E[Teacher nhận 85% = $25.50]
-    E --> F[Tích lũy trong balance]
-    F --> G[Teacher rút tiền → bank]
-    C -->|Hủy trước 12h| H[Hoàn tiền 100% cho student]
+    E --> F[Tích lũy trong B&S balance]
+    F --> G[Cuối tháng: B&S chuyển qua PayPal/bank]
+    C -->|Hủy trước 12h| H[LemonSqueezy refund 100%]
     C -->|Hủy trong 12h| I[Phạt 50% → teacher nhận $12.75]
 ```
 
@@ -284,7 +284,12 @@ interface TeacherProfile {
   isListed: boolean;           // hiện trên /teachers
   isVerified: boolean;         // admin approved
   timezone: string;            // "Asia/Ho_Chi_Minh"
-  stripeConnectId?: string;    // Stripe Connect account
+
+  // Payment
+  lemonSqueezyProductId?: string;  // LS product tạo tự động
+  payoutMethod: "paypal" | "bank_transfer";
+  payoutEmail?: string;            // PayPal email hoặc bank info
+  // Tương lai: stripeConnectId khi migrate sang Stripe Connect
 
   createdAt: string;
   updatedAt: string;
@@ -320,8 +325,9 @@ interface Booking {
   commissionUsd: number;       // $4.50 (15%)
   teacherEarningUsd: number;   // $25.50
 
-  // Payment
-  stripePaymentIntentId: string;
+  // Payment (abstracted — hiện dùng LS, tương lai Stripe)
+  paymentProviderId: string;     // LemonSqueezy order_id hoặc Stripe PI
+  paymentProvider: "lemonsqueezy" | "stripe"; // dễ migrate
   paymentStatus: "pending" | "paid" | "refunded" | "partial_refund";
 
   // Lesson
@@ -380,8 +386,8 @@ interface Review {
 /teachers/[id]/book (Booking Confirmation)
 ├── BookingSummary (teacher, date, time, type)
 ├── PriceBreakdown (lesson fee, total)
-├── PaymentForm (Stripe Elements)
-└── ConfirmButton
+├── PaymentButton → LemonSqueezy Checkout Overlay
+└── (Tương lai: swap sang Stripe Elements khi có US entity)
 
 /dashboard/earnings (Teacher Dashboard)
 ├── EarningsOverview (cards: this month, pending, lessons, rating)
@@ -401,7 +407,7 @@ interface Review {
 | **Classroom Library** | Teacher có thể dùng exercises từ Library riêng trong buổi 1:1 |
 | **User Profile (`/u/[id]`)** | Link sang Teacher Profile nếu user là teacher |
 | **Auth (Appwrite)** | Teacher = Creator role + teacher_profiles collection |
-| **Payment (LemonSqueezy)** | Marketplace dùng **Stripe Connect** (riêng) cho per-session payments |
+| **Payment (LemonSqueezy)** | Tất cả payments qua LemonSqueezy (B&S là MoR). Dùng abstraction layer để tương lai swap sang Stripe Connect |
 | **Notifications** | Booking confirmed, reminder trước 1h, review prompt sau buổi |
 | **Dashboard** | Thêm tabs: Earnings, Availability, Bookings |
 
@@ -499,7 +505,8 @@ function calculateTeacherScore(teacher: TeacherProfile): number {
 - [ ] `/teachers` — search + filters + teacher grid
 - [ ] `/teachers/[id]` — profile page + booking card
 - [ ] Calendar picker + time slot selector
-- [ ] `/teachers/[id]/book` — confirmation + Stripe payment
+- [ ] `/teachers/[id]/book` — confirmation + LemonSqueezy checkout
+- [ ] Payment abstraction layer (`IPaymentProvider`)
 - [ ] `bookings` collection + status management
 - [ ] Email notifications (confirmation, reminder)
 
@@ -513,7 +520,9 @@ function calculateTeacherScore(teacher: TeacherProfile): number {
 - [ ] Reviews hiển thị trên teacher profile
 - [ ] Teacher reply to review
 - [ ] Earnings dashboard (stats, chart, transactions)
-- [ ] Stripe Connect payout
+- [ ] Teacher payout qua PayPal / bank transfer
+
+> **Tương lai (khi có US entity):** Swap `LemonSqueezyProvider` → `StripeConnectProvider`, teacher onboard Stripe trực tiếp, payout tự động.
 
 ### Phase 5 — Polish (1 tuần)
 - [ ] Teacher ranking algorithm

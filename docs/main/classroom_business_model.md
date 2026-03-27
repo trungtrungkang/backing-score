@@ -92,7 +92,7 @@ Backing & Score
 | | Chi tiết |
 |---|---|
 | **Teacher đặt giá** | $10 - $80/giờ (tùy trình độ, nhạc cụ, thị trường) |
-| **Student thanh toán** | Qua B&S (LemonSqueezy / Stripe) |
+| **Student thanh toán** | Qua B&S (LemonSqueezy) |
 | **B&S hoa hồng** | **15%** (cạnh tranh với italki 15%) |
 | **Teacher nhận** | 85% |
 | **Buổi học** | Live Lesson 1:1 (video + synced sheet music) |
@@ -119,7 +119,7 @@ Backing & Score
 | **Per-session Payment** | Student trả từng buổi, B&S giữ 15% | Trung bình |
 | **Reviews & Ratings** | Student đánh giá sau mỗi buổi | Thấp |
 | **Teacher Earnings Dashboard** | Thu nhập, lịch sử giao dịch, rút tiền | Trung bình |
-| **Teacher Payout** | Stripe Connect, thanh toán hàng tháng | Trung bình |
+| **Teacher Payout** | PayPal / bank transfer, cuối tháng | Trung bình |
 
 > **Quan trọng:** Core Live Lesson (video + synced sheet music) = dùng chung, không build lại.
 
@@ -277,7 +277,7 @@ flowchart LR
 - [ ] Booking & Scheduling (calendar, time slots)
 - [ ] Per-session payment (B&S giữ 15%)
 - [ ] Reviews & Ratings
-- [ ] Teacher Earnings Dashboard + payout (Stripe Connect)
+- [ ] Teacher Earnings Dashboard + payout (PayPal / bank transfer)
 - [ ] Trial lesson (30 phút giá rẻ)
 - [ ] Mục tiêu: **50 marketplace teachers, 200 buổi/tháng**
 
