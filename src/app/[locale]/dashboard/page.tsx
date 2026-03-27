@@ -609,6 +609,23 @@ export default function DashboardPage() {
                               </span>
                             </>
                           )}
+                          {/* Folder badge (only at root to show which folder the project belongs to) */}
+                          {currentFolderId === null && p.folderId && (() => {
+                            const folder = folders.find(f => f.$id === p.folderId);
+                            if (!folder) return null;
+                            return (
+                              <>
+                                <span className="text-zinc-300 dark:text-zinc-700 text-xs">•</span>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentFolderId(folder.$id); }}
+                                  className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-0.5 hover:underline max-w-[100px] truncate"
+                                >
+                                  <Folder className="w-2.5 h-2.5" />
+                                  {folder.name}
+                                </button>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
