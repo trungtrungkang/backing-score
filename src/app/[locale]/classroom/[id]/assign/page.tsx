@@ -12,6 +12,8 @@ import {
   Loader2,
   Music4,
   CheckCircle,
+  Folder,
+  ChevronRight,
 } from "lucide-react";
 import {
   createAssignment,
@@ -19,7 +21,9 @@ import {
   listPublished,
   getClassroom,
   isClassroomMember,
+  listProjectFolders,
   ProjectDocument,
+  ProjectFolderDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -45,6 +49,10 @@ export default function CreateAssignmentPage() {
   const [selectedProject, setSelectedProject] = useState<ProjectDocument | null>(null);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
+  // Folder state for My Uploads tab
+  const [folders, setFolders] = useState<ProjectFolderDocument[]>([]);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) { router.push("/login"); return; }
     if (!user) return;
@@ -57,17 +65,42 @@ export default function CreateAssignmentPage() {
     });
 
     setLoadingProjects(true);
-    Promise.all([listMyProjects(), listPublished()])
-      .then(([mine, pub]) => {
+    Promise.all([listMyProjects(), listPublished(), listProjectFolders()])
+      .then(([mine, pub, flds]) => {
         setMyProjects(mine);
         setDiscoverProjects(pub);
+        setFolders(flds);
       })
       .finally(() => setLoadingProjects(false));
   }, [user, authLoading, classroomId, router, t]);
 
-  const filteredProjects = (sourceTab === "uploads" ? myProjects : discoverProjects).filter(
-    (p) => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Folder helpers
+  const getChildFolders = (parentId: string | null) =>
+    folders.filter(f => (f.parentFolderId || null) === parentId);
+
+  const getBreadcrumb = (folderId: string | null): ProjectFolderDocument[] => {
+    const path: ProjectFolderDocument[] = [];
+    let id = folderId;
+    while (id) {
+      const folder = folders.find(f => f.$id === id);
+      if (!folder) break;
+      path.unshift(folder);
+      id = folder.parentFolderId || null;
+    }
+    return path;
+  };
+
+  // Filter projects: if searching, search across all; if browsing folders, show current folder only
+  const filteredProjects = (() => {
+    const source = sourceTab === "uploads" ? myProjects : discoverProjects;
+    if (searchQuery) {
+      return source.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    if (sourceTab === "uploads") {
+      return source.filter(p => (p.folderId || null) === currentFolderId);
+    }
+    return source;
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +195,7 @@ export default function CreateAssignmentPage() {
 
             <div className="flex gap-1 mb-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
               {(["uploads", "discover"] as const).map((tab) => (
-                <button key={tab} type="button" onClick={() => setSourceTab(tab)}
+                <button key={tab} type="button" onClick={() => { setSourceTab(tab); setCurrentFolderId(null); }}
                   className={`flex-1 py-2 rounded-md text-sm font-bold transition-colors ${
                     sourceTab === tab
                       ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
@@ -173,6 +206,51 @@ export default function CreateAssignmentPage() {
                 </button>
               ))}
             </div>
+
+            {/* Breadcrumb + Folders (only in uploads tab) */}
+            {sourceTab === "uploads" && !searchQuery && folders.length > 0 && (
+              <div className="mb-3">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-1 text-xs mb-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentFolderId(null)}
+                    className={`font-bold transition-colors ${currentFolderId === null ? "text-zinc-900 dark:text-white" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
+                  >
+                    {t("myUploads")}
+                  </button>
+                  {getBreadcrumb(currentFolderId).map((folder) => (
+                    <span key={folder.$id} className="flex items-center gap-1">
+                      <ChevronRight className="w-3 h-3 text-zinc-400" />
+                      <button
+                        type="button"
+                        onClick={() => setCurrentFolderId(folder.$id)}
+                        className={`font-bold transition-colors ${currentFolderId === folder.$id ? "text-zinc-900 dark:text-white" : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"}`}
+                      >
+                        {folder.name}
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Sub-folder chips */}
+                {getChildFolders(currentFolderId).length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                    {getChildFolders(currentFolderId).map((folder) => (
+                      <button
+                        key={folder.$id}
+                        type="button"
+                        onClick={() => setCurrentFolderId(folder.$id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        <Folder className="w-3 h-3 text-amber-500" />
+                        {folder.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
