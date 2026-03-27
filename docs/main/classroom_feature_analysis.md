@@ -67,6 +67,43 @@ Teacher xem kết quả + gửi phản hồi
 | **Assessment** | Bài kiểm tra, bật Wait Mode bắt buộc | Tự động: accuracy %, completion time |
 | **Performance** | Chơi toàn bài, không dừng | Tự động: accuracy % + teacher review |
 
+### 3.4 Practice Recording & Audio Submission
+
+> **Mục tiêu:** Student có thể thu âm bản chơi của mình khi luyện tập, rồi gửi kèm khi nộp bài. Teacher nghe trực tiếp trong Submissions list để đánh giá musicality, dynamics, phrasing — không chỉ dựa vào con số accuracy.
+
+**UX Flow chính — Record trong Play Mode:**
+
+```
+Student mở assignment → bấm "Practice" → vào Play Mode
+    ↓
+Bấm nút 🔴 Record (cạnh Play/Pause) → browser xin quyền mic
+    ↓
+Bấm Play → backing track chạy + mic thu âm đồng thời
+    ↓
+Bài kết thúc hoặc student bấm Stop → recording tự dừng
+    ↓
+Hiện preview: "Listen to your recording" + nút Play lại
+    ↓
+[Hài lòng] → "Submit this recording" → auto-upload + nộp bài
+[Không hài lòng] → "Try again" → record lại
+```
+
+**Fallback — Upload file:**
+
+Tại trang Assignment Detail, có link phụ: _"Or upload an existing recording"_ → student chọn file mp3/m4a từ device (giới hạn 10MB).
+
+**Technical Implementation:**
+
+| Thành phần | Chi tiết |
+|------------|----------|
+| **Recording API** | `MediaRecorder` (browser native), output WebM/Opus |
+| **Conversion** | Client-side encode sang MP3 bằng `lamejs` (optional, WebM cũng OK) |
+| **Storage** | Appwrite Storage bucket: `classroom_recordings` |
+| **Data** | Thêm `recordingFileId` vào `SubmissionDocument` |
+| **Playback** | Inline `<audio>` player trong teacher's Submission list |
+| **Security** | File permission: `Role.users()` read (teacher + student đều nghe được) |
+| **Size limit** | Client-side: max 10MB. Nếu vượt → hiện cảnh báo, gợi ý record ngắn hơn |
+
 ## 4. Luồng hoạt động chính
 
 ### 4.1 Classroom Library — Kho bài tập riêng
