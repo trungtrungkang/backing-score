@@ -1,4 +1,4 @@
-# Classroom — Phân tích tính năng
+# Classroom & Marketplace — Phân tích tính năng
 
 ## 1. Classroom là gì?
 
@@ -144,6 +144,16 @@ flowchart LR
 | `submissions` | Kết quả nộp bài | assignmentId, studentId, accuracy, tempo, attempts, completedAt, submittedAt, status (draft/submitted/reviewed) |
 | `feedback` | Phản hồi của teacher | submissionId, teacherId, content, createdAt |
 
+### Marketplace Collections (thêm mới)
+
+| Collection | Mô tả | Trường chính |
+|-----------|-------|-------------|
+| `teacher_profiles` | Hồ sơ dạy học | userId, bio, instruments[], languages[], hourlyRate, currency, videoIntroUrl, isListed, timezone |
+| `availability` | Lịch trống | teacherId, dayOfWeek, startTime, endTime, recurring |
+| `bookings` | Buổi học đã đặt | teacherId, studentId, datetime, durationMin, price, commission, status (pending/confirmed/completed/cancelled), livekitRoomId |
+| `reviews` | Đánh giá sau buổi học | bookingId, studentId, teacherId, rating (1-5), content, createdAt |
+| `payouts` | Lịch sử rút tiền | teacherId, amount, stripeTransferId, status, createdAt |
+
 ## 6. Giao diện (UI Pages)
 
 | Route | Mô tả | Quyền |
@@ -156,6 +166,15 @@ flowchart LR
 | `/classroom/[id]/progress` | Dashboard tiến trình toàn lớp | Teacher |
 | `/classroom/[id]/assignment/[aid]` | Chi tiết bài tập + nộp bài | Student |
 | `/classroom/join/[code]` | Tham gia lớp qua mã | All |
+
+### Marketplace Routes (thêm mới)
+
+| Route | Mô tả | Quyền |
+|-------|-------|-------|
+| `/teachers` | Tìm kiếm teacher — lọc theo nhạc cụ, ngôn ngữ, giá, rating | All |
+| `/teachers/[id]` | Profile teacher: bio, video intro, reviews, lịch trống | All |
+| `/teachers/[id]/book` | Đặt lịch buổi học 1:1 + thanh toán | Student |
+| `/dashboard/earnings` | Dashboard thu nhập, lịch sử, rút tiền | Teacher |
 
 ## 7. Tích hợp với hệ thống hiện có
 
@@ -291,3 +310,12 @@ flowchart LR
 - [ ] So sánh ẩn danh với lớp (motivation)
 - [ ] Tích hợp Academy (giao cả bài Academy vào Classroom)
 - [ ] Teacher subscription tier
+
+### Phase 4 — Marketplace / italki for Music (4-6 tuần)
+- [ ] Teacher Profile & Listing (`/teachers/[id]`)
+- [ ] Teacher Discovery page (`/teachers`) — tìm kiếm, lọc nhạc cụ/ngôn ngữ/giá
+- [ ] Booking & Scheduling (calendar, time slots, timezone)
+- [ ] Per-session payment (B&S giữ 15%)
+- [ ] Trial lesson (30 phút giá rẻ)
+- [ ] Reviews & Ratings sau mỗi buổi
+- [ ] Teacher Earnings Dashboard + payout (Stripe Connect)
