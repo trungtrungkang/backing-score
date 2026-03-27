@@ -31,6 +31,7 @@
 21. [Gamification — Hệ Thống Trò Chơi Hóa](#21-gamification)
 22. [Lộ Trình Phát Triển (Roadmap)](#22-lộ-trình-phát-triển)
 23. [Đánh Giá Rủi Ro & Hạn Chế](#23-đánh-giá-rủi-ro--hạn-chế)
+24. [PDF Sheet Music — Thiết Kế Trình Xem Bản Nhạc PDF](#24-pdf-sheet-music)
 
 ---
 
@@ -1182,3 +1183,22 @@ Player (after play ends)
 ---
 
 *Tài liệu này được thiết kế để phục vụ mục đích review kỹ thuật toàn diện. Mọi thay đổi kiến trúc cần được cập nhật đồng bộ vào tài liệu này.*
+
+---
+
+## 24. PDF Sheet Music — Thiết Kế Trình Xem Bản Nhạc PDF
+
+> **Trạng thái:** Thiết kế — chưa triển khai
+
+Do quy mô thiết kế lớn, tính năng PDF Sheet Music được tách thành tài liệu riêng.
+
+📄 **Xem chi tiết:** [pdf_sheet_music_design.md](pdf_sheet_music_design.md)
+
+**Tóm tắt:**
+- **Module độc lập** — không gắn vào Project, có route `/sheets` và collections riêng
+- Thư viện cá nhân: upload, tổ chức theo folders, search, favorites
+- PDF Viewer tối ưu cho nhạc sĩ: auto-scroll, half-page turn, performance mode
+- Setlist Mode: ghép nhiều PDF thành chuỗi liên tục (Phase 2)
+- Tích hợp Classroom: teacher share PDF cho học sinh (Phase 2)
+- Annotation: highlight, ghi chú trên PDF (Phase 3, Premium)
+

@@ -40,6 +40,7 @@ Backing & Score is built on four core pillars:
 16. [Notifications](#16-notifications)
 17. [Planned Features — Advanced Analytics](#17-planned-features--advanced-analytics)
 18. [Planned Features — Adaptive Learning](#18-planned-features--adaptive-learning)
+19. [PDF Sheet Music Viewer](#19-pdf-sheet-music-viewer)
 
 ---
 
@@ -487,7 +488,7 @@ API helpers:
 > **Status:** Implemented | **Payment Provider:** LemonSqueezy
 
 ### 15.1 Revenue Model (Current)
-- **Free Tier:** Unlimited browsing and playback, Wait Mode 3 sessions/day, social features
+- **Free Tier:** Unlimited browsing and playback, Wait Mode 5 sessions/day, social features
 - **Premium Subscription:** Unlimited Wait Mode, PDF/MusicXML exports, full Academy access, ad-free experience
 - Monthly ($4.99) and Yearly ($39.99, save 33%) pricing
 
@@ -570,6 +571,28 @@ API helpers:
 - Leaderboards (opt-in, per-course or per-instrument)
 - Achievement badges (first song completed, 7-day streak, etc.)
 - `GamificationProvider` context already scaffolded in codebase
+
+---
+
+## 19. PDF Sheet Music Viewer
+
+> **Status:** Planned | **Design Doc:** [pdf_sheet_music_design.md](pdf_sheet_music_design.md)
+
+### 19.1 Overview
+Standalone module for musicians to upload, organize, and view PDF sheet music. Not tied to Projects — PDF Sheet Music has its own library (`/sheets`), dedicated viewer, and folder management.
+
+### 19.2 Planned Features
+| Phase | Features |
+|---|---|
+| Phase 1 (MVP) | PDF Library with folders/tags/search, Viewer with auto-scroll, half-page turn, performance mode, keyboard shortcuts |
+| Phase 2 | Setlist mode, Classroom integration (share PDF, attach to assignment), dark mode invert, foot pedal support |
+| Phase 3 | Annotation (Premium), offline caching, PDF download (Premium) |
+
+### 19.3 Technical Stack
+- `react-pdf` + `pdfjs-dist` for client-side rendering
+- Appwrite collections: `sheet_music`, `sheet_music_folders`
+- Appwrite Storage bucket: `sheet-pdfs` (max 20MB per file)
+- Lazy-loaded via `next/dynamic` to avoid bundle impact
 
 ---
 
