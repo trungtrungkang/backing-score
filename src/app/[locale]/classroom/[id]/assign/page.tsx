@@ -138,7 +138,7 @@ export default function CreateAssignmentPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white">
       <div className="max-w-3xl mx-auto py-8 px-6">
-        <Link href={`/classroom/${classroomId}`} className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8">
+        <Link href={`/classroom/${classroomId}`} className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors mb-8">
           <ArrowLeft className="w-4 h-4" /> {t("backToClassroom")}
         </Link>
 
