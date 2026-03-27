@@ -246,6 +246,8 @@ export interface SubmissionDocument {
   assignmentId: string;
   classroomId: string;
   studentId: string;
+  /** Display name (snapshotted at submit time) */
+  studentName?: string;
   /** Accuracy percentage 0-100 */
   accuracy?: number;
   /** Tempo achieved */

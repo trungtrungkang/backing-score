@@ -58,6 +58,7 @@ export async function submitAssignment(params: {
       assignmentId: params.assignmentId,
       classroomId: params.classroomId,
       studentId: user.$id,
+      studentName: user.name || user.email || "Student",
       accuracy: params.accuracy ?? 0,
       tempo: params.tempo ?? 0,
       attempts: params.attempts ?? 1,

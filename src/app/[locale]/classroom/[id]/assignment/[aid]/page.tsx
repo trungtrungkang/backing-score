@@ -267,11 +267,11 @@ export default function AssignmentDetailPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
-                        {sub.studentId.slice(0, 2).toUpperCase()}
+                        {(sub.studentName || sub.studentId).slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-zinc-900 dark:text-white">
-                          {sub.studentId}
+                          {sub.studentName || sub.studentId}
                         </div>
                         <div className="text-[10px] text-zinc-400">
                           {sub.submittedAt && new Date(sub.submittedAt).toLocaleString()}
