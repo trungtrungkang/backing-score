@@ -104,6 +104,48 @@ Tại trang Assignment Detail, có link phụ: _"Or upload an existing recording
 | **Security** | File permission: `Role.users()` read (teacher + student đều nghe được) |
 | **Size limit** | Client-side: max 10MB. Nếu vượt → hiện cảnh báo, gợi ý record ngắn hơn |
 
+### 3.5 Teacher Audio Review
+
+> Khi teacher mở Assignment Detail → tab Submissions, mỗi submission card hiển thị:
+
+**Layout submission card (có audio):**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  🟢 Nguyễn Văn A                                        │
+│  Submitted: 27/03/2026 15:30                             │
+│                                                          │
+│  Accuracy: 85%    Tempo: 120    Attempts: 3x             │
+│                                                          │
+│  🎵 ▶ ━━━━━━━━━━━━━━━━━━━━━ 2:34  [⬇ Download]         │
+│                                                          │
+│  💬 Feedback:                                            │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ Nhập nhận xét cho student...              [Gửi] │    │
+│  └──────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Hành động teacher:**
+
+| Hành động | Mô tả |
+|-----------|-------|
+| **▶ Play inline** | Nghe audio trực tiếp trong browser (HTML5 `<audio>`, không cần download) |
+| **⬇ Download** | Tải file audio về máy để nghe offline hoặc lưu trữ |
+| **💬 Feedback** | Gõ nhận xét text → gửi cho student (student thấy ở trang assignment detail) |
+| **⭐ Grade** (Phase 2) | Chấm điểm thủ công bổ sung cho accuracy auto |
+
+**Khi student submit nhiều lần:**
+
+- Recording **mới nhất** hiển thị chính trên submission card
+- Link _"View previous recordings (N)"_ → dropdown timeline tất cả recordings
+- Teacher so sánh tiến bộ qua từng lần practice
+
+**Khi submission không có audio:**
+
+- Card hiện bình thường (chỉ accuracy + attempts)
+- Label nhỏ: _"No recording attached"_
+
 ## 4. Luồng hoạt động chính
 
 ### 4.1 Classroom Library — Kho bài tập riêng
