@@ -357,8 +357,8 @@
   "UpgradePrompt": {
     "playLimitTitle": "Đã đạt giới hạn phát trong ngày",
     "playLimitDesc": "Tài khoản miễn phí có thể phát tối đa 3 bản mỗi ngày. Nâng cấp lên Premium để phát không giới hạn, sử dụng chế độ Luyện tập và nhiều hơn nữa.",
-    "waitModeTitle": "Chế độ Luyện tập là tính năng Premium",
-    "waitModeDesc": "Chế độ Luyện tập tạm dừng phát nhạc và chờ bạn chơi đúng nốt — công cụ luyện tập tốt nhất. Nâng cấp để mở khóa.",
+    "waitModeTitle": "Đã hết lượt Wait Mode trong ngày",
+    "waitModeDesc": "Bạn đã dùng hết 3 lượt Wait Mode miễn phí hôm nay. Nâng cấp lên Premium để sử dụng Wait Mode không giới hạn.",
     "upgradeNow": "Nâng cấp lên Premium",
     "maybeLater": "Để sau"
   },

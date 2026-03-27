@@ -56,11 +56,10 @@ export default function PricingPage() {
 
   const premiumFeatures = [
     { icon: Zap, text: t("premiumFeature1") },
-    { icon: Music, text: t("premiumFeature2") },
-    { icon: Download, text: t("premiumFeature3") },
-    { icon: Crown, text: t("premiumFeature4") },
-    { icon: Sparkles, text: t("premiumFeature5") },
-    { icon: Shield, text: t("premiumFeature6") },
+    { icon: Download, text: t("premiumFeature2") },
+    { icon: Crown, text: t("premiumFeature3") },
+    { icon: Sparkles, text: t("premiumFeature4") },
+    { icon: Shield, text: t("premiumFeature5") },
   ];
 
   return (

@@ -7,6 +7,19 @@
 
 ---
 
+## Tầm Nhìn Nền Tảng — Bốn Trụ Cột
+
+Backing & Score được xây dựng trên 4 trụ cột chính:
+
+| Trụ cột | Tính năng | Mô tả |
+|---|---|---|
+| 🎯 **Luyện tập** | Play Mode · Wait Mode · Mixer | Chơi theo nhạc đệm, nhận phản hồi cao độ thời gian thực |
+| 🎓 **Học** | Academy · Khóa học · Classroom *(sắp ra mắt)* | Khóa học có cấu trúc, kết hợp lý thuyết và thực hành |
+| 🔍 **Khám phá** | Discover · Wiki · Collections | Thư viện nhạc phân loại, bách khoa toàn thư âm nhạc |
+| 🤝 **Kết nối** | Feed · Follow · Thông báo | Kết nối và chia sẻ với cộng đồng những người yêu âm nhạc |
+
+---
+
 ## Mục Lục
 
 1. [Tổng Quan Kiến Trúc](#1-tổng-quan-kiến-trúc)
@@ -474,8 +487,8 @@ API helpers:
 > **Trạng thái:** Đã triển khai | **Nhà cung cấp thanh toán:** LemonSqueezy
 
 ### 15.1 Mô Hình Doanh Thu (Hiện tại)
-- **Gói Miễn phí:** Duyệt thoải mái, phát tối đa 3 bài/ngày
-- **Thuê bao Premium:** Phát không giới hạn, Wait Mode, xuất PDF/MusicXML, truy cập đầy đủ Academy, không quảng cáo
+- **Gói Miễn phí:** Phát nhạc không giới hạn, Wait Mode 3 lượt/ngày, tính năng xã hội
+- **Thuê bao Premium:** Wait Mode không giới hạn, xuất PDF/MusicXML, truy cập đầy đủ Academy, không quảng cáo
 - Gói Tháng ($4.99) và Năm ($39.99, tiết kiệm 33%)
 
 ### 15.2 Triển Khai Kỹ Thuật

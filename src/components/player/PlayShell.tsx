@@ -85,11 +85,11 @@ function MobileActionsMenu({ projectId, projectName }: { projectId: string; proj
   );
 }
 
-const FREE_DAILY_PLAY_LIMIT = 999;
+const FREE_DAILY_WAIT_MODE_LIMIT = 3;
 
-function getPlayCount(): { count: number; date: string } {
+function getWaitModeCount(): { count: number; date: string } {
   try {
-    const raw = localStorage.getItem("bs_play_count");
+    const raw = localStorage.getItem("bs_wait_mode_count");
     if (raw) {
       const data = JSON.parse(raw);
       const today = new Date().toISOString().slice(0, 10);
@@ -99,11 +99,11 @@ function getPlayCount(): { count: number; date: string } {
   return { count: 0, date: new Date().toISOString().slice(0, 10) };
 }
 
-function incrementPlayCount(): void {
+function incrementWaitModeCount(): void {
   const today = new Date().toISOString().slice(0, 10);
-  const current = getPlayCount();
+  const current = getWaitModeCount();
   const newCount = current.date === today ? current.count + 1 : 1;
-  localStorage.setItem("bs_play_count", JSON.stringify({ count: newCount, date: today }));
+  localStorage.setItem("bs_wait_mode_count", JSON.stringify({ count: newCount, date: today }));
 }
 
 export interface PlayShellProps {
@@ -140,28 +140,21 @@ export function PlayShell({
 
   const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
 
-  // Gated play handler — checks play count for free users
+  // Play handler — no limit for free users, just track server play count
   const gatedHandlePlay = useCallback(() => {
-    if (isPremium) {
-      actions.handlePlay();
-      incrementServerPlayCount(projectId); // fire-and-forget
-      return;
-    }
-    const { count } = getPlayCount();
-    if (count >= FREE_DAILY_PLAY_LIMIT) {
-      setShowUpgrade("playLimit");
-      return;
-    }
-    incrementPlayCount();
-    incrementServerPlayCount(projectId); // fire-and-forget
     actions.handlePlay();
-  }, [isPremium, actions, projectId]);
+    incrementServerPlayCount(projectId); // fire-and-forget
+  }, [actions, projectId]);
 
-  // Gated Wait Mode toggle
+  // Gated Wait Mode toggle — 3/day for free users, unlimited for premium
   const gatedWaitModeToggle = useCallback((enabled: boolean) => {
     if (enabled && !isPremium) {
-      setShowUpgrade("waitMode");
-      return;
+      const { count } = getWaitModeCount();
+      if (count >= FREE_DAILY_WAIT_MODE_LIMIT) {
+        setShowUpgrade("waitMode");
+        return;
+      }
+      incrementWaitModeCount();
     }
     actions.setIsWaitMode(enabled);
   }, [isPremium, actions]);

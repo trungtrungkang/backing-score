@@ -7,6 +7,19 @@
 
 ---
 
+## Platform Vision — Four Pillars
+
+Backing & Score is built on four core pillars:
+
+| Pillar | Features | Description |
+|---|---|---|
+| 🎯 **Practice** | Play Mode · Wait Mode · Mixer | Play along with backing tracks, get real-time pitch feedback |
+| 🎓 **Learn** | Academy · Courses · Classroom *(coming soon)* | Structured courses combining theory with hands-on practice |
+| 🔍 **Discover** | Discover · Wiki · Collections | Curated music library and music encyclopedia |
+| 🤝 **Connect** | Feed · Follow · Notifications | Share and connect with a community of music lovers |
+
+---
+
 ## Table of Contents
 
 1. [Architecture Overview](#1-architecture-overview)
@@ -474,8 +487,8 @@ API helpers:
 > **Status:** Implemented | **Payment Provider:** LemonSqueezy
 
 ### 15.1 Revenue Model (Current)
-- **Free Tier:** Browse freely, play up to 3 pieces per day
-- **Premium Subscription:** Unlimited plays, Wait Mode, PDF/MusicXML exports, full Academy access, ad-free experience
+- **Free Tier:** Unlimited browsing and playback, Wait Mode 3 sessions/day, social features
+- **Premium Subscription:** Unlimited Wait Mode, PDF/MusicXML exports, full Academy access, ad-free experience
 - Monthly ($4.99) and Yearly ($39.99, save 33%) pricing
 
 ### 15.2 Technical Implementation

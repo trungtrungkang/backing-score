@@ -24,7 +24,7 @@
 - **Bấm vào bài hát**: Chuyển sang trang chi tiết bài hát
 
 ### Yêu thích / Bỏ yêu thích
-- Bấm nút **♡ (Heart)** trên bài hát bất kỳ để thêm vào danh sách Favorites
+- Bấm nút **🔖 (Bookmark)** trên bài hát bất kỳ để thêm vào danh sách Favorites
 - Xem danh sách yêu thích tại **Dashboard → Favorites**
 
 ---
@@ -108,7 +108,7 @@ Collections là các playlist nhạc được tổ chức theo chủ đề (ví 
 - Phần bên trên: Ảnh bìa + tên + thông tin tác giả + số bài
 - Phần bên dưới: Danh sách bài hát, bấm vào để nghe ngay
 - Nút **▶ Phát tất cả**: Phát toàn bộ bài trong collection
-- Nút **♡ Like**: Thả tim collection
+- Nút **🔖 Bookmark**: Đánh dấu yêu thích collection
 - Nút **Share**: Chia sẻ lên Feed
 
 ---
