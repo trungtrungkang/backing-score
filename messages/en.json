@@ -614,6 +614,9 @@
     "studentsCompleted": "{count} / {total} students submitted",
     "noStudents": "No students in this classroom yet",
     "deadlinePassed": "Deadline has passed",
-    "waitModeForced": "Wait Mode is required for this assignment"
+    "waitModeForced": "Wait Mode is required for this assignment",
+    "assignmentNotFound": "This assignment no longer exists. It may have been deleted by the teacher.",
+    "assignmentUnavailable": "Assignment Unavailable",
+    "submissionFailedDeleted": "Could not submit — this assignment may have been deleted by the teacher."
   }
 }

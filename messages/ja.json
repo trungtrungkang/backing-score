@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} 人が提出済み",
     "noStudents": "まだ生徒がいません",
     "deadlinePassed": "締切を過ぎています",
-    "waitModeForced": "この課題はWait Modeが必須です"
+    "waitModeForced": "この課題はWait Modeが必須です",
+    "assignmentNotFound": "この課題は存在しません。教師によって削除された可能性があります。",
+    "assignmentUnavailable": "課題は利用できません",
+    "submissionFailedDeleted": "提出できません — この課題は教師によって削除された可能性があります。"
   }
 }

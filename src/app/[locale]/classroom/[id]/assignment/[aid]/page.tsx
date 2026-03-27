@@ -23,6 +23,7 @@ import {
   Trash2,
   X,
   Save,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getAssignment,
@@ -214,6 +215,7 @@ export default function AssignmentDetailPage() {
   const [userRole, setUserRole] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -263,8 +265,7 @@ export default function AssignmentDetailPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error(t("failedLoadAssignment"));
-          router.push(`/classroom/${classroomId}`);
+          setError(t("assignmentNotFound"));
         }
       })
       .finally(() => {
@@ -345,7 +346,29 @@ export default function AssignmentDetailPage() {
     );
   }
 
-  if (!assignment || !classroom) return null;
+  if (!assignment || !classroom) {
+    if (error) {
+      return (
+        <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black flex items-center justify-center">
+          <div className="max-w-md text-center px-6">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            <h1 className="text-xl font-black text-zinc-900 dark:text-white mb-2">{t("assignmentUnavailable")}</h1>
+            <p className="text-sm text-zinc-400 mb-6">{error}</p>
+            <Link
+              href={`/classroom/${classroomId}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {t("backToClassroom")}
+            </Link>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const isPastDeadline = assignment.deadline && new Date(assignment.deadline) < new Date();
 

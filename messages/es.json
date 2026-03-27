@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} estudiantes entregaron",
     "noStudents": "Aún no hay estudiantes",
     "deadlinePassed": "La fecha límite ha pasado",
-    "waitModeForced": "El modo de espera es obligatorio"
+    "waitModeForced": "El modo de espera es obligatorio",
+    "assignmentNotFound": "Esta tarea ya no existe. Es posible que el profesor la haya eliminado.",
+    "assignmentUnavailable": "Tarea no disponible",
+    "submissionFailedDeleted": "No se pudo enviar — la tarea puede haber sido eliminada por el profesor."
   }
 }

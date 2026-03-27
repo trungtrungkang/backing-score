@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} Schüler eingereicht",
     "noStudents": "Noch keine Schüler in der Klasse",
     "deadlinePassed": "Frist abgelaufen",
-    "waitModeForced": "Diese Aufgabe erfordert Wait Mode"
+    "waitModeForced": "Diese Aufgabe erfordert Wait Mode",
+    "assignmentNotFound": "Diese Aufgabe existiert nicht mehr. Sie wurde möglicherweise vom Lehrer gelöscht.",
+    "assignmentUnavailable": "Aufgabe nicht verfügbar",
+    "submissionFailedDeleted": "Einreichung fehlgeschlagen — die Aufgabe wurde möglicherweise gelöscht."
   }
 }

@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} élèves ont soumis",
     "noStudents": "Pas encore d'élèves",
     "deadlinePassed": "Date limite dépassée",
-    "waitModeForced": "Le mode d'attente est requis"
+    "waitModeForced": "Le mode d'attente est requis",
+    "assignmentNotFound": "Ce devoir n'existe plus. Il a peut-être été supprimé par le professeur.",
+    "assignmentUnavailable": "Devoir indisponible",
+    "submissionFailedDeleted": "Impossible de soumettre — le devoir a peut-être été supprimé."
   }
 }

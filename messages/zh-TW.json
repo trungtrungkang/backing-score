@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} 名學生已提交",
     "noStudents": "教室中還沒有學生",
     "deadlinePassed": "已過截止日期",
-    "waitModeForced": "此作業要求使用 Wait Mode"
+    "waitModeForced": "此作業要求使用 Wait Mode",
+    "assignmentNotFound": "此作業不存在，可能已被教師刪除。",
+    "assignmentUnavailable": "作業不可用",
+    "submissionFailedDeleted": "無法提交 — 此作業可能已被教師刪除。"
   }
 }

@@ -579,6 +579,9 @@
     "studentsCompleted": "{count} / {total} 학생 제출 완료",
     "noStudents": "아직 학생이 없습니다",
     "deadlinePassed": "마감일이 지났습니다",
-    "waitModeForced": "이 과제는 Wait Mode가 필수입니다"
+    "waitModeForced": "이 과제는 Wait Mode가 필수입니다",
+    "assignmentNotFound": "이 과제는 더 이상 존재하지 않습니다. 교사가 삭제했을 수 있습니다.",
+    "assignmentUnavailable": "과제를 사용할 수 없습니다",
+    "submissionFailedDeleted": "제출할 수 없습니다 — 이 과제는 교사가 삭제했을 수 있습니다."
   }
 }

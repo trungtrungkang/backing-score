@@ -111,7 +111,7 @@ export default function PlayProjectPage() {
       });
       toast.success(tc("recordingSubmitted"));
     } catch {
-      toast.error(tc("failedSubmitRecording"));
+      toast.error(tc("submissionFailedDeleted"));
     }
   }, [assignmentId, classroomId]);
 

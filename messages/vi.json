@@ -500,7 +500,7 @@
     "joinFailedDefault": "Không thể tham gia lớp. Kiểm tra mã và thử lại.",
     "tryAgain": "Thử lại",
     "assignTitle": "Tạo bài tập",
-    "backToClassroom": "Quay lại lớp",
+    "backToClassroom": "Quay lại lớp học",
     "titleLabel": "Tiêu đề",
     "titleRequired": "Tiêu đề *",
     "titlePlaceholder": "VD: Luyện tập gam Đô trưởng",
@@ -582,6 +582,9 @@
     "studentsCompleted": "{count} / {total} học sinh đã nộp",
     "noStudents": "Chưa có học sinh trong lớp",
     "deadlinePassed": "Đã quá hạn nộp bài",
-    "waitModeForced": "Bài tập yêu cầu bật Wait Mode"
+    "waitModeForced": "Bài tập yêu cầu bật Wait Mode",
+    "assignmentNotFound": "Bài tập này không còn tồn tại. Có thể đã bị xóa bởi giáo viên.",
+    "assignmentUnavailable": "Bài tập không khả dụng",
+    "submissionFailedDeleted": "Không thể nộp bài — bài tập có thể đã bị xóa bởi giáo viên."
   }
 }
