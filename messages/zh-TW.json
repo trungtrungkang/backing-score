@@ -123,7 +123,8 @@
     "selectCollection": "選擇合集",
     "addedToCollection": "已加入合集！",
     "noCollections": "尚無合集，請先建立一個。",
-    "noMatchingProjects": "未找到匹配的作品。"
+    "noMatchingProjects": "未找到匹配的作品。",
+    "classroom": "我的教室"
   },
   "Login": {
     "welcomeBack": "歡迎回來",
@@ -554,6 +555,14 @@
     "submitRecording": "提交錄音",
     "discardRecording": "捨棄",
     "recordingSubmitted": "錄音已提交！",
-    "failedSubmitRecording": "提交錄音失敗"
+    "failedSubmitRecording": "提交錄音失敗",
+    "editAssignment": "編輯作業",
+    "saveChanges": "儲存變更",
+    "changesSaved": "變更已儲存！",
+    "failedSave": "儲存失敗",
+    "deleteAssignmentBtn": "刪除作業",
+    "deleteAssignmentConfirm": "刪除此作業？所有提交將遺失。",
+    "assignmentDeleted": "作業已刪除",
+    "failedDeleteAssignment": "刪除作業失敗"
   }
 }

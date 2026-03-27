@@ -106,6 +106,7 @@ export {
   listAssignments,
   getAssignment,
   deleteAssignment,
+  updateAssignment,
 } from "./assignments";
 export {
   submitAssignment,

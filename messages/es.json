@@ -123,7 +123,8 @@
     "selectCollection": "Seleccionar colección",
     "addedToCollection": "¡Añadido a la colección!",
     "noCollections": "Sin colecciones aún. Crea una primero.",
-    "noMatchingProjects": "No se encontraron piezas."
+    "noMatchingProjects": "No se encontraron piezas.",
+    "classroom": "Mis clases"
   },
   "Login": {
     "welcomeBack": "Bienvenido de nuevo",
@@ -554,6 +555,14 @@
     "submitRecording": "Enviar grabación",
     "discardRecording": "Descartar",
     "recordingSubmitted": "¡Grabación enviada!",
-    "failedSubmitRecording": "Error al enviar grabación"
+    "failedSubmitRecording": "Error al enviar grabación",
+    "editAssignment": "Editar tarea",
+    "saveChanges": "Guardar cambios",
+    "changesSaved": "¡Cambios guardados!",
+    "failedSave": "Error al guardar",
+    "deleteAssignmentBtn": "Eliminar tarea",
+    "deleteAssignmentConfirm": "¿Eliminar esta tarea? Todos los envíos se perderán.",
+    "assignmentDeleted": "Tarea eliminada",
+    "failedDeleteAssignment": "Error al eliminar tarea"
   }
 }

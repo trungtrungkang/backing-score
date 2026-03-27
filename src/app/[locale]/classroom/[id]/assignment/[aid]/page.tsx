@@ -19,6 +19,10 @@ import {
   Download,
   Upload,
   MessageCircle,
+  Pencil,
+  Trash2,
+  X,
+  Save,
 } from "lucide-react";
 import {
   getAssignment,
@@ -26,6 +30,8 @@ import {
   getProject,
   isClassroomMember,
   submitAssignment,
+  updateAssignment,
+  deleteAssignment,
   listSubmissions,
   getMySubmission,
   getRecordingUrl,
@@ -208,6 +214,13 @@ export default function AssignmentDetailPage() {
   const [userRole, setUserRole] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [editWaitMode, setEditWaitMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const isTeacher = userRole === "teacher";
 
@@ -281,6 +294,49 @@ export default function AssignmentDetailPage() {
     }
   };
 
+  const startEditing = () => {
+    if (!assignment) return;
+    setEditTitle(assignment.title);
+    setEditDesc(assignment.description || "");
+    setEditType(assignment.type);
+    setEditDeadline(assignment.deadline ? new Date(assignment.deadline).toISOString().slice(0, 16) : "");
+    setEditWaitMode(assignment.waitModeRequired);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!assignment || saving) return;
+    setSaving(true);
+    try {
+      const updated = await updateAssignment(assignmentId, {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+        type: editType,
+        deadline: editDeadline || null,
+        waitModeRequired: editWaitMode,
+      });
+      setAssignment(updated);
+      setEditing(false);
+      toast.success(t("changesSaved"));
+    } catch {
+      toast.error(t("failedSave"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAssignment = async () => {
+    if (!assignment) return;
+    if (!window.confirm(t("deleteAssignmentConfirm"))) return;
+    try {
+      await deleteAssignment(assignmentId);
+      toast.success(t("assignmentDeleted"));
+      router.push(`/classroom/${classroomId}`);
+    } catch {
+      toast.error(t("failedDeleteAssignment"));
+    }
+  };
+
   if (authLoading || !user || loading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black flex items-center justify-center">
@@ -302,44 +358,96 @@ export default function AssignmentDetailPage() {
 
         {/* Assignment Header */}
         <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 mb-6">
-          <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-              assignment.type === "assessment"
-                ? "bg-amber-500/10 text-amber-500"
-                : assignment.type === "performance"
-                ? "bg-red-500/10 text-red-500"
-                : "bg-blue-500/10 text-blue-500"
-            }`}>
-              <Target className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-1">{assignment.title}</h1>
-              {assignment.description && (
-                <p className="text-zinc-400 text-sm mb-3">{assignment.description}</p>
-              )}
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <span className={`uppercase font-bold tracking-wider text-xs px-2 py-1 rounded-full ${
-                  assignment.type === "assessment"
-                    ? "bg-amber-500/10 text-amber-500"
-                    : assignment.type === "performance"
-                    ? "bg-red-500/10 text-red-500"
-                    : "bg-blue-500/10 text-blue-500"
-                }`}>
-                  {assignment.type}
-                </span>
-                {assignment.deadline && (
-                  <span className={`flex items-center gap-1 text-xs ${isPastDeadline ? "text-red-400" : "text-zinc-400"}`}>
-                    <Clock className="w-3.5 h-3.5" />
-                    {t("due")} {new Date(assignment.deadline).toLocaleDateString()} {new Date(assignment.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    {isPastDeadline && <span className="text-red-400 font-bold ml-1">{t("overdue")}</span>}
-                  </span>
-                )}
-                {assignment.waitModeRequired && (
-                  <span className="text-xs text-amber-400 font-bold">⏳ {t("waitModeRequired")}</span>
-                )}
+          {editing ? (
+            /* Edit Mode */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-zinc-900 dark:text-white">{t("editAssignment")}</h2>
+                <button onClick={() => setEditing(false)} className="text-zinc-400 hover:text-zinc-200">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full h-11 px-4 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2}
+                placeholder={t("assignDescPlaceholder")}
+                className="w-full px-4 py-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <select value={editType} onChange={(e) => setEditType(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                >
+                  <option value="practice">{t("typePractice")}</option>
+                  <option value="assessment">{t("typeAssessment")}</option>
+                  <option value="performance">{t("typePerformance")}</option>
+                </select>
+                <input type="datetime-local" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)}
+                  className="h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+                <label className="flex items-center gap-2 h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 cursor-pointer">
+                  <input type="checkbox" checked={editWaitMode} onChange={(e) => setEditWaitMode(e.target.checked)} className="w-4 h-4 accent-indigo-500" />
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300">{t("waitMode")}</span>
+                </label>
+              </div>
+              <div className="flex justify-between">
+                <Button onClick={handleDeleteAssignment} variant="outline" className="border-red-500/30 text-red-500 hover:bg-red-500/10">
+                  <Trash2 className="w-4 h-4 mr-2" /> {t("deleteAssignmentBtn")}
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={saving || !editTitle.trim()} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6">
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {t("saveChanges")}
+                </Button>
               </div>
             </div>
-          </div>
+          ) : (
+            /* View Mode */
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                assignment.type === "assessment"
+                  ? "bg-amber-500/10 text-amber-500"
+                  : assignment.type === "performance"
+                  ? "bg-red-500/10 text-red-500"
+                  : "bg-blue-500/10 text-blue-500"
+              }`}>
+                <Target className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-1">{assignment.title}</h1>
+                  {isTeacher && (
+                    <button onClick={startEditing} className="text-zinc-400 hover:text-indigo-400 transition-colors p-1">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {assignment.description && (
+                  <p className="text-zinc-400 text-sm mb-3">{assignment.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <span className={`uppercase font-bold tracking-wider text-xs px-2 py-1 rounded-full ${
+                    assignment.type === "assessment"
+                      ? "bg-amber-500/10 text-amber-500"
+                      : assignment.type === "performance"
+                      ? "bg-red-500/10 text-red-500"
+                      : "bg-blue-500/10 text-blue-500"
+                  }`}>
+                    {assignment.type}
+                  </span>
+                  {assignment.deadline && (
+                    <span className={`flex items-center gap-1 text-xs ${isPastDeadline ? "text-red-400" : "text-zinc-400"}`}>
+                      <Clock className="w-3.5 h-3.5" />
+                      {t("due")} {new Date(assignment.deadline).toLocaleDateString()} {new Date(assignment.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {isPastDeadline && <span className="text-red-400 font-bold ml-1">{t("overdue")}</span>}
+                    </span>
+                  )}
+                  {assignment.waitModeRequired && (
+                    <span className="text-xs text-amber-400 font-bold">⏳ {t("waitModeRequired")}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Student View */}

@@ -126,7 +126,8 @@
     "selectCollection": "Select a collection",
     "addedToCollection": "Added to collection!",
     "noCollections": "No collections yet. Create one first.",
-    "noMatchingProjects": "No matching pieces found."
+    "noMatchingProjects": "No matching pieces found.",
+    "classroom": "My Classrooms"
   },
   "Login": {
     "welcomeBack": "Welcome back",
@@ -589,6 +590,14 @@
     "submitRecording": "Submit Recording",
     "discardRecording": "Discard",
     "recordingSubmitted": "Recording submitted!",
-    "failedSubmitRecording": "Failed to submit recording"
+    "failedSubmitRecording": "Failed to submit recording",
+    "editAssignment": "Edit Assignment",
+    "saveChanges": "Save Changes",
+    "changesSaved": "Changes saved!",
+    "failedSave": "Failed to save changes",
+    "deleteAssignmentBtn": "Delete Assignment",
+    "deleteAssignmentConfirm": "Delete this assignment? All submissions will be lost.",
+    "assignmentDeleted": "Assignment deleted",
+    "failedDeleteAssignment": "Failed to delete assignment"
   }
 }

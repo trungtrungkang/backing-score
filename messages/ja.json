@@ -123,7 +123,8 @@
     "selectCollection": "コレクションを選択",
     "addedToCollection": "コレクションに追加しました！",
     "noCollections": "コレクションがありません。まず作成してください。",
-    "noMatchingProjects": "該当する作品が見つかりません。"
+    "noMatchingProjects": "該当する作品が見つかりません。",
+    "classroom": "マイクラス"
   },
   "Login": {
     "welcomeBack": "おかえりなさい",
@@ -554,6 +555,14 @@
     "submitRecording": "録音を提出",
     "discardRecording": "破棄",
     "recordingSubmitted": "録音を提出しました！",
-    "failedSubmitRecording": "録音の提出に失敗しました"
+    "failedSubmitRecording": "録音の提出に失敗しました",
+    "editAssignment": "課題を編集",
+    "saveChanges": "変更を保存",
+    "changesSaved": "変更を保存しました！",
+    "failedSave": "保存に失敗しました",
+    "deleteAssignmentBtn": "課題を削除",
+    "deleteAssignmentConfirm": "この課題を削除しますか？すべての提出物が失われます。",
+    "assignmentDeleted": "課題を削除しました",
+    "failedDeleteAssignment": "課題の削除に失敗しました"
   }
 }

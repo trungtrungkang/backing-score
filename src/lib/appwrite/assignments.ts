@@ -78,3 +78,25 @@ export async function getAssignment(assignmentId: string): Promise<AssignmentDoc
 export async function deleteAssignment(assignmentId: string): Promise<void> {
   await databases.deleteDocument(dbId, collId, assignmentId);
 }
+
+/** Update an assignment. Caller must be teacher/owner. */
+export async function updateAssignment(
+  assignmentId: string,
+  updates: {
+    title?: string;
+    description?: string;
+    type?: string;
+    deadline?: string | null;
+    waitModeRequired?: boolean;
+  }
+): Promise<AssignmentDocument> {
+  const body: Record<string, unknown> = {};
+  if (updates.title !== undefined) body.title = updates.title;
+  if (updates.description !== undefined) body.description = updates.description;
+  if (updates.type !== undefined) body.type = updates.type;
+  if (updates.deadline !== undefined) body.deadline = updates.deadline;
+  if (updates.waitModeRequired !== undefined) body.waitModeRequired = updates.waitModeRequired;
+
+  const doc = await databases.updateDocument(dbId, collId, assignmentId, body);
+  return doc as unknown as AssignmentDocument;
+}

@@ -123,7 +123,8 @@
     "selectCollection": "Sammlung auswählen",
     "addedToCollection": "Zur Sammlung hinzugefügt!",
     "noCollections": "Noch keine Sammlungen. Erstellen Sie zuerst eine.",
-    "noMatchingProjects": "Keine passenden Stücke gefunden."
+    "noMatchingProjects": "Keine passenden Stücke gefunden.",
+    "classroom": "Meine Klassen"
   },
   "Login": {
     "welcomeBack": "Willkommen zurück",
@@ -554,6 +555,14 @@
     "submitRecording": "Aufnahme einreichen",
     "discardRecording": "Verwerfen",
     "recordingSubmitted": "Aufnahme eingereicht!",
-    "failedSubmitRecording": "Aufnahme einreichen fehlgeschlagen"
+    "failedSubmitRecording": "Aufnahme einreichen fehlgeschlagen",
+    "editAssignment": "Aufgabe bearbeiten",
+    "saveChanges": "Änderungen speichern",
+    "changesSaved": "Änderungen gespeichert!",
+    "failedSave": "Speichern fehlgeschlagen",
+    "deleteAssignmentBtn": "Aufgabe löschen",
+    "deleteAssignmentConfirm": "Diese Aufgabe löschen? Alle Einreichungen gehen verloren.",
+    "assignmentDeleted": "Aufgabe gelöscht",
+    "failedDeleteAssignment": "Löschen fehlgeschlagen"
   }
 }

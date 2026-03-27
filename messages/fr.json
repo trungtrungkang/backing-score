@@ -123,7 +123,8 @@
     "selectCollection": "Sélectionner une collection",
     "addedToCollection": "Ajouté à la collection !",
     "noCollections": "Pas encore de collections. Créez-en une d'abord.",
-    "noMatchingProjects": "Aucune pièce trouvée."
+    "noMatchingProjects": "Aucune pièce trouvée.",
+    "classroom": "Mes classes"
   },
   "Login": {
     "welcomeBack": "Bon retour",
@@ -554,6 +555,14 @@
     "submitRecording": "Soumettre l'enregistrement",
     "discardRecording": "Supprimer",
     "recordingSubmitted": "Enregistrement soumis !",
-    "failedSubmitRecording": "Échec de la soumission"
+    "failedSubmitRecording": "Échec de la soumission",
+    "editAssignment": "Modifier le devoir",
+    "saveChanges": "Enregistrer",
+    "changesSaved": "Modifications enregistrées !",
+    "failedSave": "Échec de l'enregistrement",
+    "deleteAssignmentBtn": "Supprimer le devoir",
+    "deleteAssignmentConfirm": "Supprimer ce devoir ? Toutes les soumissions seront perdues.",
+    "assignmentDeleted": "Devoir supprimé",
+    "failedDeleteAssignment": "Échec de la suppression"
   }
 }

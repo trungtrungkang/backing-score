@@ -126,7 +126,8 @@
     "selectCollection": "Chọn bộ sưu tập",
     "addedToCollection": "Đã thêm vào bộ sưu tập!",
     "noCollections": "Chưa có bộ sưu tập. Hãy tạo một cái trước.",
-    "noMatchingProjects": "Không tìm thấy bài phù hợp."
+    "noMatchingProjects": "Không tìm thấy bài phù hợp.",
+    "classroom": "Lớp học của tôi"
   },
   "Login": {
     "welcomeBack": "Chào mừng trở lại",
@@ -557,6 +558,14 @@
     "submitRecording": "Gửi bản thu",
     "discardRecording": "Hủy",
     "recordingSubmitted": "Đã gửi bản thu!",
-    "failedSubmitRecording": "Không thể gửi bản thu"
+    "failedSubmitRecording": "Không thể gửi bản thu",
+    "editAssignment": "Sửa bài tập",
+    "saveChanges": "Lưu thay đổi",
+    "changesSaved": "Đã lưu thay đổi!",
+    "failedSave": "Không thể lưu thay đổi",
+    "deleteAssignmentBtn": "Xóa bài tập",
+    "deleteAssignmentConfirm": "Xóa bài tập này? Tất cả bài nộp sẽ bị mất.",
+    "assignmentDeleted": "Đã xóa bài tập",
+    "failedDeleteAssignment": "Không thể xóa bài tập"
   }
 }
