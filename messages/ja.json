@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "課題を削除",
     "deleteAssignmentConfirm": "この課題を削除しますか？すべての提出物が失われます。",
     "assignmentDeleted": "課題を削除しました",
-    "failedDeleteAssignment": "課題の削除に失敗しました"
+    "failedDeleteAssignment": "課題の削除に失敗しました",
+    "classroomName": "クラス名",
+    "classroomDescription": "説明",
+    "classroomInstrument": "楽器",
+    "classroomLevel": "レベル",
+    "settingsSaved": "設定を保存しました！",
+    "failedSaveSettings": "設定の保存に失敗しました",
+    "progress": "進捗",
+    "totalSubmissions": "提出数",
+    "avgAccuracy": "平均精度",
+    "lastActivity": "最終活動",
+    "notSubmitted": "未提出",
+    "overallProgress": "全体の進捗",
+    "studentsCompleted": "{count} / {total} 人が提出済み",
+    "noStudents": "まだ生徒がいません",
+    "deadlinePassed": "締切を過ぎています",
+    "waitModeForced": "この課題はWait Modeが必須です"
   }
 }

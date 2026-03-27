@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "Aufgabe löschen",
     "deleteAssignmentConfirm": "Diese Aufgabe löschen? Alle Einreichungen gehen verloren.",
     "assignmentDeleted": "Aufgabe gelöscht",
-    "failedDeleteAssignment": "Löschen fehlgeschlagen"
+    "failedDeleteAssignment": "Löschen fehlgeschlagen",
+    "classroomName": "Klassenname",
+    "classroomDescription": "Beschreibung",
+    "classroomInstrument": "Instrument",
+    "classroomLevel": "Niveau",
+    "settingsSaved": "Einstellungen gespeichert!",
+    "failedSaveSettings": "Speichern fehlgeschlagen",
+    "progress": "Fortschritt",
+    "totalSubmissions": "Einreichungen",
+    "avgAccuracy": "Ø Genauigkeit",
+    "lastActivity": "Letzte Aktivität",
+    "notSubmitted": "Nicht eingereicht",
+    "overallProgress": "Gesamtfortschritt",
+    "studentsCompleted": "{count} / {total} Schüler eingereicht",
+    "noStudents": "Noch keine Schüler in der Klasse",
+    "deadlinePassed": "Frist abgelaufen",
+    "waitModeForced": "Diese Aufgabe erfordert Wait Mode"
   }
 }

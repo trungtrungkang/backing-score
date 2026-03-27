@@ -27,6 +27,7 @@ export default function PlayProjectPage() {
   const playlistId = searchParams.get("list");
   const assignmentId = searchParams.get("assignmentId");
   const classroomId = searchParams.get("classroomId");
+  const waitModeRequired = searchParams.get("waitModeRequired") === "true";
   const tc = useTranslations("Classroom");
 
   const [project, setProject] = useState<ProjectDocument | null>(null);
@@ -154,6 +155,7 @@ export default function PlayProjectPage() {
         autoplayOnLoad={searchParams.get("autoplay") === "true"}
         enableRecording={!!assignmentId && !!classroomId}
         onRecordingReady={handleRecordingReady}
+        forceWaitMode={waitModeRequired}
       />
     </main>
   );

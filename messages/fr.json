@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "Supprimer le devoir",
     "deleteAssignmentConfirm": "Supprimer ce devoir ? Toutes les soumissions seront perdues.",
     "assignmentDeleted": "Devoir supprimé",
-    "failedDeleteAssignment": "Échec de la suppression"
+    "failedDeleteAssignment": "Échec de la suppression",
+    "classroomName": "Nom de la classe",
+    "classroomDescription": "Description",
+    "classroomInstrument": "Instrument",
+    "classroomLevel": "Niveau",
+    "settingsSaved": "Paramètres enregistrés !",
+    "failedSaveSettings": "Échec de l'enregistrement",
+    "progress": "Progression",
+    "totalSubmissions": "Soumissions",
+    "avgAccuracy": "Précision moy.",
+    "lastActivity": "Dernière activité",
+    "notSubmitted": "Non soumis",
+    "overallProgress": "Progression générale",
+    "studentsCompleted": "{count} / {total} élèves ont soumis",
+    "noStudents": "Pas encore d'élèves",
+    "deadlinePassed": "Date limite dépassée",
+    "waitModeForced": "Le mode d'attente est requis"
   }
 }

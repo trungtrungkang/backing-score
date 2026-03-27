@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "刪除作業",
     "deleteAssignmentConfirm": "刪除此作業？所有提交將遺失。",
     "assignmentDeleted": "作業已刪除",
-    "failedDeleteAssignment": "刪除作業失敗"
+    "failedDeleteAssignment": "刪除作業失敗",
+    "classroomName": "教室名稱",
+    "classroomDescription": "描述",
+    "classroomInstrument": "樂器",
+    "classroomLevel": "等級",
+    "settingsSaved": "設定已儲存！",
+    "failedSaveSettings": "儲存設定失敗",
+    "progress": "進度",
+    "totalSubmissions": "提交數",
+    "avgAccuracy": "平均準確率",
+    "lastActivity": "最近活動",
+    "notSubmitted": "未提交",
+    "overallProgress": "整體進度",
+    "studentsCompleted": "{count} / {total} 名學生已提交",
+    "noStudents": "教室中還沒有學生",
+    "deadlinePassed": "已過截止日期",
+    "waitModeForced": "此作業要求使用 Wait Mode"
   }
 }

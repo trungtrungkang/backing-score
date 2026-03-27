@@ -124,6 +124,8 @@ export interface PlayShellProps {
   enableRecording?: boolean;
   /** Callback when student has a recording ready to submit */
   onRecordingReady?: (blob: Blob) => void;
+  /** Force Wait Mode on (for assessments with waitModeRequired) */
+  forceWaitMode?: boolean;
 }
 
 export function PlayShell({
@@ -140,6 +142,7 @@ export function PlayShell({
   autoplayOnLoad,
   enableRecording = false,
   onRecordingReady,
+  forceWaitMode = false,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
@@ -149,6 +152,13 @@ export function PlayShell({
 
   const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
   const recorder = useAudioRecorder();
+
+  // Auto-enable Wait Mode when forced by assignment
+  useEffect(() => {
+    if (forceWaitMode && !state.isWaitMode) {
+      actions.setIsWaitMode(true);
+    }
+  }, [forceWaitMode]);
 
   const handleRecordToggle = useCallback((shouldRecord: boolean) => {
     if (shouldRecord) {
@@ -165,7 +175,9 @@ export function PlayShell({
   }, [actions, projectId]);
 
   // Gated Wait Mode toggle — 3/day for free users, unlimited for premium
+  // If forceWaitMode, prevent turning off
   const gatedWaitModeToggle = useCallback((enabled: boolean) => {
+    if (forceWaitMode && !enabled) return; // can't disable when forced
     if (enabled && !isPremium) {
       const { count } = getWaitModeCount();
       if (count >= FREE_DAILY_WAIT_MODE_LIMIT) {
@@ -175,7 +187,7 @@ export function PlayShell({
       incrementWaitModeCount();
     }
     actions.setIsWaitMode(enabled);
-  }, [isPremium, actions]);
+  }, [forceWaitMode, isPremium, actions]);
 
   const scoreFileId = payload.notationData?.fileId;
 

@@ -455,7 +455,7 @@ export default function AssignmentDetailPage() {
           <div className="space-y-4">
             {project && (
               <Link
-                href={`/play/${project.$id}?assignmentId=${assignment.$id}&classroomId=${classroomId}`}
+                href={`/play/${project.$id}?assignmentId=${assignment.$id}&classroomId=${classroomId}${assignment.waitModeRequired ? "&waitModeRequired=true" : ""}`}
                 className="flex items-center gap-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-5 text-white hover:opacity-90 transition-opacity"
               >
                 <Play className="w-8 h-8" />

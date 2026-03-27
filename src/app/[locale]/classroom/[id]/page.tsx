@@ -21,23 +21,28 @@ import {
   Loader2,
   UserMinus,
   Music4,
+  BarChart3,
+  Save,
 } from "lucide-react";
 import {
   getClassroom,
   listClassroomMembers,
   listAssignments,
+  listSubmissions,
   isClassroomMember,
   deleteClassroom,
+  updateClassroom,
   removeClassroomMember,
   ClassroomDocument,
   ClassroomMemberDocument,
   AssignmentDocument,
+  SubmissionDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
 
-type Tab = "assignments" | "members" | "settings";
+type Tab = "assignments" | "members" | "settings" | "progress";
 
 export default function ClassroomDetailPage() {
   const params = useParams();
@@ -54,6 +59,15 @@ export default function ClassroomDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | undefined>();
   const [codeCopied, setCodeCopied] = useState(false);
+  // Settings form
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsDesc, setSettingsDesc] = useState("");
+  const [settingsInstrument, setSettingsInstrument] = useState("");
+  const [settingsLevel, setSettingsLevel] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+  // Progress data
+  const [progressData, setProgressData] = useState<Map<string, SubmissionDocument[]>>(new Map());
+  const [progressLoaded, setProgressLoaded] = useState(false);
 
   const isTeacher = userRole === "teacher";
 
@@ -84,6 +98,11 @@ export default function ClassroomDetailPage() {
         setUserRole(membership.role);
         setMembers(mems);
         setAssignments(assigns);
+        // Init settings form
+        setSettingsName(cr.name);
+        setSettingsDesc(cr.description || "");
+        setSettingsInstrument(cr.instrumentFocus || "");
+        setSettingsLevel(cr.level || "");
       })
       .catch(() => {
         if (!cancelled) {
@@ -125,6 +144,38 @@ export default function ClassroomDetailPage() {
     }
   };
 
+  // Load progress data when progress tab is activated
+  useEffect(() => {
+    if (activeTab !== "progress" || progressLoaded || !assignments.length) return;
+    Promise.all(assignments.map(a => listSubmissions(a.$id)))
+      .then(results => {
+        const map = new Map<string, SubmissionDocument[]>();
+        assignments.forEach((a, i) => map.set(a.$id, results[i]));
+        setProgressData(map);
+        setProgressLoaded(true);
+      })
+      .catch(() => setProgressLoaded(true));
+  }, [activeTab, progressLoaded, assignments]);
+
+  const handleSaveSettings = async () => {
+    if (!classroom || savingSettings) return;
+    setSavingSettings(true);
+    try {
+      const updated = await updateClassroom(classroomId, {
+        name: settingsName.trim(),
+        description: settingsDesc.trim(),
+        instrumentFocus: settingsInstrument.trim(),
+        level: settingsLevel.trim(),
+      });
+      setClassroom(updated);
+      toast.success(t("settingsSaved"));
+    } catch {
+      toast.error(t("failedSaveSettings"));
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const handleRemoveMember = async (userId: string) => {
     const ok = await confirm({
       title: t("removeStudent"),
@@ -155,7 +206,10 @@ export default function ClassroomDetailPage() {
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "assignments", label: t("assignments"), icon: <ClipboardList className="w-4 h-4" /> },
     { key: "members", label: t("membersCount", { count: members.length }), icon: <Users className="w-4 h-4" /> },
-    ...(isTeacher ? [{ key: "settings" as Tab, label: t("settings"), icon: <Settings className="w-4 h-4" /> }] : []),
+    ...(isTeacher ? [
+      { key: "progress" as Tab, label: t("progress"), icon: <BarChart3 className="w-4 h-4" /> },
+      { key: "settings" as Tab, label: t("settings"), icon: <Settings className="w-4 h-4" /> },
+    ] : []),
   ];
 
   return (
@@ -326,11 +380,49 @@ export default function ClassroomDetailPage() {
 
         {activeTab === "settings" && isTeacher && (
           <div className="space-y-6">
+            {/* Edit Classroom Form */}
+            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+              <h3 className="font-bold text-zinc-900 dark:text-white mb-4">{t("settings")}</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("classroomName")}</label>
+                  <input value={settingsName} onChange={(e) => setSettingsName(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("classroomDescription")}</label>
+                  <textarea value={settingsDesc} onChange={(e) => setSettingsDesc(e.target.value)} rows={2}
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("classroomInstrument")}</label>
+                    <input value={settingsInstrument} onChange={(e) => setSettingsInstrument(e.target.value)}
+                      placeholder="Piano, Guitar, ..." 
+                      className="w-full h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("classroomLevel")}</label>
+                    <input value={settingsLevel} onChange={(e) => setSettingsLevel(e.target.value)}
+                      placeholder="Beginner, Intermediate, ..."
+                      className="w-full h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleSaveSettings} disabled={savingSettings || !settingsName.trim()} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold">
+                  {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  {t("saveChanges")}
+                </Button>
+              </div>
+            </div>
+
+            {/* Invite Code */}
             <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
               <h3 className="font-bold text-zinc-900 dark:text-white mb-2">{t("inviteStudents")}</h3>
-              <p className="text-sm text-zinc-400 mb-4">
-                {t("inviteDesc")}
-              </p>
+              <p className="text-sm text-zinc-400 mb-4">{t("inviteDesc")}</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-lg flex items-center justify-center font-mono text-2xl font-black tracking-[0.3em] text-indigo-500">
                   {classroom.classCode}
@@ -346,9 +438,7 @@ export default function ClassroomDetailPage() {
 
             <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
               <h3 className="font-bold text-red-400 mb-2">{t("dangerZone")}</h3>
-              <p className="text-sm text-zinc-400 mb-4">
-                {t("dangerDesc")}
-              </p>
+              <p className="text-sm text-zinc-400 mb-4">{t("dangerDesc")}</p>
               <Button
                 onClick={handleDeleteClassroom}
                 variant="outline"
@@ -357,6 +447,93 @@ export default function ClassroomDetailPage() {
                 <Trash2 className="w-4 h-4 mr-2" /> {t("deleteClassroom")}
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Progress Tab */}
+        {activeTab === "progress" && isTeacher && (
+          <div>
+            {/* Overview */}
+            {(() => {
+              const students = members.filter(m => m.role === "student");
+              const allSubs = Array.from(progressData.values()).flat();
+              const studentsWithSubs = new Set(allSubs.map(s => s.studentId));
+              const avgAcc = allSubs.length > 0 ? Math.round(allSubs.reduce((a, b) => a + (b.accuracy || 0), 0) / allSubs.length) : 0;
+              return (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-black text-zinc-900 dark:text-white">{studentsWithSubs.size}/{students.length}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("overallProgress")}</div>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-black text-zinc-900 dark:text-white">{allSubs.length}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("totalSubmissions")}</div>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-black text-indigo-500">{avgAcc}%</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("avgAccuracy")}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Per-student table */}
+            {(() => {
+              const students = members.filter(m => m.role === "student");
+              if (students.length === 0) {
+                return (
+                  <div className="py-16 border border-dashed border-zinc-300 dark:border-zinc-800 rounded-xl text-center">
+                    <Users className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
+                    <p className="text-zinc-500">{t("noStudents")}</p>
+                  </div>
+                );
+              }
+              const allSubs = Array.from(progressData.values()).flat();
+              return (
+                <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                        <th className="text-left p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("members")}</th>
+                        <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("totalSubmissions")}</th>
+                        <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("avgAccuracy")}</th>
+                        <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("lastActivity")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map(student => {
+                        const subs = allSubs.filter(s => s.studentId === student.userId);
+                        const avg = subs.length > 0 ? Math.round(subs.reduce((a, b) => a + (b.accuracy || 0), 0) / subs.length) : 0;
+                        const lastSub = subs.sort((a, b) => (b.submittedAt || "").localeCompare(a.submittedAt || ""))[0];
+                        return (
+                          <tr key={student.userId} className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-0">
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                                  {(student.userName || student.userId).slice(0, 2).toUpperCase()}
+                                </div>
+                                <span className="font-medium text-zinc-900 dark:text-white">{student.userName || student.userId}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center font-bold text-zinc-900 dark:text-white">{subs.length}/{assignments.length}</td>
+                            <td className="p-3 text-center">
+                              {subs.length > 0 ? (
+                                <span className={`font-bold ${avg >= 80 ? "text-green-500" : avg >= 50 ? "text-amber-500" : "text-red-400"}`}>{avg}%</span>
+                              ) : (
+                                <span className="text-zinc-400">—</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center text-xs text-zinc-400">
+                              {lastSub?.submittedAt ? new Date(lastSub.submittedAt).toLocaleDateString() : t("notSubmitted")}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

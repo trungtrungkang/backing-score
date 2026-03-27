@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "Eliminar tarea",
     "deleteAssignmentConfirm": "¿Eliminar esta tarea? Todos los envíos se perderán.",
     "assignmentDeleted": "Tarea eliminada",
-    "failedDeleteAssignment": "Error al eliminar tarea"
+    "failedDeleteAssignment": "Error al eliminar tarea",
+    "classroomName": "Nombre de la clase",
+    "classroomDescription": "Descripción",
+    "classroomInstrument": "Instrumento",
+    "classroomLevel": "Nivel",
+    "settingsSaved": "¡Configuración guardada!",
+    "failedSaveSettings": "Error al guardar",
+    "progress": "Progreso",
+    "totalSubmissions": "Entregas",
+    "avgAccuracy": "Precisión prom.",
+    "lastActivity": "Última actividad",
+    "notSubmitted": "Sin entregar",
+    "overallProgress": "Progreso general",
+    "studentsCompleted": "{count} / {total} estudiantes entregaron",
+    "noStudents": "Aún no hay estudiantes",
+    "deadlinePassed": "La fecha límite ha pasado",
+    "waitModeForced": "El modo de espera es obligatorio"
   }
 }

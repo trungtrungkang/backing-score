@@ -566,6 +566,22 @@
     "deleteAssignmentBtn": "Xóa bài tập",
     "deleteAssignmentConfirm": "Xóa bài tập này? Tất cả bài nộp sẽ bị mất.",
     "assignmentDeleted": "Đã xóa bài tập",
-    "failedDeleteAssignment": "Không thể xóa bài tập"
+    "failedDeleteAssignment": "Không thể xóa bài tập",
+    "classroomName": "Tên lớp học",
+    "classroomDescription": "Mô tả",
+    "classroomInstrument": "Nhạc cụ",
+    "classroomLevel": "Trình độ",
+    "settingsSaved": "Đã lưu cài đặt!",
+    "failedSaveSettings": "Không thể lưu cài đặt",
+    "progress": "Tiến trình",
+    "totalSubmissions": "Bài nộp",
+    "avgAccuracy": "Trung bình Accuracy",
+    "lastActivity": "Hoạt động gần nhất",
+    "notSubmitted": "Chưa nộp",
+    "overallProgress": "Tiến trình tổng quan",
+    "studentsCompleted": "{count} / {total} học sinh đã nộp",
+    "noStudents": "Chưa có học sinh trong lớp",
+    "deadlinePassed": "Đã quá hạn nộp bài",
+    "waitModeForced": "Bài tập yêu cầu bật Wait Mode"
   }
 }

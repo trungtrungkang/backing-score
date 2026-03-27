@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "删除作业",
     "deleteAssignmentConfirm": "删除此作业？所有提交将丢失。",
     "assignmentDeleted": "作业已删除",
-    "failedDeleteAssignment": "删除作业失败"
+    "failedDeleteAssignment": "删除作业失败",
+    "classroomName": "教室名称",
+    "classroomDescription": "描述",
+    "classroomInstrument": "乐器",
+    "classroomLevel": "等级",
+    "settingsSaved": "设置已保存！",
+    "failedSaveSettings": "保存设置失败",
+    "progress": "进度",
+    "totalSubmissions": "提交数",
+    "avgAccuracy": "平均准确率",
+    "lastActivity": "最近活动",
+    "notSubmitted": "未提交",
+    "overallProgress": "整体进度",
+    "studentsCompleted": "{count} / {total} 名学生已提交",
+    "noStudents": "教室中还没有学生",
+    "deadlinePassed": "已过截止日期",
+    "waitModeForced": "此作业要求使用 Wait Mode"
   }
 }

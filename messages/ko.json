@@ -563,6 +563,22 @@
     "deleteAssignmentBtn": "과제 삭제",
     "deleteAssignmentConfirm": "이 과제를 삭제하시겠습니까? 모든 제출물이 삭제됩니다.",
     "assignmentDeleted": "과제가 삭제되었습니다",
-    "failedDeleteAssignment": "과제 삭제에 실패했습니다"
+    "failedDeleteAssignment": "과제 삭제에 실패했습니다",
+    "classroomName": "교실 이름",
+    "classroomDescription": "설명",
+    "classroomInstrument": "악기",
+    "classroomLevel": "레벨",
+    "settingsSaved": "설정이 저장되었습니다!",
+    "failedSaveSettings": "설정 저장에 실패했습니다",
+    "progress": "진행 상황",
+    "totalSubmissions": "제출 수",
+    "avgAccuracy": "평균 정확도",
+    "lastActivity": "최근 활동",
+    "notSubmitted": "미제출",
+    "overallProgress": "전체 진행 상황",
+    "studentsCompleted": "{count} / {total} 학생 제출 완료",
+    "noStudents": "아직 학생이 없습니다",
+    "deadlinePassed": "마감일이 지났습니다",
+    "waitModeForced": "이 과제는 Wait Mode가 필수입니다"
   }
 }
