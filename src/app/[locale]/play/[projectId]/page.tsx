@@ -102,9 +102,9 @@ export default function PlayProjectPage() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 h-[100dvh] w-full gap-4 bg-[#fdfdfc] dark:bg-[#151518]">
         <div className="text-red-500 dark:text-red-400 font-medium">{error || "Score not found."}</div>
-        <Link href="/discover" className="text-sm text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white hover:underline underline-offset-4">
-          Back to Discover
-        </Link>
+        <button onClick={() => router.back()} className="text-sm text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white hover:underline underline-offset-4">
+          Go Back
+        </button>
       </div>
     );
   }

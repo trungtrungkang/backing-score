@@ -186,9 +186,9 @@ export function PlayShell({
       {/* 1. Minimal Header */}
       <header className="absolute top-0 left-0 w-full z-20 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-[#151518]/80 to-transparent pointer-events-none transition-opacity duration-300">
         <div className="flex items-center gap-4 pointer-events-auto">
-          <Link href="/discover" className="p-2 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all">
+          <button onClick={() => window.history.back()} className="p-2 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all">
             <ArrowLeft className="w-5 h-5" />
-          </Link>
+          </button>
           <div className="flex flex-col">
             <h1 className="text-xl font-bold text-white drop-shadow-md tracking-tight leading-tight line-clamp-2">
               {projectName}
