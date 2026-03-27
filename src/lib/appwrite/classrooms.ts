@@ -200,9 +200,11 @@ export async function joinClassroom(classCode: string): Promise<ClassroomDocumen
       status: "active",
     },
     [
+      // Client-side SDK can only set permissions for self, users, or any
+      // Teacher removal handled via collection-level admin permissions
       Permission.read(Role.users()),
-      Permission.update(Role.user(classroom.teacherId)),
-      Permission.delete(Role.user(classroom.teacherId)),
+      Permission.update(Role.user(user.$id)),
+      Permission.delete(Role.user(user.$id)),
     ]
   );
 
