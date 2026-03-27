@@ -600,6 +600,10 @@
     "waitModeForced": "El modo de espera es obligatorio",
     "assignmentNotFound": "Esta tarea ya no existe. Es posible que el profesor la haya eliminado.",
     "assignmentUnavailable": "Tarea no disponible",
-    "submissionFailedDeleted": "No se pudo enviar — la tarea puede haber sido eliminada por el profesor."
+    "submissionFailedDeleted": "No se pudo enviar — la tarea puede haber sido eliminada por el profesor.",
+    "avgGrade": "Nota prom.",
+    "assignmentBreakdown": "Desglose de tareas",
+    "submissionRate": "Entregado",
+    "studentSummary": "Resumen por alumno"
   }
 }

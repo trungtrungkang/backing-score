@@ -600,6 +600,10 @@
     "waitModeForced": "Diese Aufgabe erfordert Wait Mode",
     "assignmentNotFound": "Diese Aufgabe existiert nicht mehr. Sie wurde möglicherweise vom Lehrer gelöscht.",
     "assignmentUnavailable": "Aufgabe nicht verfügbar",
-    "submissionFailedDeleted": "Einreichung fehlgeschlagen — die Aufgabe wurde möglicherweise gelöscht."
+    "submissionFailedDeleted": "Einreichung fehlgeschlagen — die Aufgabe wurde möglicherweise gelöscht.",
+    "avgGrade": "Ø Note",
+    "assignmentBreakdown": "Aufgabenübersicht",
+    "submissionRate": "Abgegeben",
+    "studentSummary": "Schülerübersicht"
   }
 }

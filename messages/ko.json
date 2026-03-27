@@ -600,6 +600,10 @@
     "waitModeForced": "이 과제는 Wait Mode가 필수입니다",
     "assignmentNotFound": "이 과제는 더 이상 존재하지 않습니다. 교사가 삭제했을 수 있습니다.",
     "assignmentUnavailable": "과제를 사용할 수 없습니다",
-    "submissionFailedDeleted": "제출할 수 없습니다 — 이 과제는 교사가 삭제했을 수 있습니다."
+    "submissionFailedDeleted": "제출할 수 없습니다 — 이 과제는 교사가 삭제했을 수 있습니다.",
+    "avgGrade": "평균 점수",
+    "assignmentBreakdown": "과제별 통계",
+    "submissionRate": "제출",
+    "studentSummary": "학생별 통계"
   }
 }

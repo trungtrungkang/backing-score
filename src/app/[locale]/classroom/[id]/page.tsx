@@ -29,6 +29,7 @@ import {
   listClassroomMembers,
   listAssignments,
   listSubmissions,
+  listFeedback,
   isClassroomMember,
   deleteClassroom,
   updateClassroom,
@@ -37,6 +38,7 @@ import {
   ClassroomMemberDocument,
   AssignmentDocument,
   SubmissionDocument,
+  SubmissionFeedbackDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -67,6 +69,7 @@ export default function ClassroomDetailPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   // Progress data
   const [progressData, setProgressData] = useState<Map<string, SubmissionDocument[]>>(new Map());
+  const [feedbackData, setFeedbackData] = useState<Map<string, SubmissionFeedbackDocument[]>>(new Map());
   const [progressLoaded, setProgressLoaded] = useState(false);
 
   const isTeacher = userRole === "teacher";
@@ -144,14 +147,24 @@ export default function ClassroomDetailPage() {
     }
   };
 
-  // Load progress data when progress tab is activated
+  // Load progress + feedback data when progress tab is activated
   useEffect(() => {
     if (activeTab !== "progress" || progressLoaded || !assignments.length) return;
     Promise.all(assignments.map(a => listSubmissions(a.$id)))
-      .then(results => {
-        const map = new Map<string, SubmissionDocument[]>();
-        assignments.forEach((a, i) => map.set(a.$id, results[i]));
-        setProgressData(map);
+      .then(async (results) => {
+        const subMap = new Map<string, SubmissionDocument[]>();
+        assignments.forEach((a, i) => subMap.set(a.$id, results[i]));
+        setProgressData(subMap);
+
+        // Load feedback for all submissions
+        const allSubs = results.flat();
+        try {
+          const fbResults = await Promise.all(allSubs.map(s => listFeedback(s.$id)));
+          const fbMap = new Map<string, SubmissionFeedbackDocument[]>();
+          allSubs.forEach((s, i) => fbMap.set(s.$id, fbResults[i]));
+          setFeedbackData(fbMap);
+        } catch { /* best-effort */ }
+
         setProgressLoaded(true);
       })
       .catch(() => setProgressLoaded(true));
@@ -453,14 +466,18 @@ export default function ClassroomDetailPage() {
         {/* Progress Tab */}
         {activeTab === "progress" && isTeacher && (
           <div>
-            {/* Overview */}
+            {/* Overview Cards */}
             {(() => {
               const students = members.filter(m => m.role === "student");
               const allSubs = Array.from(progressData.values()).flat();
               const studentsWithSubs = new Set(allSubs.map(s => s.studentId));
               const avgAcc = allSubs.length > 0 ? Math.round(allSubs.reduce((a, b) => a + (b.accuracy || 0), 0) / allSubs.length) : 0;
+              // Avg grade from feedback
+              const allFb = Array.from(feedbackData.values()).flat();
+              const graded = allFb.filter(f => f.grade !== undefined && f.grade !== null);
+              const avgGrade = graded.length > 0 ? Math.round(graded.reduce((a, b) => a + (b.grade || 0), 0) / graded.length) : null;
               return (
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-center">
                     <div className="text-3xl font-black text-zinc-900 dark:text-white">{studentsWithSubs.size}/{students.length}</div>
                     <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("overallProgress")}</div>
@@ -473,11 +490,69 @@ export default function ClassroomDetailPage() {
                     <div className="text-3xl font-black text-indigo-500">{avgAcc}%</div>
                     <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("avgAccuracy")}</div>
                   </div>
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-center">
+                    <div className="text-3xl font-black text-amber-500">{avgGrade !== null ? avgGrade : "—"}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("avgGrade")}</div>
+                  </div>
                 </div>
               );
             })()}
 
-            {/* Per-student table */}
+            {/* Per-Assignment Breakdown */}
+            {assignments.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden mb-6">
+                <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                  <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{t("assignmentBreakdown")}</h3>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                      <th className="text-left p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("assignments")}</th>
+                      <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("submissionRate")}</th>
+                      <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("avgAccuracy")}</th>
+                      <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("avgGrade")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignments.map(assignment => {
+                      const subs = progressData.get(assignment.$id) || [];
+                      const studentCount = members.filter(m => m.role === "student").length;
+                      const avgAcc = subs.length > 0 ? Math.round(subs.reduce((a, b) => a + (b.accuracy || 0), 0) / subs.length) : 0;
+                      // Avg grade for this assignment's submissions
+                      const assignFb = subs.flatMap(s => feedbackData.get(s.$id) || []);
+                      const graded = assignFb.filter(f => f.grade !== undefined && f.grade !== null);
+                      const avgGrade = graded.length > 0 ? Math.round(graded.reduce((a, b) => a + (b.grade || 0), 0) / graded.length) : null;
+                      return (
+                        <tr key={assignment.$id} className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-0">
+                          <td className="p-3">
+                            <Link href={`/classroom/${classroomId}/assignment/${assignment.$id}`} className="font-medium text-zinc-900 dark:text-white hover:text-indigo-500 transition-colors">
+                              {assignment.title}
+                            </Link>
+                          </td>
+                          <td className="p-3 text-center font-bold text-zinc-900 dark:text-white">{subs.length}/{studentCount}</td>
+                          <td className="p-3 text-center">
+                            {subs.length > 0 ? (
+                              <span className={`font-bold ${avgAcc >= 80 ? "text-green-500" : avgAcc >= 50 ? "text-amber-500" : "text-red-400"}`}>{avgAcc}%</span>
+                            ) : (
+                              <span className="text-zinc-400">—</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {avgGrade !== null ? (
+                              <span className={`font-bold ${avgGrade >= 80 ? "text-green-500" : avgGrade >= 50 ? "text-amber-500" : "text-red-400"}`}>{avgGrade}</span>
+                            ) : (
+                              <span className="text-zinc-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Per-Student Summary */}
             {(() => {
               const students = members.filter(m => m.role === "student");
               if (students.length === 0) {
@@ -491,12 +566,16 @@ export default function ClassroomDetailPage() {
               const allSubs = Array.from(progressData.values()).flat();
               return (
                 <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                    <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{t("studentSummary")}</h3>
+                  </div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-zinc-200 dark:border-zinc-800">
                         <th className="text-left p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("members")}</th>
                         <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("totalSubmissions")}</th>
                         <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("avgAccuracy")}</th>
+                        <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("avgGrade")}</th>
                         <th className="text-center p-3 text-xs uppercase tracking-widest text-zinc-500 font-bold">{t("lastActivity")}</th>
                       </tr>
                     </thead>
@@ -504,7 +583,11 @@ export default function ClassroomDetailPage() {
                       {students.map(student => {
                         const subs = allSubs.filter(s => s.studentId === student.userId);
                         const avg = subs.length > 0 ? Math.round(subs.reduce((a, b) => a + (b.accuracy || 0), 0) / subs.length) : 0;
-                        const lastSub = subs.sort((a, b) => (b.submittedAt || "").localeCompare(a.submittedAt || ""))[0];
+                        const lastSub = [...subs].sort((a, b) => (b.submittedAt || "").localeCompare(a.submittedAt || ""))[0];
+                        // Student avg grade
+                        const studentFb = subs.flatMap(s => feedbackData.get(s.$id) || []);
+                        const graded = studentFb.filter(f => f.grade !== undefined && f.grade !== null);
+                        const studentAvgGrade = graded.length > 0 ? Math.round(graded.reduce((a, b) => a + (b.grade || 0), 0) / graded.length) : null;
                         return (
                           <tr key={student.userId} className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-0">
                             <td className="p-3">
@@ -519,6 +602,13 @@ export default function ClassroomDetailPage() {
                             <td className="p-3 text-center">
                               {subs.length > 0 ? (
                                 <span className={`font-bold ${avg >= 80 ? "text-green-500" : avg >= 50 ? "text-amber-500" : "text-red-400"}`}>{avg}%</span>
+                              ) : (
+                                <span className="text-zinc-400">—</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {studentAvgGrade !== null ? (
+                                <span className={`font-bold ${studentAvgGrade >= 80 ? "text-green-500" : studentAvgGrade >= 50 ? "text-amber-500" : "text-red-400"}`}>{studentAvgGrade}</span>
                               ) : (
                                 <span className="text-zinc-400">—</span>
                               )}

@@ -600,6 +600,10 @@
     "waitModeForced": "此作業要求使用 Wait Mode",
     "assignmentNotFound": "此作業不存在，可能已被教師刪除。",
     "assignmentUnavailable": "作業不可用",
-    "submissionFailedDeleted": "無法提交 — 此作業可能已被教師刪除。"
+    "submissionFailedDeleted": "無法提交 — 此作業可能已被教師刪除。",
+    "avgGrade": "平均分",
+    "assignmentBreakdown": "作業統計",
+    "submissionRate": "已提交",
+    "studentSummary": "學生統計"
   }
 }

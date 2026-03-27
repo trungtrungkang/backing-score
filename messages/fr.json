@@ -600,6 +600,10 @@
     "waitModeForced": "Le mode d'attente est requis",
     "assignmentNotFound": "Ce devoir n'existe plus. Il a peut-être été supprimé par le professeur.",
     "assignmentUnavailable": "Devoir indisponible",
-    "submissionFailedDeleted": "Impossible de soumettre — le devoir a peut-être été supprimé."
+    "submissionFailedDeleted": "Impossible de soumettre — le devoir a peut-être été supprimé.",
+    "avgGrade": "Note moy.",
+    "assignmentBreakdown": "Détail par devoir",
+    "submissionRate": "Soumis",
+    "studentSummary": "Résumé par élève"
   }
 }
