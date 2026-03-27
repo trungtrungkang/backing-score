@@ -1,10 +1,16 @@
 /**
- * useAudioRecorder — Browser-based audio recording hook using mp3-mediarecorder.
- * Outputs high-quality MP3 using WASM LAME encoder (vs native MediaRecorder's low-quality WebM).
- * MP3 has proper duration metadata → no seekbar bugs.
+ * useAudioRecorder — High-quality MP3 recording using Web Audio API + lamejs.
+ *
+ * Flow:
+ * 1. getUserMedia → AudioContext → ScriptProcessorNode captures PCM float samples
+ * 2. On stop, lamejs encodes accumulated PCM → MP3 Blob
+ * 3. Output: proper MP3 file with correct duration metadata
+ *
+ * No WASM, no workers, no Next.js bundling issues — pure JavaScript.
  */
 
 import { useState, useRef, useCallback } from "react";
+import { encodePcmToMp3 } from "@/lib/mp3encoder";
 
 export interface AudioRecorderState {
   isRecording: boolean;
@@ -27,24 +33,70 @@ export function useAudioRecorder() {
     error: null,
   });
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const startTimeRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const pcmDataRef = useRef<Float32Array[]>([]);
+  const startTimeRef = useRef<number>(0);
   const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRecordingRef = useRef(false);
 
-  const stopRecording = useCallback(() => {
+  const cleanup = useCallback(() => {
     if (autoStopTimerRef.current) {
       clearTimeout(autoStopTimerRef.current);
       autoStopTimerRef.current = null;
     }
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      mediaRecorderRef.current.stop();
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
     }
   }, []);
+
+  const stopRecording = useCallback(async () => {
+    if (!isRecordingRef.current) return;
+    isRecordingRef.current = false;
+
+    const sampleRate = audioCtxRef.current?.sampleRate ?? 44100;
+    const pcmChunks = [...pcmDataRef.current];
+    const duration = Date.now() - startTimeRef.current;
+
+    cleanup();
+
+    // Encode to MP3 (async — lamejs is loaded dynamically)
+    try {
+      const blob = await encodePcmToMp3(pcmChunks, sampleRate);
+      const url = URL.createObjectURL(blob);
+
+      setState((prev) => ({
+        ...prev,
+        isRecording: false,
+        isPaused: false,
+        recordingBlob: blob,
+        recordingUrl: url,
+        durationMs: duration,
+      }));
+    } catch (err) {
+      console.error("MP3 encoding failed:", err);
+      setState((prev) => ({
+        ...prev,
+        isRecording: false,
+        error: "Failed to encode recording",
+      }));
+    }
+  }, [cleanup]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -55,63 +107,35 @@ export function useAudioRecorder() {
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
+          echoCancellation: false,  // OFF for music quality
+          noiseSuppression: false,  // OFF for music quality
+          autoGainControl: false,   // OFF for natural dynamics
           sampleRate: 44100,
         },
       });
       streamRef.current = stream;
 
-      // Dynamically import mp3-mediarecorder (WASM-based, loads worker)
-      let RecorderClass: typeof MediaRecorder;
-      try {
-        const { Mp3MediaRecorder } = await import("mp3-mediarecorder");
-        const workerUrl = new URL(
-          "mp3-mediarecorder/worker",
-          import.meta.url
-        );
-        RecorderClass = class extends Mp3MediaRecorder {
-          constructor(s: MediaStream, opts?: MediaRecorderOptions) {
-            super(s, { worker: new Worker(workerUrl, { type: "module" }), ...opts });
-          }
-        } as unknown as typeof MediaRecorder;
-      } catch {
-        // Fallback to native MediaRecorder if mp3-mediarecorder fails
-        RecorderClass = MediaRecorder;
-      }
+      const audioCtx = new AudioContext({ sampleRate: 44100 });
+      audioCtxRef.current = audioCtx;
 
-      const recorder = new RecorderClass(stream);
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
+      const source = audioCtx.createMediaStreamSource(stream);
+      sourceRef.current = source;
+
+      // ScriptProcessorNode to capture raw PCM
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
+      pcmDataRef.current = [];
       startTimeRef.current = Date.now();
+      isRecordingRef.current = true;
 
-      recorder.ondataavailable = (e: BlobEvent) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+      processor.onaudioprocess = (e) => {
+        if (!isRecordingRef.current) return;
+        const inputData = e.inputBuffer.getChannelData(0);
+        pcmDataRef.current.push(new Float32Array(inputData));
       };
 
-      recorder.onstop = () => {
-        const mimeType = chunksRef.current[0]?.type || "audio/mpeg";
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const duration = Date.now() - startTimeRef.current;
-
-        setState((prev) => ({
-          ...prev,
-          isRecording: false,
-          isPaused: false,
-          recordingBlob: blob,
-          recordingUrl: url,
-          durationMs: duration,
-        }));
-
-        // Stop all tracks
-        stream.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      };
-
-      recorder.start(1000); // Collect data every second
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
 
       // Auto-stop after MAX_RECORDING_MS
       autoStopTimerRef.current = setTimeout(() => {
@@ -128,6 +152,7 @@ export function useAudioRecorder() {
         error: null,
       }));
     } catch (err) {
+      cleanup();
       const message =
         err instanceof DOMException && err.name === "NotAllowedError"
           ? "Microphone permission denied. Please allow mic access to record."
@@ -135,7 +160,7 @@ export function useAudioRecorder() {
 
       setState((prev) => ({ ...prev, error: message }));
     }
-  }, [state.recordingUrl, stopRecording]);
+  }, [state.recordingUrl, stopRecording, cleanup]);
 
   const discardRecording = useCallback(() => {
     if (state.recordingUrl) {
