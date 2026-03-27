@@ -61,7 +61,7 @@ export default function CreateAssignmentPage() {
     });
 
     setLoadingProjects(true);
-    Promise.all([listMyProjects(), listPublished(), listClassroomExercises(classroomId)])
+    Promise.all([listMyProjects(), listPublished(), listClassroomExercises()])
       .then(([mine, pub, lib]) => {
         setMyProjects(mine);
         setDiscoverProjects(pub);

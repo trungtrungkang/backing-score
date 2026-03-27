@@ -180,7 +180,7 @@ async function main() {
 
   console.log("\nCreating attributes for exercise_folders...");
   await createAttributes(databases, "exercise_folders", [
-    { key: "classroomId", type: "string", required: true, size: 256 },
+    { key: "teacherId", type: "string", required: true, size: 256 },
     { key: "name", type: "string", required: true, size: 512 },
     { key: "order", type: "integer", required: false },
     { key: "parentFolderId", type: "string", required: false, size: 256 },
@@ -188,7 +188,7 @@ async function main() {
 
   console.log("\nCreating attributes for classroom_exercises...");
   await createAttributes(databases, "classroom_exercises", [
-    { key: "classroomId", type: "string", required: true, size: 256 },
+    { key: "teacherId", type: "string", required: true, size: 256 },
     { key: "folderId", type: "string", required: false, size: 256 },
     { key: "projectId", type: "string", required: true, size: 256 },
     { key: "title", type: "string", required: true, size: 512 },
@@ -223,12 +223,12 @@ async function main() {
     { collection: "submission_feedback", key: "idx_submission", type: IndexType.Key, attributes: ["submissionId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Asc] },
 
     // Exercise Folders
-    { collection: "exercise_folders", key: "idx_classroom", type: IndexType.Key, attributes: ["classroomId", "order"], orders: [OrderBy.Asc, OrderBy.Asc] },
-    { collection: "exercise_folders", key: "idx_parent", type: IndexType.Key, attributes: ["classroomId", "parentFolderId"], orders: [] },
+    { collection: "exercise_folders", key: "idx_teacher", type: IndexType.Key, attributes: ["teacherId", "order"], orders: [OrderBy.Asc, OrderBy.Asc] },
+    { collection: "exercise_folders", key: "idx_parent", type: IndexType.Key, attributes: ["teacherId", "parentFolderId"], orders: [] },
 
     // Classroom Exercises
-    { collection: "classroom_exercises", key: "idx_classroom", type: IndexType.Key, attributes: ["classroomId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
-    { collection: "classroom_exercises", key: "idx_folder", type: IndexType.Key, attributes: ["classroomId", "folderId"], orders: [] },
+    { collection: "classroom_exercises", key: "idx_teacher", type: IndexType.Key, attributes: ["teacherId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
+    { collection: "classroom_exercises", key: "idx_folder", type: IndexType.Key, attributes: ["teacherId", "folderId"], orders: [] },
   ];
 
   for (const idx of indexes) {

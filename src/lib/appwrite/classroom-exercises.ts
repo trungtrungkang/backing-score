@@ -1,6 +1,6 @@
 /**
- * Classroom Exercise CRUD for Classroom Library.
- * Links existing projects to a classroom's library.
+ * Teacher Exercise CRUD for Teacher Library.
+ * Links existing projects to a teacher's personal library.
  */
 
 import {
@@ -20,9 +20,8 @@ import type { ClassroomExerciseDocument } from "./types";
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_CLASSROOM_EXERCISES_COLLECTION_ID;
 
-/** Add an exercise (project link) to the classroom library. */
+/** Add an exercise (project link) to the teacher's library. */
 export async function addClassroomExercise(params: {
-  classroomId: string;
   folderId?: string | null;
   projectId: string;
   title: string;
@@ -35,7 +34,7 @@ export async function addClassroomExercise(params: {
     collId,
     ID.unique(),
     {
-      classroomId: params.classroomId,
+      teacherId: user.$id,
       folderId: params.folderId || null,
       projectId: params.projectId,
       title: params.title,
@@ -50,13 +49,13 @@ export async function addClassroomExercise(params: {
   return doc as unknown as ClassroomExerciseDocument;
 }
 
-/** List exercises in a classroom, optionally filtered by folder. */
+/** List exercises belonging to the current teacher, optionally filtered by folder. */
 export async function listClassroomExercises(
-  classroomId: string,
   folderId?: string | null
 ): Promise<ClassroomExerciseDocument[]> {
+  const user = await account.get();
   const queries = [
-    Query.equal("classroomId", classroomId),
+    Query.equal("teacherId", user.$id),
     Query.orderDesc("$createdAt"),
     Query.limit(100),
   ];
@@ -71,7 +70,7 @@ export async function listClassroomExercises(
   return documents as unknown as ClassroomExerciseDocument[];
 }
 
-/** Remove an exercise from the classroom library. */
+/** Remove an exercise from the teacher's library. */
 export async function removeClassroomExercise(exerciseId: string): Promise<void> {
   await databases.deleteDocument(dbId, collId, exerciseId);
 }

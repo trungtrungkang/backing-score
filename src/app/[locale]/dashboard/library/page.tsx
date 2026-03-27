@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import {
-  ArrowLeft,
   FolderPlus,
   Folder,
   Plus,
@@ -18,36 +16,30 @@ import {
   ChevronRight,
 } from "lucide-react";
 import {
-  isClassroomMember,
-  getClassroom,
   listExerciseFolders,
   listClassroomExercises,
   createExerciseFolder,
   deleteExerciseFolder,
   addClassroomExercise,
   removeClassroomExercise,
-  ClassroomDocument,
+  listMyProjects,
   ExerciseFolderDocument,
   ClassroomExerciseDocument,
+  ProjectDocument,
 } from "@/lib/appwrite";
-import { listMyProjects, ProjectDocument } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
 
-export default function ClassroomLibraryPage() {
-  const params = useParams();
-  const classroomId = params.id as string;
+export default function TeacherLibraryPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { confirm } = useDialogs();
   const t = useTranslations("Classroom");
 
-  const [classroom, setClassroom] = useState<ClassroomDocument | null>(null);
   const [folders, setFolders] = useState<ExerciseFolderDocument[]>([]);
   const [exercises, setExercises] = useState<ClassroomExerciseDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isTeacher, setIsTeacher] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
   // Add Folder modal
@@ -61,30 +53,21 @@ export default function ClassroomLibraryPage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!user || !classroomId) return;
+    if (!user) return;
     setLoading(true);
     try {
-      const [cr, membership, flds, exs] = await Promise.all([
-        getClassroom(classroomId),
-        isClassroomMember(classroomId),
-        listExerciseFolders(classroomId),
-        listClassroomExercises(classroomId),
+      const [flds, exs] = await Promise.all([
+        listExerciseFolders(),
+        listClassroomExercises(),
       ]);
-      if (!membership.isMember) {
-        router.push("/classroom");
-        return;
-      }
-      setClassroom(cr);
-      setIsTeacher(membership.role === "teacher");
       setFolders(flds);
       setExercises(exs);
     } catch {
       toast.error(t("failedLoad"));
-      router.push("/classroom");
     } finally {
       setLoading(false);
     }
-  }, [user, classroomId, router, t]);
+  }, [user, t]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,14 +75,13 @@ export default function ClassroomLibraryPage() {
       return;
     }
     loadData();
-  }, [authLoading, user, loadData]);
+  }, [authLoading, user, loadData, router]);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || creatingFolder) return;
     setCreatingFolder(true);
     try {
       const folder = await createExerciseFolder({
-        classroomId,
         name: newFolderName.trim(),
       });
       setFolders((prev) => [...prev, folder]);
@@ -148,7 +130,6 @@ export default function ClassroomLibraryPage() {
   const handleAddExercise = async (project: ProjectDocument) => {
     try {
       const exercise = await addClassroomExercise({
-        classroomId,
         folderId: selectedFolder,
         projectId: project.$id,
         title: project.name,
@@ -184,31 +165,23 @@ export default function ClassroomLibraryPage() {
     );
   }
 
-  if (!classroom) return null;
-
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white">
       <div className="max-w-5xl mx-auto py-8 px-6">
         {/* Header */}
-        <Link href={`/classroom/${classroomId}`} className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> {classroom.name}
-        </Link>
-
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <BookOpen className="w-6 h-6 text-indigo-500" />
             <h1 className="text-2xl font-black text-zinc-900 dark:text-white">{t("library")}</h1>
           </div>
-          {isTeacher && (
-            <div className="flex gap-2">
-              <Button onClick={() => setShowNewFolder(true)} variant="outline" className="text-sm font-bold">
-                <FolderPlus className="w-4 h-4 mr-2" /> {t("newFolder")}
-              </Button>
-              <Button onClick={handleOpenAddExercise} className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold">
-                <Plus className="w-4 h-4 mr-2" /> {t("addExercise")}
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button onClick={() => setShowNewFolder(true)} variant="outline" className="text-sm font-bold">
+              <FolderPlus className="w-4 h-4 mr-2" /> {t("newFolder")}
+            </Button>
+            <Button onClick={handleOpenAddExercise} className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold">
+              <Plus className="w-4 h-4 mr-2" /> {t("addExercise")}
+            </Button>
+          </div>
         </div>
 
         {/* New Folder Inline Form */}
@@ -252,14 +225,12 @@ export default function ClassroomLibraryPage() {
                     <Folder className="w-4 h-4 text-amber-500" /> {folder.name}
                     <span className="ml-auto text-xs text-zinc-400">{count}</span>
                   </button>
-                  {isTeacher && (
-                    <button
-                      onClick={() => handleDeleteFolder(folder.$id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-400 transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDeleteFolder(folder.$id)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-400 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               );
             })}
@@ -293,16 +264,14 @@ export default function ClassroomLibraryPage() {
                       href={`/play/${exercise.projectId}`}
                       className="flex items-center gap-1 text-xs font-bold text-indigo-500 hover:text-indigo-400 transition-colors"
                     >
-                      {t("practiceHint")} <ChevronRight className="w-3 h-3" />
+                      Play <ChevronRight className="w-3 h-3" />
                     </Link>
-                    {isTeacher && (
-                      <button
-                        onClick={() => handleRemoveExercise(exercise.$id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-400 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleRemoveExercise(exercise.$id)}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-400 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>

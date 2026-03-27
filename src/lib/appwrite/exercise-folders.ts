@@ -1,6 +1,6 @@
 /**
- * Exercise Folder CRUD for Classroom Library.
- * Folders organize exercises within a classroom.
+ * Exercise Folder CRUD for Teacher Library.
+ * Folders organize exercises belonging to a teacher (shared across all classrooms).
  */
 
 import {
@@ -22,9 +22,8 @@ const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_EXERCISE_FOLDERS_COLLECTION_ID;
 const exercisesCollId = APPWRITE_CLASSROOM_EXERCISES_COLLECTION_ID;
 
-/** Create a folder in the classroom library. */
+/** Create a folder in the teacher's library. */
 export async function createExerciseFolder(params: {
-  classroomId: string;
   name: string;
   parentFolderId?: string | null;
   order?: number;
@@ -36,7 +35,7 @@ export async function createExerciseFolder(params: {
     collId,
     ID.unique(),
     {
-      classroomId: params.classroomId,
+      teacherId: user.$id,
       name: params.name,
       parentFolderId: params.parentFolderId || null,
       order: params.order ?? 0,
@@ -50,13 +49,13 @@ export async function createExerciseFolder(params: {
   return doc as unknown as ExerciseFolderDocument;
 }
 
-/** List folders in a classroom (optionally filtered by parent). */
+/** List folders belonging to the current teacher. */
 export async function listExerciseFolders(
-  classroomId: string,
   parentFolderId?: string | null
 ): Promise<ExerciseFolderDocument[]> {
+  const user = await account.get();
   const queries = [
-    Query.equal("classroomId", classroomId),
+    Query.equal("teacherId", user.$id),
     Query.orderAsc("order"),
     Query.limit(100),
   ];

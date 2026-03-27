@@ -239,9 +239,6 @@ export default function ClassroomDetailPage() {
                   <Users className="w-3.5 h-3.5" /> {members.length} {t("members").toLowerCase()}
                 </span>
               </div>
-              <Link href={`/classroom/${classroomId}/library`} className="inline-flex items-center gap-1.5 mt-3 text-sm bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 font-bold transition-colors">
-                <BookOpen className="w-4 h-4" /> {t("library")}
-              </Link>
             </div>
 
             <button
