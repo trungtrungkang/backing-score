@@ -19,9 +19,9 @@ export function ThemeToggle({ className, hideBg = false }: { className?: string;
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className={`relative inline-flex items-center justify-center rounded-md w-9 h-9 transition-colors focus:outline-none ${
+      className={`relative inline-flex items-center justify-center rounded-full w-9 h-9 transition-colors focus:outline-none ${
         hideBg
-          ? "text-zinc-400 hover:text-white"
+          ? "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
           : "border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800"
       } ${className || ""}`}
       title="Toggle theme"

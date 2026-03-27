@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Home, Library, Compass, User, LogOut, ShieldAlert,
-  Users, GraduationCap, Menu, X, Settings2, BookOpen, Search
+  Users, GraduationCap, Menu, X, Settings2, BookOpen, Search, LogIn
 } from "lucide-react";
 import { WikiSearchDialog } from "@/components/WikiSearchDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -175,68 +175,53 @@ export function Header() {
               <TooltipContent side="bottom" className="font-semibold text-xs">Search Wiki</TooltipContent>
             </Tooltip>
             <LanguageSwitcher />
+            <ThemeToggle hideBg className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400" />
             {user && <NotificationBell />}
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors overflow-hidden">
-                      {user ? (
-                        avatarUrl
+
+            {user ? (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors overflow-hidden">
+                        {avatarUrl
                           ? <img src={avatarUrl} className="w-full h-full object-cover" alt="User" />
                           : <span className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-xs">{initials}</span>
-                      ) : (
-                        <Settings2 className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="font-semibold text-xs">Options</TooltipContent>
-              </Tooltip>
+                        }
+                      </button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="font-semibold text-xs">Options</TooltipContent>
+                </Tooltip>
 
-              <DropdownMenuContent align="end" className="w-52 mt-1">
-                {/* User info */}
-                {user && (
-                  <>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{user.name || "User"}</span>
-                        <span className="text-xs text-zinc-500 truncate">{user.email}</span>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href={`/u/${user.$id}`} className="flex items-center gap-3 cursor-pointer">
-                        <User className="w-4 h-4" />
-                        My Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                <DropdownMenuContent align="end" className="w-52 mt-1">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{user.name || "User"}</span>
+                      <span className="text-xs text-zinc-500 truncate">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={`/u/${user.$id}`} className="flex items-center gap-3 cursor-pointer">
+                      <User className="w-4 h-4" />
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
 
-                {/* Theme */}
-                <div className="px-2 py-1.5 flex items-center justify-between">
-                  <span className="text-xs text-zinc-500 font-medium">Theme</span>
-                  <ThemeToggle hideBg className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white" />
-                </div>
+                  {canAccessAdmin(user?.labels) && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center gap-3 cursor-pointer text-red-500 focus:text-red-500">
+                          <ShieldAlert className="w-4 h-4" />
+                          {t("admin")}
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
 
-                {/* Admin */}
-                {canAccessAdmin(user?.labels) && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-3 cursor-pointer text-red-500 focus:text-red-500">
-                        <ShieldAlert className="w-4 h-4" />
-                        {t("admin")}
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-
-                {/* Login / Logout */}
-                <DropdownMenuSeparator />
-                {user ? (
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => logout()}
                     className="flex items-center gap-3 cursor-pointer text-red-500 focus:text-red-500"
@@ -244,16 +229,17 @@ export function Header() {
                     <LogOut className="w-4 h-4" />
                     Logout
                   </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/login" className="flex items-center gap-3 cursor-pointer">
-                      <User className="w-4 h-4" />
-                      {t("login")}
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 h-9 px-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors shadow-sm"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("login")}</span>
+              </Link>
+            )}
           </div>
 
         </div>
