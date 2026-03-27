@@ -87,7 +87,7 @@ function MobileActionsMenu({ projectId, projectName }: { projectId: string; proj
   );
 }
 
-const FREE_DAILY_WAIT_MODE_LIMIT = 3;
+const FREE_DAILY_WAIT_MODE_LIMIT = 5;
 
 function getWaitModeCount(): { count: number; date: string } {
   try {
