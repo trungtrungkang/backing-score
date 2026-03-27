@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslations } from "next-intl";
 import {
   GraduationCap,
   Loader2,
@@ -20,6 +21,7 @@ export default function JoinClassroomPage() {
   const code = (params.code as string)?.toUpperCase();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const t = useTranslations("Classroom");
 
   const [joining, setJoining] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -34,18 +36,16 @@ export default function JoinClassroomPage() {
       const cr = await joinClassroom(code);
       setClassroom(cr);
       setJoined(true);
-      toast.success(`Joined "${cr.name}"!`);
+      toast.success(`${t("joinedMsg")} "${cr.name}"!`);
     } catch (err: any) {
-      setError(err?.message || "Failed to join classroom. Check the code and try again.");
+      setError(err?.message || t("joinFailedDefault"));
     } finally {
       setJoining(false);
     }
   };
 
-  // Auto-join if user is logged in
   useEffect(() => {
     if (!authLoading && !user) {
-      // Redirect to login, then back here
       router.push(`/login`);
     }
   }, [authLoading, user, router, code]);
@@ -62,21 +62,20 @@ export default function JoinClassroomPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center shadow-xl shadow-black/5">
-          {/* Success State */}
           {joined && classroom ? (
             <>
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
               <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
-                Welcome to the class!
+                {t("joinSuccess")}
               </h1>
               <p className="text-zinc-400 mb-6">
-                You&apos;ve joined <span className="font-bold text-zinc-200">{classroom.name}</span>
+                {t("joinedMsg")} <span className="font-bold text-zinc-200">{classroom.name}</span>
               </p>
               <Link href={`/classroom/${classroom.$id}`}>
                 <Button className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 h-11 w-full">
-                  Go to Classroom
+                  {t("goToClassroom")}
                 </Button>
               </Link>
             </>
@@ -86,18 +85,18 @@ export default function JoinClassroomPage() {
                 <XCircle className="w-8 h-8 text-red-500" />
               </div>
               <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
-                Couldn&apos;t join
+                {t("joinFailed")}
               </h1>
               <p className="text-zinc-400 mb-6">{error}</p>
               <Button
                 onClick={handleJoin}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 h-11 w-full mb-3"
               >
-                Try Again
+                {t("tryAgain")}
               </Button>
               <Link href="/classroom">
                 <Button variant="ghost" className="w-full text-zinc-400">
-                  Back to Classrooms
+                  {t("backToClassrooms")}
                 </Button>
               </Link>
             </>
@@ -107,10 +106,10 @@ export default function JoinClassroomPage() {
                 <GraduationCap className="w-8 h-8 text-indigo-400" />
               </div>
               <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
-                Join Classroom
+                {t("joinTitle")}
               </h1>
               <p className="text-zinc-400 mb-6">
-                You&apos;re about to join a classroom with code:
+                {t("joinPrompt")}
               </p>
               <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl py-4 px-6 mb-6">
                 <span className="text-3xl font-mono font-black tracking-[0.3em] text-indigo-500">
@@ -123,7 +122,7 @@ export default function JoinClassroomPage() {
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 h-11 w-full shadow-lg shadow-indigo-500/20"
               >
                 {joining && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Join Classroom
+                {t("joinButton")}
               </Button>
             </>
           )}

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Play,
@@ -14,7 +15,6 @@ import {
   Users,
   CheckCircle2,
   Loader2,
-  Trophy,
   BarChart3,
   Download,
   Upload,
@@ -43,6 +43,7 @@ export default function AssignmentDetailPage() {
   const assignmentId = params.aid as string;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const t = useTranslations("Classroom");
 
   const [assignment, setAssignment] = useState<AssignmentDocument | null>(null);
   const [classroom, setClassroom] = useState<ClassroomDocument | null>(null);
@@ -70,7 +71,7 @@ export default function AssignmentDetailPage() {
       .then(async ([assign, cr, membership]) => {
         if (cancelled) return;
         if (!membership.isMember) {
-          toast.error("You are not a member of this classroom");
+          toast.error(t("notMember"));
           router.push("/classroom");
           return;
         }
@@ -79,7 +80,6 @@ export default function AssignmentDetailPage() {
         setClassroom(cr);
         setUserRole(membership.role);
 
-        // Load the linked project
         try {
           const proj = await getProject(assign.sourceId);
           if (!cancelled) setProject(proj);
@@ -95,7 +95,7 @@ export default function AssignmentDetailPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Failed to load assignment");
+          toast.error(t("failedLoadAssignment"));
           router.push(`/classroom/${classroomId}`);
         }
       })
@@ -104,25 +104,23 @@ export default function AssignmentDetailPage() {
       });
 
     return () => { cancelled = true; };
-  }, [user, authLoading, classroomId, assignmentId, router]);
+  }, [user, authLoading, classroomId, assignmentId, router, t]);
 
   const handleSubmit = async () => {
     if (!assignment || !classroom || submitting) return;
     setSubmitting(true);
     try {
-      const sub = await submitAssignment(
-        {
-          assignmentId: assignment.$id,
-          classroomId,
-          accuracy: 0, // Will be filled when integrated with Play Mode
-          tempo: 0,
-          attempts: 1,
-        }
-      );
+      const sub = await submitAssignment({
+        assignmentId: assignment.$id,
+        classroomId,
+        accuracy: 0,
+        tempo: 0,
+        attempts: 1,
+      });
       setMySubmission(sub);
-      toast.success("Submission recorded!");
+      toast.success(t("submissionRecorded"));
     } catch {
-      toast.error("Failed to submit");
+      toast.error(t("failedSubmit"));
     } finally {
       setSubmitting(false);
     }
@@ -177,12 +175,12 @@ export default function AssignmentDetailPage() {
                 {assignment.deadline && (
                   <span className={`flex items-center gap-1 text-xs ${isPastDeadline ? "text-red-400" : "text-zinc-400"}`}>
                     <Clock className="w-3.5 h-3.5" />
-                    Due: {new Date(assignment.deadline).toLocaleDateString()} {new Date(assignment.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    {isPastDeadline && <span className="text-red-400 font-bold ml-1">OVERDUE</span>}
+                    {t("due")} {new Date(assignment.deadline).toLocaleDateString()} {new Date(assignment.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {isPastDeadline && <span className="text-red-400 font-bold ml-1">{t("overdue")}</span>}
                   </span>
                 )}
                 {assignment.waitModeRequired && (
-                  <span className="text-xs text-amber-400 font-bold">⏳ Wait Mode Required</span>
+                  <span className="text-xs text-amber-400 font-bold">⏳ {t("waitModeRequired")}</span>
                 )}
               </div>
             </div>
@@ -192,7 +190,6 @@ export default function AssignmentDetailPage() {
         {/* Student View */}
         {!isTeacher && (
           <div className="space-y-4">
-            {/* Practice Button */}
             {project && (
               <Link
                 href={`/play/${project.$id}?assignmentId=${assignment.$id}&classroomId=${classroomId}`}
@@ -200,41 +197,40 @@ export default function AssignmentDetailPage() {
               >
                 <Play className="w-8 h-8" />
                 <div>
-                  <div className="font-bold text-lg">Practice: {project.name}</div>
-                  <div className="text-white/60 text-sm">Open in Play Mode — Record & submit your performance</div>
+                  <div className="font-bold text-lg">{t("practiceLabel", { name: project.name })}</div>
+                  <div className="text-white/60 text-sm">{t("practiceHint")}</div>
                 </div>
               </Link>
             )}
 
-            {/* Submission Status */}
             {mySubmission ? (
               <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  <h3 className="font-bold text-green-400 text-lg">Submitted</h3>
+                  <h3 className="font-bold text-green-400 text-lg">{t("submitted")}</h3>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-white dark:bg-zinc-900/50 rounded-lg p-3 text-center">
                     <div className="text-2xl font-black text-zinc-900 dark:text-white">{mySubmission.accuracy ?? 0}%</div>
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Accuracy</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("accuracy")}</div>
                   </div>
                   <div className="bg-white dark:bg-zinc-900/50 rounded-lg p-3 text-center">
                     <div className="text-2xl font-black text-zinc-900 dark:text-white">{mySubmission.tempo ?? 0}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Tempo</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("tempo")}</div>
                   </div>
                   <div className="bg-white dark:bg-zinc-900/50 rounded-lg p-3 text-center">
                     <div className="text-2xl font-black text-zinc-900 dark:text-white">{mySubmission.attempts}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Attempts</div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("attempts")}</div>
                   </div>
                 </div>
                 {mySubmission.submittedAt && (
                   <p className="text-xs text-zinc-500 mt-3">
-                    Submitted: {new Date(mySubmission.submittedAt).toLocaleString()}
+                    {t("submittedAt")} {new Date(mySubmission.submittedAt).toLocaleString()}
                   </p>
                 )}
                 {mySubmission.recordingFileId && (
                   <div className="mt-3 pt-3 border-t border-green-500/20">
-                    <div className="text-xs text-zinc-500 mb-1">Your recording:</div>
+                    <div className="text-xs text-zinc-500 mb-1">{t("yourRecording")}</div>
                     <audio src={getRecordingUrl(mySubmission.recordingFileId)} controls className="w-full h-8" />
                   </div>
                 )}
@@ -242,8 +238,8 @@ export default function AssignmentDetailPage() {
             ) : (
               <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center">
                 <Send className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
-                <p className="text-zinc-400 mb-2">Practice the score above, then submit your results.</p>
-                <p className="text-xs text-zinc-500 mb-4">Use the 🎙 Record button in Play Mode to record & submit automatically.</p>
+                <p className="text-zinc-400 mb-2">{t("practiceHintLong")}</p>
+                <p className="text-xs text-zinc-500 mb-4">{t("recordHint")}</p>
                 <div className="flex items-center gap-3 justify-center">
                   <Button
                     onClick={handleSubmit}
@@ -251,11 +247,11 @@ export default function AssignmentDetailPage() {
                     className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8"
                   >
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Submit Assignment
+                    {t("submitAssignment")}
                   </Button>
                   <label className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-sm font-medium text-zinc-600 dark:text-zinc-300">
                     <Upload className="w-4 h-4" />
-                    Upload Audio
+                    {t("uploadAudio")}
                     <input
                       type="file"
                       accept="audio/*"
@@ -264,7 +260,7 @@ export default function AssignmentDetailPage() {
                         const file = e.target.files?.[0];
                         if (!file || !assignment || !classroom) return;
                         if (file.size > 10 * 1024 * 1024) {
-                          toast.error("File too large. Max 10MB.");
+                          toast.error(t("fileTooLarge"));
                           return;
                         }
                         setSubmitting(true);
@@ -278,9 +274,9 @@ export default function AssignmentDetailPage() {
                             recordingBlob: file,
                           });
                           setMySubmission(sub);
-                          toast.success("Recording uploaded & submitted!");
+                          toast.success(t("uploadSuccess"));
                         } catch {
-                          toast.error("Failed to upload");
+                          toast.error(t("failedUpload"));
                         } finally {
                           setSubmitting(false);
                         }
@@ -298,13 +294,13 @@ export default function AssignmentDetailPage() {
           <div>
             <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-indigo-400" />
-              Submissions ({allSubmissions.length})
+              {t("submissions")} ({allSubmissions.length})
             </h2>
 
             {allSubmissions.length === 0 ? (
               <div className="py-16 border border-dashed border-zinc-800 rounded-xl text-center">
                 <Users className="w-10 h-10 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500">No submissions yet</p>
+                <p className="text-zinc-500">{t("noSubmissions")}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -312,7 +308,6 @@ export default function AssignmentDetailPage() {
                   <div key={sub.$id}
                     className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 space-y-2"
                   >
-                    {/* Top row: student info + stats */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
@@ -330,7 +325,7 @@ export default function AssignmentDetailPage() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="text-lg font-black text-zinc-900 dark:text-white">{sub.accuracy ?? 0}%</div>
-                          <div className="text-[10px] text-zinc-500">accuracy</div>
+                          <div className="text-[10px] text-zinc-500">{t("accuracy").toLowerCase()}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-bold text-zinc-400">{sub.attempts}x</div>
@@ -344,7 +339,6 @@ export default function AssignmentDetailPage() {
                         </span>
                       </div>
                     </div>
-                    {/* Audio row — full width */}
                     {sub.recordingFileId && (
                       <div className="flex items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800">
                         <audio src={getRecordingUrl(sub.recordingFileId)} controls className="flex-1 h-8" />
@@ -352,7 +346,7 @@ export default function AssignmentDetailPage() {
                           href={getRecordingDownloadUrl(sub.recordingFileId)}
                           download
                           className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
-                          title="Download recording"
+                          title={t("downloadRecording")}
                         >
                           <Download className="w-4 h-4" />
                         </a>

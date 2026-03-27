@@ -8,7 +8,6 @@ import { useTranslations } from "next-intl";
 import {
   GraduationCap,
   Plus,
-  Users,
   Music4,
   Clock,
   ChevronRight,
@@ -22,6 +21,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 export default function ClassroomListPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const t = useTranslations("Classroom");
   const [classrooms, setClassrooms] = useState<ClassroomDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,11 +70,11 @@ export default function ClassroomListPage() {
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white">
-                  My Classrooms
+                  {t("title")}
                 </h1>
               </div>
               <p className="text-zinc-400 ml-[52px]">
-                Manage your classes or join one with a class code
+                {t("subtitle")}
               </p>
             </div>
 
@@ -84,7 +84,7 @@ export default function ClassroomListPage() {
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 h-11 shadow-lg shadow-indigo-500/20"
               >
                 <Plus className="w-5 h-5 mr-2" />
-                Create Classroom
+                {t("createBtn")}
               </Button>
             </div>
           </header>
@@ -92,10 +92,10 @@ export default function ClassroomListPage() {
           {/* Join Classroom Input */}
           <div className="mb-8 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <BookOpen className="w-5 h-5 text-indigo-400 shrink-0 hidden sm:block" />
-            <span className="text-sm text-zinc-500 shrink-0">Have a class code?</span>
+            <span className="text-sm text-zinc-500 shrink-0">{t("haveCode")}</span>
             <input
               type="text"
-              placeholder="Enter 6-character code"
+              placeholder={t("enterCode")}
               maxLength={6}
               className="flex-1 h-10 px-4 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 uppercase tracking-widest font-mono"
               onKeyDown={(e) => {
@@ -111,14 +111,14 @@ export default function ClassroomListPage() {
               variant="outline"
               className="h-10 px-5 text-sm font-bold"
               onClick={() => {
-                const input = document.querySelector('input[placeholder="Enter 6-character code"]') as HTMLInputElement;
+                const input = document.querySelector(`input[placeholder="${t("enterCode")}"]`) as HTMLInputElement;
                 const code = input?.value?.trim();
                 if (code && code.length >= 4) {
                   router.push(`/classroom/join/${code}`);
                 }
               }}
             >
-              Join
+              {t("joinBtn")}
             </Button>
           </div>
 
@@ -126,7 +126,7 @@ export default function ClassroomListPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-32">
               <Loader2 className="w-10 h-10 text-zinc-400 animate-spin mb-4" />
-              <p className="text-zinc-500 font-medium">Loading classrooms...</p>
+              <p className="text-zinc-500 font-medium">{t("loading")}</p>
             </div>
           ) : classrooms.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950/50 text-center px-4">
@@ -134,16 +134,16 @@ export default function ClassroomListPage() {
                 <GraduationCap className="w-8 h-8 text-indigo-400" />
               </div>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                No classrooms yet
+                {t("emptyTitle")}
               </h3>
               <p className="text-zinc-400 max-w-sm mb-6">
-                Create a classroom to start teaching, or join one using a class code from your teacher.
+                {t("emptyDesc")}
               </p>
               <Button
                 onClick={() => router.push("/classroom/create")}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
               >
-                <Plus className="w-4 h-4 mr-2" /> Create First Classroom
+                <Plus className="w-4 h-4 mr-2" /> {t("createFirst")}
               </Button>
             </div>
           ) : (

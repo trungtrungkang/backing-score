@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslations } from "next-intl";
 import {
   GraduationCap,
   ArrowLeft,
@@ -44,6 +45,7 @@ export default function ClassroomDetailPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { confirm } = useDialogs();
+  const t = useTranslations("Classroom");
 
   const [classroom, setClassroom] = useState<ClassroomDocument | null>(null);
   const [members, setMembers] = useState<ClassroomMemberDocument[]>([]);
@@ -74,7 +76,7 @@ export default function ClassroomDetailPage() {
       .then(([cr, membership, mems, assigns]) => {
         if (cancelled) return;
         if (!membership.isMember) {
-          toast.error("You are not a member of this classroom");
+          toast.error(t("notMember"));
           router.push("/classroom");
           return;
         }
@@ -85,7 +87,7 @@ export default function ClassroomDetailPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Failed to load classroom");
+          toast.error(t("failedLoad"));
           router.push("/classroom");
         }
       })
@@ -94,49 +96,49 @@ export default function ClassroomDetailPage() {
       });
 
     return () => { cancelled = true; };
-  }, [user, authLoading, classroomId, router]);
+  }, [user, authLoading, classroomId, router, t]);
 
   const handleCopyCode = async () => {
     if (!classroom) return;
     await navigator.clipboard.writeText(classroom.classCode);
     setCodeCopied(true);
-    toast.success("Class code copied!");
+    toast.success(t("codeCopied"));
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
   const handleDeleteClassroom = async () => {
     if (!classroom) return;
     const ok = await confirm({
-      title: "Delete Classroom",
-      description: `Permanently delete "${classroom.name}"? All assignments and data will be lost.`,
-      confirmText: "Delete",
-      cancelText: "Cancel",
+      title: t("deleteConfirmTitle"),
+      description: t("deleteConfirmDesc", { name: classroom.name }),
+      confirmText: t("deleteConfirm"),
+      cancelText: t("deleteCancel"),
     });
     if (!ok) return;
 
     try {
       await deleteClassroom(classroomId);
-      toast.success("Classroom deleted");
+      toast.success(t("classroomDeleted"));
       router.push("/classroom");
     } catch {
-      toast.error("Failed to delete classroom");
+      toast.error(t("failedDelete"));
     }
   };
 
   const handleRemoveMember = async (userId: string) => {
     const ok = await confirm({
-      title: "Remove Student",
-      description: "Remove this student from the classroom?",
-      confirmText: "Remove",
-      cancelText: "Cancel",
+      title: t("removeStudent"),
+      description: t("removeConfirmDesc"),
+      confirmText: t("removeConfirm"),
+      cancelText: t("removeCancel"),
     });
     if (!ok) return;
     try {
       await removeClassroomMember(classroomId, userId);
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
-      toast.success("Student removed");
+      toast.success(t("studentRemoved"));
     } catch {
-      toast.error("Failed to remove student");
+      toast.error(t("failedRemove"));
     }
   };
 
@@ -151,17 +153,16 @@ export default function ClassroomDetailPage() {
   if (!classroom) return null;
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "assignments", label: "Assignments", icon: <ClipboardList className="w-4 h-4" /> },
-    { key: "members", label: `Members (${members.length})`, icon: <Users className="w-4 h-4" /> },
-    ...(isTeacher ? [{ key: "settings" as Tab, label: "Settings", icon: <Settings className="w-4 h-4" /> }] : []),
+    { key: "assignments", label: t("assignments"), icon: <ClipboardList className="w-4 h-4" /> },
+    { key: "members", label: t("membersCount", { count: members.length }), icon: <Users className="w-4 h-4" /> },
+    ...(isTeacher ? [{ key: "settings" as Tab, label: t("settings"), icon: <Settings className="w-4 h-4" /> }] : []),
   ];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white">
       <div className="max-w-4xl mx-auto py-8 px-6">
-        {/* Back */}
         <Link href="/classroom" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> All Classrooms
+          <ArrowLeft className="w-4 h-4" /> {t("allClassrooms")}
         </Link>
 
         {/* Header */}
@@ -180,17 +181,16 @@ export default function ClassroomDetailPage() {
                 )}
                 {classroom.level && <span className="capitalize">{classroom.level}</span>}
                 <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" /> {members.length} members
+                  <Users className="w-3.5 h-3.5" /> {members.length} {t("members").toLowerCase()}
                 </span>
               </div>
             </div>
 
-            {/* Class Code */}
             <button
               onClick={handleCopyCode}
               className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl px-4 py-3 text-center transition-all"
             >
-              <div className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Class Code</div>
+              <div className="text-[10px] uppercase tracking-widest text-white/50 mb-1">{t("classCode")}</div>
               <div className="text-xl font-mono font-black tracking-[0.2em] flex items-center gap-2">
                 {classroom.classCode}
                 {codeCopied ? (
@@ -230,7 +230,7 @@ export default function ClassroomDetailPage() {
                   onClick={() => router.push(`/classroom/${classroomId}/assign`)}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
                 >
-                  <Plus className="w-4 h-4 mr-2" /> Create Assignment
+                  <Plus className="w-4 h-4 mr-2" /> {t("createAssignment")}
                 </Button>
               </div>
             )}
@@ -238,9 +238,9 @@ export default function ClassroomDetailPage() {
             {assignments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 border border-dashed border-zinc-800 rounded-xl text-center">
                 <ClipboardList className="w-10 h-10 text-zinc-700 mb-4" />
-                <p className="text-zinc-500 font-medium">No assignments yet</p>
+                <p className="text-zinc-500 font-medium">{t("noAssignments")}</p>
                 {isTeacher && (
-                  <p className="text-zinc-600 text-sm mt-1">Click &quot;Create Assignment&quot; to get started</p>
+                  <p className="text-zinc-600 text-sm mt-1">{t("noAssignmentsHint")}</p>
                 )}
               </div>
             ) : (
@@ -274,11 +274,11 @@ export default function ClassroomDetailPage() {
                         {a.deadline && (
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            Due: {new Date(a.deadline).toLocaleDateString()}
+                            {t("due")} {new Date(a.deadline).toLocaleDateString()}
                           </span>
                         )}
                         {a.waitModeRequired && (
-                          <span className="text-amber-400 font-medium">Wait Mode</span>
+                          <span className="text-amber-400 font-medium">{t("waitMode")}</span>
                         )}
                       </div>
                     </div>
@@ -314,7 +314,7 @@ export default function ClassroomDetailPage() {
                   <button
                     onClick={() => handleRemoveMember(m.userId)}
                     className="text-zinc-400 hover:text-red-400 transition-colors"
-                    title="Remove student"
+                    title={t("removeStudent")}
                   >
                     <UserMinus className="w-4 h-4" />
                   </button>
@@ -326,11 +326,10 @@ export default function ClassroomDetailPage() {
 
         {activeTab === "settings" && isTeacher && (
           <div className="space-y-6">
-            {/* Class Code */}
             <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
-              <h3 className="font-bold text-zinc-900 dark:text-white mb-2">Invite Students</h3>
+              <h3 className="font-bold text-zinc-900 dark:text-white mb-2">{t("inviteStudents")}</h3>
               <p className="text-sm text-zinc-400 mb-4">
-                Share this code with your students so they can join the classroom.
+                {t("inviteDesc")}
               </p>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-lg flex items-center justify-center font-mono text-2xl font-black tracking-[0.3em] text-indigo-500">
@@ -341,22 +340,21 @@ export default function ClassroomDetailPage() {
                 </Button>
               </div>
               <p className="text-xs text-zinc-500 mt-3">
-                Or share this link: <span className="text-indigo-400 font-mono">{typeof window !== "undefined" ? `${window.location.origin}/classroom/join/${classroom.classCode}` : ""}</span>
+                {t("shareLink")} <span className="text-indigo-400 font-mono">{typeof window !== "undefined" ? `${window.location.origin}/classroom/join/${classroom.classCode}` : ""}</span>
               </p>
             </div>
 
-            {/* Danger Zone */}
             <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
-              <h3 className="font-bold text-red-400 mb-2">Danger Zone</h3>
+              <h3 className="font-bold text-red-400 mb-2">{t("dangerZone")}</h3>
               <p className="text-sm text-zinc-400 mb-4">
-                Deleting this classroom will remove all assignments and member data permanently.
+                {t("dangerDesc")}
               </p>
               <Button
                 onClick={handleDeleteClassroom}
                 variant="outline"
                 className="border-red-500/30 text-red-500 hover:bg-red-500/10"
               >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete Classroom
+                <Trash2 className="w-4 h-4 mr-2" /> {t("deleteClassroom")}
               </Button>
             </div>
           </div>
