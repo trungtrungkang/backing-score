@@ -124,7 +124,22 @@
     "addedToCollection": "¡Añadido a la colección!",
     "noCollections": "Sin colecciones aún. Crea una primero.",
     "noMatchingProjects": "No se encontraron piezas.",
-    "classroom": "Mis clases"
+    "classroom": "Mis clases",
+    "folders": "Carpetas",
+    "newFolder": "Nueva carpeta",
+    "folderName": "Nombre de la carpeta",
+    "createFolder": "Crear carpeta",
+    "deleteFolder": "Eliminar carpeta",
+    "deleteFolderDesc": "Los proyectos se moverán a 'Todos'. No serán eliminados.",
+    "folderCreated": "¡Carpeta creada!",
+    "folderDeleted": "¡Carpeta eliminada!",
+    "failedCreateFolder": "Error al crear la carpeta",
+    "failedDeleteFolder": "Error al eliminar la carpeta",
+    "allProjects": "Todos",
+    "moveToFolder": "Mover a carpeta",
+    "unfiled": "Sin clasificar",
+    "movedToFolder": "¡Movido!",
+    "failedMoveToFolder": "Error al mover"
   },
   "Login": {
     "welcomeBack": "Bienvenido de nuevo",

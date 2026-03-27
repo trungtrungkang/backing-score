@@ -123,4 +123,11 @@ export {
   updateFeedback,
   deleteFeedback,
 } from "./submission-feedback";
-
+export type { ProjectFolderDocument } from "./types";
+export {
+  createProjectFolder,
+  listProjectFolders,
+  updateProjectFolder,
+  deleteProjectFolder,
+  moveProjectToFolder,
+} from "./project-folders";

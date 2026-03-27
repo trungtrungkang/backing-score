@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X, FolderPlus, Folder, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +20,14 @@ import {
   publishMyProject,
   listMyPlaylists,
   addProjectToPlaylist,
+  listProjectFolders,
+  createProjectFolder,
+  deleteProjectFolder,
+  moveProjectToFolder,
   ProjectDocument,
   ProjectPayload,
-  PlaylistDocument
+  PlaylistDocument,
+  ProjectFolderDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -66,12 +71,62 @@ export default function DashboardPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
   const { confirm } = useDialogs();
+
+  // Folder state
+  const [folders, setFolders] = useState<ProjectFolderDocument[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const searchParams = useSearchParams();
 
-  // Load playlists once for add-to-collection feature
+  // Load playlists + folders once
   useEffect(() => {
-    if (user) listMyPlaylists().then(setPlaylists).catch(() => {});
+    if (user) {
+      listMyPlaylists().then(setPlaylists).catch(() => {});
+      listProjectFolders().then(setFolders).catch(() => {});
+    }
   }, [user]);
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || creatingFolder) return;
+    setCreatingFolder(true);
+    try {
+      const folder = await createProjectFolder(newFolderName.trim());
+      setFolders((prev) => [...prev, folder]);
+      setNewFolderName("");
+      setShowNewFolder(false);
+      toast.success(t("folderCreated"));
+    } catch {
+      toast.error(t("failedCreateFolder"));
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!(await confirm({ title: t("deleteFolder"), description: t("deleteFolderDesc"), confirmText: t("deleteConfirm"), cancelText: t("deleteCancel") }))) return;
+    try {
+      await deleteProjectFolder(folderId);
+      setFolders((prev) => prev.filter((f) => f.$id !== folderId));
+      // Unfile projects locally
+      setProjects((prev) => prev.map((p) => p.folderId === folderId ? { ...p, folderId: null } : p));
+      if (selectedFolder === folderId) setSelectedFolder(null);
+      toast.success(t("folderDeleted"));
+    } catch {
+      toast.error(t("failedDeleteFolder"));
+    }
+  };
+
+  const handleMoveToFolder = async (projectId: string, folderId: string | null) => {
+    try {
+      await moveProjectToFolder(projectId, folderId);
+      setProjects((prev) => prev.map((p) => p.$id === projectId ? { ...p, folderId } : p));
+      toast.success(t("movedToFolder"));
+    } catch {
+      toast.error(t("failedMoveToFolder"));
+    }
+  };
 
   // After checkout success: sync subscription from LS and refresh premium status
   useEffect(() => {
@@ -347,6 +402,62 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Folder Filter Chips */}
+          {!loading && projects.length > 0 && (
+            <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedFolder(null)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${selectedFolder === null ? "bg-zinc-900 dark:bg-white text-white dark:text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+              >
+                {t("allProjects")} <span className="text-[10px] opacity-60">{projects.length}</span>
+              </button>
+              {folders.map((folder) => {
+                const count = projects.filter((p) => p.folderId === folder.$id).length;
+                return (
+                  <div key={folder.$id} className="group shrink-0 flex items-center">
+                    <button
+                      onClick={() => setSelectedFolder(folder.$id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${selectedFolder === folder.$id ? "bg-zinc-900 dark:bg-white text-white dark:text-black" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+                    >
+                      <Folder className="w-3 h-3" /> {folder.name} <span className="text-[10px] opacity-60">{count}</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFolder(folder.$id)}
+                      className="opacity-0 group-hover:opacity-100 ml-0.5 p-0.5 text-zinc-400 hover:text-red-400 transition-all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setShowNewFolder(true)}
+                className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              >
+                <FolderPlus className="w-3 h-3" /> {t("newFolder")}
+              </button>
+            </div>
+          )}
+
+          {/* New Folder Inline Form */}
+          {showNewFolder && (
+            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 mb-6 flex items-center gap-3">
+              <Folder className="w-5 h-5 text-amber-500 shrink-0" />
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
+                placeholder={t("folderName")}
+                className="flex-1 h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              <Button onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()} className="bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-500 text-white font-bold text-sm">
+                {creatingFolder ? <Loader2 className="w-4 h-4 animate-spin" /> : t("createFolder")}
+              </Button>
+              <button onClick={() => { setShowNewFolder(false); setNewFolderName(""); }} className="text-zinc-400 hover:text-zinc-200 text-sm">✕</button>
+            </div>
+          )}
+
           {error && (
             <div className="mb-8 p-4 bg-red-950/50 border border-red-900 rounded-xl text-red-400 text-center backdrop-blur-sm">
               {error}
@@ -379,7 +490,8 @@ export default function DashboardPage() {
             const filtered = projects.filter(p => {
               const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase());
               const matchesStatus = statusFilter === "all" || (statusFilter === "published" ? p.published : !p.published);
-              return matchesSearch && matchesStatus;
+              const matchesFolder = selectedFolder === null || p.folderId === selectedFolder;
+              return matchesSearch && matchesStatus && matchesFolder;
             });
             return filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -495,6 +607,32 @@ export default function DashboardPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
+                          {/* Move to Folder */}
+                          {folders.length > 0 && (
+                            <>
+                              <DropdownMenuItem disabled className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
+                                {t("moveToFolder")}
+                              </DropdownMenuItem>
+                              {p.folderId && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); handleMoveToFolder(p.$id, null); }}
+                                  className="flex items-center gap-2 cursor-pointer text-xs"
+                                >
+                                  <FolderOpen className="w-3 h-3" /> {t("unfiled")}
+                                </DropdownMenuItem>
+                              )}
+                              {folders.filter(f => f.$id !== p.folderId).map(f => (
+                                <DropdownMenuItem
+                                  key={f.$id}
+                                  onClick={(e) => { e.stopPropagation(); handleMoveToFolder(p.$id, f.$id); }}
+                                  className="flex items-center gap-2 cursor-pointer text-xs"
+                                >
+                                  <Folder className="w-3 h-3" /> {f.name}
+                                </DropdownMenuItem>
+                              ))}
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                           {/* Add to Collection sub-menu */}
                           {playlists.length > 0 && (
                             <>

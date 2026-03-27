@@ -39,6 +39,8 @@ export interface ProjectDocument {
   featuredAt?: string;
   /** Denormalized favorite count for sorting */
   favoriteCount?: number;
+  /** Folder ID for My Uploads organization */
+  folderId?: string | null;
 }
 
 export type ProjectPayload = Record<string, any>;
@@ -275,4 +277,13 @@ export interface SubmissionFeedbackDocument {
   content: string;
   /** Optional grade 0-100 */
   grade?: number;
+}
+
+export interface ProjectFolderDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  userId: string;
+  name: string;
+  order: number;
 }

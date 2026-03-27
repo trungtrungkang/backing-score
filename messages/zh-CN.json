@@ -124,7 +124,22 @@
     "addedToCollection": "已添加到合集！",
     "noCollections": "暂无合集，请先创建一个。",
     "noMatchingProjects": "未找到匹配的作品。",
-    "classroom": "我的教室"
+    "classroom": "我的教室",
+    "folders": "文件夹",
+    "newFolder": "新建文件夹",
+    "folderName": "文件夹名称",
+    "createFolder": "创建文件夹",
+    "deleteFolder": "删除文件夹",
+    "deleteFolderDesc": "里面的项目将移到'全部'，不会被删除。",
+    "folderCreated": "文件夹已创建！",
+    "folderDeleted": "文件夹已删除！",
+    "failedCreateFolder": "创建文件夹失败",
+    "failedDeleteFolder": "删除文件夹失败",
+    "allProjects": "全部",
+    "moveToFolder": "移到文件夹",
+    "unfiled": "未分类",
+    "movedToFolder": "已移动！",
+    "failedMoveToFolder": "移动失败"
   },
   "Login": {
     "welcomeBack": "欢迎回来",

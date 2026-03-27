@@ -127,7 +127,22 @@
     "addedToCollection": "Added to collection!",
     "noCollections": "No collections yet. Create one first.",
     "noMatchingProjects": "No matching pieces found.",
-    "classroom": "My Classrooms"
+    "classroom": "My Classrooms",
+    "folders": "Folders",
+    "newFolder": "New Folder",
+    "folderName": "Folder Name",
+    "createFolder": "Create Folder",
+    "deleteFolder": "Delete Folder",
+    "deleteFolderDesc": "Projects inside will be moved to 'All'. They will not be deleted.",
+    "folderCreated": "Folder created!",
+    "folderDeleted": "Folder deleted!",
+    "failedCreateFolder": "Failed to create folder",
+    "failedDeleteFolder": "Failed to delete folder",
+    "allProjects": "All Projects",
+    "moveToFolder": "Move to Folder",
+    "unfiled": "Unfiled",
+    "movedToFolder": "Moved!",
+    "failedMoveToFolder": "Failed to move"
   },
   "Login": {
     "welcomeBack": "Welcome back",

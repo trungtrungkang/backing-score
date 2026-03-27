@@ -127,7 +127,22 @@
     "addedToCollection": "Đã thêm vào bộ sưu tập!",
     "noCollections": "Chưa có bộ sưu tập. Hãy tạo một cái trước.",
     "noMatchingProjects": "Không tìm thấy bài phù hợp.",
-    "classroom": "Lớp học của tôi"
+    "classroom": "Lớp học của tôi",
+    "folders": "Thư mục",
+    "newFolder": "Thư mục mới",
+    "folderName": "Tên thư mục",
+    "createFolder": "Tạo thư mục",
+    "deleteFolder": "Xóa thư mục",
+    "deleteFolderDesc": "Các project bên trong sẽ chuyển về 'Tất cả'. Chúng sẽ không bị xóa.",
+    "folderCreated": "Đã tạo thư mục!",
+    "folderDeleted": "Đã xóa thư mục!",
+    "failedCreateFolder": "Không thể tạo thư mục",
+    "failedDeleteFolder": "Không thể xóa thư mục",
+    "allProjects": "Tất cả",
+    "moveToFolder": "Chuyển vào thư mục",
+    "unfiled": "Chưa phân loại",
+    "movedToFolder": "Đã chuyển!",
+    "failedMoveToFolder": "Không thể chuyển"
   },
   "Login": {
     "welcomeBack": "Chào mừng trở lại",

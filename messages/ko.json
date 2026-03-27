@@ -124,7 +124,22 @@
     "addedToCollection": "컬렉션에 추가했습니다!",
     "noCollections": "아직 컬렉션이 없습니다. 먼저 만드세요.",
     "noMatchingProjects": "일치하는 작품이 없습니다.",
-    "classroom": "내 교실"
+    "classroom": "내 교실",
+    "folders": "폴더",
+    "newFolder": "새 폴더",
+    "folderName": "폴더 이름",
+    "createFolder": "폴더 만들기",
+    "deleteFolder": "폴더 삭제",
+    "deleteFolderDesc": "내부 프로젝트는 '전체'로 이동합니다. 삭제되지 않습니다.",
+    "folderCreated": "폴더가 생성되었습니다!",
+    "folderDeleted": "폴더가 삭제되었습니다!",
+    "failedCreateFolder": "폴더 생성에 실패했습니다",
+    "failedDeleteFolder": "폴더 삭제에 실패했습니다",
+    "allProjects": "전체",
+    "moveToFolder": "폴더로 이동",
+    "unfiled": "미분류",
+    "movedToFolder": "이동되었습니다!",
+    "failedMoveToFolder": "이동에 실패했습니다"
   },
   "Login": {
     "welcomeBack": "다시 오신 것을 환영합니다",

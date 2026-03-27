@@ -124,7 +124,22 @@
     "addedToCollection": "コレクションに追加しました！",
     "noCollections": "コレクションがありません。まず作成してください。",
     "noMatchingProjects": "該当する作品が見つかりません。",
-    "classroom": "マイクラス"
+    "classroom": "マイクラス",
+    "folders": "フォルダ",
+    "newFolder": "新規フォルダ",
+    "folderName": "フォルダ名",
+    "createFolder": "フォルダ作成",
+    "deleteFolder": "フォルダ削除",
+    "deleteFolderDesc": "中のプロジェクトは「すべて」に移動されます。削除されません。",
+    "folderCreated": "フォルダを作成しました！",
+    "folderDeleted": "フォルダを削除しました！",
+    "failedCreateFolder": "フォルダの作成に失敗しました",
+    "failedDeleteFolder": "フォルダの削除に失敗しました",
+    "allProjects": "すべて",
+    "moveToFolder": "フォルダに移動",
+    "unfiled": "未分類",
+    "movedToFolder": "移動しました！",
+    "failedMoveToFolder": "移動に失敗しました"
   },
   "Login": {
     "welcomeBack": "おかえりなさい",
