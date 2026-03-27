@@ -80,7 +80,7 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
-                    {s.emoji} {t(pk.t as any)}
+                    {t(pk.t as any)}
                   </h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">{t(pk.s as any)}</p>
                 </div>
