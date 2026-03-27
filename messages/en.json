@@ -418,7 +418,10 @@
     "report_resolved": "Your report on \"{targetName}\" has been reviewed",
     "markAllRead": "Mark all read",
     "noNotifications": "No notifications yet",
-    "justNow": "Just now"
+    "justNow": "Just now",
+    "assignment_new": "{userName} assigned \"{targetName}\"",
+    "submission_new": "{userName} submitted \"{targetName}\"",
+    "feedback_new": "{userName} graded \"{targetName}\""
   },
   "About": {
     "badge": "About",

@@ -386,7 +386,10 @@
     "report_resolved": "Báo cáo của bạn về \"{targetName}\" đã được xử lý",
     "markAllRead": "Đánh dấu đã đọc",
     "noNotifications": "Chưa có thông báo",
-    "justNow": "Vừa xong"
+    "justNow": "Vừa xong",
+    "assignment_new": "{userName} đã giao bài \"{targetName}\"",
+    "submission_new": "{userName} đã nộp bài \"{targetName}\"",
+    "feedback_new": "{userName} đã chấm bài \"{targetName}\""
   },
   "About": {
     "badge": "Giới thiệu",

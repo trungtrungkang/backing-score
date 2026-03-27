@@ -79,6 +79,16 @@ export function NotificationBell() {
           return `/${locale}/feed/post/${n.targetId}`;
         }
         return null;
+      case "assignment_new":
+      case "submission_new":
+      case "feedback_new": {
+        // targetId format: "classroomId/assignmentId"
+        if (n.targetId && n.targetId.includes("/")) {
+          const [classroomId, assignmentId] = n.targetId.split("/");
+          return `/${locale}/classroom/${classroomId}/assignment/${assignmentId}`;
+        }
+        return null;
+      }
       default:
         return null;
     }

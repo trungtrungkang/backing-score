@@ -383,7 +383,10 @@
     "report_resolved": "「{targetName}」への報告が確認されました",
     "markAllRead": "すべて既読にする",
     "noNotifications": "通知はありません",
-    "justNow": "たった今"
+    "justNow": "たった今",
+    "assignment_new": "{userName}が「{targetName}」を出題しました",
+    "submission_new": "{userName}が「{targetName}」を提出しました",
+    "feedback_new": "{userName}が「{targetName}」を採点しました"
   },
   "About": {
     "badge": "About",

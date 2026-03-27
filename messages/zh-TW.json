@@ -383,7 +383,10 @@
     "report_resolved": "你對「{targetName}」的檢舉已處理",
     "markAllRead": "全部標為已讀",
     "noNotifications": "暫無通知",
-    "justNow": "剛剛"
+    "justNow": "剛剛",
+    "assignment_new": "{userName} 佈置了作業 \"{targetName}\"",
+    "submission_new": "{userName} 提交了 \"{targetName}\"",
+    "feedback_new": "{userName} 批改了 \"{targetName}\""
   },
   "About": {
     "badge": "About",

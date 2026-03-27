@@ -383,7 +383,10 @@
     "report_resolved": "Votre signalement de \"{targetName}\" a été examiné",
     "markAllRead": "Tout marquer comme lu",
     "noNotifications": "Aucune notification",
-    "justNow": "À l'instant"
+    "justNow": "À l'instant",
+    "assignment_new": "{userName} a attribué \"{targetName}\"",
+    "submission_new": "{userName} a soumis \"{targetName}\"",
+    "feedback_new": "{userName} a noté \"{targetName}\""
   },
   "About": {
     "badge": "About",

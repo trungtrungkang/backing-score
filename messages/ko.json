@@ -383,7 +383,10 @@
     "report_resolved": "\"{targetName}\"에 대한 신고가 검토되었습니다",
     "markAllRead": "모두 읽음 처리",
     "noNotifications": "알림 없음",
-    "justNow": "방금"
+    "justNow": "방금",
+    "assignment_new": "{userName}님이 \"{targetName}\"을(를) 출제했습니다",
+    "submission_new": "{userName}님이 \"{targetName}\"을(를) 제출했습니다",
+    "feedback_new": "{userName}님이 \"{targetName}\"을(를) 채점했습니다"
   },
   "About": {
     "badge": "About",

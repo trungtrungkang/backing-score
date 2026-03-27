@@ -18,6 +18,8 @@ import {
   APPWRITE_UPLOADS_BUCKET_ID,
 } from "./constants";
 import type { SubmissionDocument } from "./types";
+import { createNotification } from "./notifications";
+import { getClassroom } from "./classrooms";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_SUBMISSIONS_COLLECTION_ID;
@@ -63,6 +65,31 @@ export function getRecordingDownloadUrl(fileId: string): string {
   return storage.getFileDownload(recordingsBucket, fileId);
 }
 
+/** Notify the teacher of a new submission (fire-and-forget) */
+function notifyTeacherOfSubmission(
+  classroomId: string,
+  assignmentId: string,
+  student: { $id: string; name: string; email: string }
+) {
+  (async () => {
+    try {
+      const [classroom, assignment] = await Promise.all([
+        getClassroom(classroomId),
+        (await import("./assignments")).getAssignment(assignmentId),
+      ]);
+      await createNotification({
+        recipientId: classroom.teacherId,
+        type: "submission_new",
+        sourceUserName: student.name || student.email || "Student",
+        sourceUserId: student.$id,
+        targetType: "assignment",
+        targetName: assignment.title,
+        targetId: `${classroomId}/${assignmentId}`,
+      });
+    } catch { /* best-effort */ }
+  })();
+}
+
 /** Create or update a submission. If student already has one for this assignment, update it.
  *  Optionally attach an audio recording blob (will overwrite previous recording). */
 export async function submitAssignment(params: {
@@ -104,6 +131,8 @@ export async function submitAssignment(params: {
       status: "submitted",
       ...(recordingFileId ? { recordingFileId } : {}),
     });
+
+    notifyTeacherOfSubmission(params.classroomId, params.assignmentId, user);
     return doc as unknown as SubmissionDocument;
   }
 
@@ -131,6 +160,7 @@ export async function submitAssignment(params: {
     ]
   );
 
+  notifyTeacherOfSubmission(params.classroomId, params.assignmentId, user);
   return doc as unknown as SubmissionDocument;
 }
 

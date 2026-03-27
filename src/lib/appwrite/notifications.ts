@@ -23,7 +23,7 @@ export interface NotificationDoc {
   $id: string;
   $createdAt: string;
   recipientId: string;
-  type: "like" | "follow" | "comment" | "report_resolved";
+  type: "like" | "follow" | "comment" | "report_resolved" | "assignment_new" | "submission_new" | "feedback_new";
   sourceUserName: string;
   sourceUserId: string;
   targetType?: string; // 'post' | 'project' | 'user'

@@ -17,6 +17,7 @@ import {
   APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID,
 } from "./constants";
 import type { SubmissionFeedbackDocument } from "./types";
+import { createNotification } from "./notifications";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID;
@@ -46,6 +47,25 @@ export async function createFeedback(params: {
       Permission.delete(Role.user(user.$id)),
     ]
   );
+
+  // Fire-and-forget: notify the student
+  (async () => {
+    try {
+      const { APPWRITE_SUBMISSIONS_COLLECTION_ID } = await import("./constants");
+      const submission = await databases.getDocument(dbId, APPWRITE_SUBMISSIONS_COLLECTION_ID, params.submissionId);
+      const { getAssignment } = await import("./assignments");
+      const assignment = await getAssignment(submission.assignmentId as string);
+      await createNotification({
+        recipientId: submission.studentId as string,
+        type: "feedback_new",
+        sourceUserName: user.name || user.email || "Teacher",
+        sourceUserId: user.$id,
+        targetType: "assignment",
+        targetName: assignment.title,
+        targetId: `${submission.classroomId}/${submission.assignmentId}`,
+      });
+    } catch { /* best-effort */ }
+  })();
 
   return doc as unknown as SubmissionFeedbackDocument;
 }

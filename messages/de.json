@@ -383,7 +383,10 @@
     "report_resolved": "Dein Report zu \"{targetName}\" wurde bearbeitet",
     "markAllRead": "Alle als gelesen markieren",
     "noNotifications": "Keine Benachrichtigungen",
-    "justNow": "Gerade eben"
+    "justNow": "Gerade eben",
+    "assignment_new": "{userName} hat \"{targetName}\" zugewiesen",
+    "submission_new": "{userName} hat \"{targetName}\" eingereicht",
+    "feedback_new": "{userName} hat \"{targetName}\" bewertet"
   },
   "About": {
     "badge": "About",

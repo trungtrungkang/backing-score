@@ -15,6 +15,8 @@ import {
   APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID,
 } from "./constants";
 import type { AssignmentDocument, SubmissionDocument } from "./types";
+import { createNotification } from "./notifications";
+import { listClassroomMembers, getClassroom } from "./classrooms";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_ASSIGNMENTS_COLLECTION_ID;
@@ -56,6 +58,28 @@ export async function createAssignment(params: {
       Permission.delete(Role.user(user.$id)),
     ]
   );
+
+  // Fire-and-forget: notify all students in class
+  (async () => {
+    try {
+      const [members, classroom] = await Promise.all([
+        listClassroomMembers(params.classroomId),
+        getClassroom(params.classroomId),
+      ]);
+      const students = members.filter(m => m.role === "student" && m.status === "active");
+      await Promise.all(students.map(s =>
+        createNotification({
+          recipientId: s.userId,
+          type: "assignment_new",
+          sourceUserName: user.name || user.email || "Teacher",
+          sourceUserId: user.$id,
+          targetType: "assignment",
+          targetName: params.title,
+          targetId: `${params.classroomId}/${doc.$id}`,
+        })
+      ));
+    } catch { /* best-effort */ }
+  })();
 
   return doc as unknown as AssignmentDocument;
 }
