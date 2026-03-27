@@ -276,3 +276,27 @@ export interface SubmissionFeedbackDocument {
   /** Optional grade 0-100 */
   grade?: number;
 }
+
+export interface ExerciseFolderDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  classroomId: string;
+  name: string;
+  order: number;
+  /** null = root level */
+  parentFolderId: string | null;
+}
+
+export interface ClassroomExerciseDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  classroomId: string;
+  /** Folder this exercise belongs to (null = unfiled) */
+  folderId: string | null;
+  /** Reference to existing project */
+  projectId: string;
+  title: string;
+  description?: string;
+}

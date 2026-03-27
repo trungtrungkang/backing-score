@@ -81,6 +81,8 @@ async function main() {
     { id: "assignments", name: "Assignments" },
     { id: "submissions", name: "Submissions" },
     { id: "submission_feedback", name: "Submission Feedback" },
+    { id: "exercise_folders", name: "Exercise Folders" },
+    { id: "classroom_exercises", name: "Classroom Exercises" },
   ];
 
   const permissions = [
@@ -176,6 +178,23 @@ async function main() {
     { key: "grade", type: "float", required: false },
   ]);
 
+  console.log("\nCreating attributes for exercise_folders...");
+  await createAttributes(databases, "exercise_folders", [
+    { key: "classroomId", type: "string", required: true, size: 256 },
+    { key: "name", type: "string", required: true, size: 512 },
+    { key: "order", type: "integer", required: false },
+    { key: "parentFolderId", type: "string", required: false, size: 256 },
+  ]);
+
+  console.log("\nCreating attributes for classroom_exercises...");
+  await createAttributes(databases, "classroom_exercises", [
+    { key: "classroomId", type: "string", required: true, size: 256 },
+    { key: "folderId", type: "string", required: false, size: 256 },
+    { key: "projectId", type: "string", required: true, size: 256 },
+    { key: "title", type: "string", required: true, size: 512 },
+    { key: "description", type: "string", required: false, size: 4096 },
+  ]);
+
   // ==========================================
   // 3. Create Indexes
   // ==========================================
@@ -202,6 +221,14 @@ async function main() {
 
     // Submission Feedback
     { collection: "submission_feedback", key: "idx_submission", type: IndexType.Key, attributes: ["submissionId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Asc] },
+
+    // Exercise Folders
+    { collection: "exercise_folders", key: "idx_classroom", type: IndexType.Key, attributes: ["classroomId", "order"], orders: [OrderBy.Asc, OrderBy.Asc] },
+    { collection: "exercise_folders", key: "idx_parent", type: IndexType.Key, attributes: ["classroomId", "parentFolderId"], orders: [] },
+
+    // Classroom Exercises
+    { collection: "classroom_exercises", key: "idx_classroom", type: IndexType.Key, attributes: ["classroomId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },
+    { collection: "classroom_exercises", key: "idx_folder", type: IndexType.Key, attributes: ["classroomId", "folderId"], orders: [] },
   ];
 
   for (const idx of indexes) {
@@ -223,8 +250,8 @@ async function main() {
   }
 
   console.log("\n🎉 Appwrite Classroom Setup Complete!");
-  console.log("   Collections: classrooms, classroom_members, assignments, submissions, submission_feedback");
-  console.log("   Total indexes: 11");
+  console.log("   Collections: classrooms, classroom_members, assignments, submissions, submission_feedback, exercise_folders, classroom_exercises");
+  console.log("   Total indexes: 15");
 }
 
 main().catch((err) => {

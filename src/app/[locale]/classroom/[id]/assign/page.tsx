@@ -17,9 +17,11 @@ import {
   createAssignment,
   listMyProjects,
   listPublished,
+  listClassroomExercises,
   getClassroom,
   isClassroomMember,
   ProjectDocument,
+  ClassroomExerciseDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -38,11 +40,13 @@ export default function CreateAssignmentPage() {
   const [waitModeRequired, setWaitModeRequired] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const [sourceTab, setSourceTab] = useState<"uploads" | "discover">("uploads");
+  const [sourceTab, setSourceTab] = useState<"uploads" | "discover" | "library">("uploads");
   const [searchQuery, setSearchQuery] = useState("");
   const [myProjects, setMyProjects] = useState<ProjectDocument[]>([]);
   const [discoverProjects, setDiscoverProjects] = useState<ProjectDocument[]>([]);
+  const [libraryExercises, setLibraryExercises] = useState<ClassroomExerciseDocument[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectDocument | null>(null);
+  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<ClassroomExerciseDocument | null>(null);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
@@ -57,30 +61,42 @@ export default function CreateAssignmentPage() {
     });
 
     setLoadingProjects(true);
-    Promise.all([listMyProjects(), listPublished()])
-      .then(([mine, pub]) => {
+    Promise.all([listMyProjects(), listPublished(), listClassroomExercises(classroomId)])
+      .then(([mine, pub, lib]) => {
         setMyProjects(mine);
         setDiscoverProjects(pub);
+        setLibraryExercises(lib);
       })
       .finally(() => setLoadingProjects(false));
   }, [user, authLoading, classroomId, router, t]);
 
-  const filteredProjects = (sourceTab === "uploads" ? myProjects : discoverProjects).filter(
-    (p) => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProjects = sourceTab === "library"
+    ? []
+    : (sourceTab === "uploads" ? myProjects : discoverProjects).filter(
+        (p) => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+  const filteredLibrary = sourceTab === "library"
+    ? libraryExercises.filter(
+        (e) => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !selectedProject || creating) return;
+    if (!title.trim() || (!selectedProject && !selectedLibraryExercise) || creating) return;
 
     setCreating(true);
     try {
+      const sourceId = sourceTab === "library" && selectedLibraryExercise
+        ? selectedLibraryExercise.projectId
+        : selectedProject!.$id;
       await createAssignment({
         classroomId,
         title: title.trim(),
         description: description.trim(),
-        sourceType: sourceTab === "uploads" ? "upload" : "discover",
-        sourceId: selectedProject.$id,
+        sourceType: sourceTab === "library" ? "library" : sourceTab === "uploads" ? "upload" : "discover",
+        sourceId,
         type,
         deadline: deadline || undefined,
         waitModeRequired,
@@ -161,15 +177,15 @@ export default function CreateAssignmentPage() {
             <h3 className="font-bold text-zinc-900 dark:text-white mb-4">{t("selectScore")}</h3>
 
             <div className="flex gap-1 mb-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
-              {(["uploads", "discover"] as const).map((tab) => (
-                <button key={tab} type="button" onClick={() => setSourceTab(tab)}
+              {(["uploads", "discover", "library"] as const).map((tab) => (
+                <button key={tab} type="button" onClick={() => { setSourceTab(tab); setSelectedProject(null); setSelectedLibraryExercise(null); }}
                   className={`flex-1 py-2 rounded-md text-sm font-bold transition-colors ${
                     sourceTab === tab
                       ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
                       : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                   }`}
                 >
-                  {tab === "uploads" ? t("myUploads") : t("discover")}
+                  {tab === "uploads" ? t("myUploads") : tab === "discover" ? t("discover") : t("librarySource")}
                 </button>
               ))}
             </div>
@@ -185,11 +201,34 @@ export default function CreateAssignmentPage() {
             <div className="max-h-64 overflow-y-auto space-y-1">
               {loadingProjects ? (
                 <div className="py-8 text-center"><Loader2 className="w-6 h-6 text-zinc-400 animate-spin mx-auto" /></div>
+              ) : sourceTab === "library" ? (
+                filteredLibrary.length === 0 ? (
+                  <p className="py-8 text-center text-zinc-500 text-sm">{t("noLibraryExercises")}</p>
+                ) : (
+                  filteredLibrary.map((ex) => (
+                    <button key={ex.$id} type="button" onClick={() => { setSelectedLibraryExercise(ex); setSelectedProject(null); }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
+                        selectedLibraryExercise?.$id === ex.$id
+                          ? "bg-indigo-500/10 border border-indigo-500/30"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent"
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded bg-indigo-500/10 flex items-center justify-center shrink-0">
+                        <Music4 className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-medium text-zinc-900 dark:text-white truncate block">{ex.title}</span>
+                        {ex.description && <span className="text-xs text-zinc-400 truncate block">{ex.description}</span>}
+                      </div>
+                      {selectedLibraryExercise?.$id === ex.$id && <CheckCircle className="w-5 h-5 text-indigo-500 shrink-0" />}
+                    </button>
+                  ))
+                )
               ) : filteredProjects.length === 0 ? (
                 <p className="py-8 text-center text-zinc-500 text-sm">{t("noScores")}</p>
               ) : (
                 filteredProjects.map((p) => (
-                  <button key={p.$id} type="button" onClick={() => setSelectedProject(p)}
+                  <button key={p.$id} type="button" onClick={() => { setSelectedProject(p); setSelectedLibraryExercise(null); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
                       selectedProject?.$id === p.$id
                         ? "bg-indigo-500/10 border border-indigo-500/30"
@@ -211,7 +250,7 @@ export default function CreateAssignmentPage() {
             <Button type="button" variant="ghost" onClick={() => router.push(`/classroom/${classroomId}`)} className="text-zinc-400">
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={creating || !title.trim() || !selectedProject}
+            <Button type="submit" disabled={creating || !title.trim() || (!selectedProject && !selectedLibraryExercise)}
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 h-11 shadow-lg shadow-indigo-500/20"
             >
               {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
