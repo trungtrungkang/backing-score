@@ -61,11 +61,16 @@ Teacher xem kết quả + gửi phản hồi
 
 **Loại bài tập:**
 
-| Loại | Mô tả | Cách chấm |
-|------|-------|-----------|
-| **Practice** | Luyện tập tự do, không chấm điểm | Chỉ ghi nhận đã hoàn thành |
-| **Assessment** | Bài kiểm tra, bật Wait Mode bắt buộc | Tự động: accuracy %, completion time |
-| **Performance** | Chơi toàn bài, không dừng | Tự động: accuracy % + teacher review |
+| Loại | Mô tả | Cách chấm | Trạng thái implement |
+|------|-------|-----------|---------------------|
+| **Practice** | Luyện tập tự do, không chấm điểm | Chỉ ghi nhận đã hoàn thành | ✅ UI + API, nhưng chưa phân biệt logic với Assessment |
+| **Assessment** | Bài kiểm tra, bật Wait Mode bắt buộc | Tự động: accuracy %, completion time | ⚠️ UI hiển thị label, nhưng **chưa tự bật Wait Mode** khi student vào Play |
+| **Performance** | Chơi toàn bài, không dừng | Tự động: accuracy % + teacher review | ⚠️ UI hiển thị label, nhưng chưa có logic khác biệt |
+
+> **Lưu ý implement (27/03/2026):**
+> - `waitModeRequired`: Chỉ hiển thị badge "⏳ Wait Mode Required" trên UI. **Chưa enforce** — Student vẫn có thể tắt Wait Mode trong Play.
+> - `deadline`: Hiển thị trên UI với badge "Overdue" nếu quá hạn. **Chưa chặn** nộp bài sau deadline.
+> - `type`: Chỉ ảnh hưởng màu badge. **Chưa có logic** phân biệt cách chấm giữa 3 loại.
 
 ### 3.4 Practice Recording & Audio Submission
 
@@ -221,7 +226,7 @@ flowchart LR
 | `classroom_exercises` | Bài tập trong Library | classroomId, folderId, projectId, title, description, createdAt |
 | `assignments` | Bài được giao | classroomId, title, description, sourceType (library/upload/discover), sourceId, type (practice/assessment/performance), deadline, waitModeRequired, createdAt |
 | `submissions` | Kết quả nộp bài | assignmentId, studentId, accuracy, tempo, attempts, completedAt, submittedAt, status (draft/submitted/reviewed) |
-| `feedback` | Phản hồi của teacher | submissionId, teacherId, content, createdAt |
+| `submission_feedback` | Phản hồi của teacher | submissionId, teacherId, teacherName, content, grade (0-100) |
 
 ### Marketplace Collections (thêm mới)
 
@@ -371,19 +376,26 @@ flowchart LR
 ## 10. Giai đoạn triển khai đề xuất
 
 ### Phase 1 — MVP (2-3 tuần)
-- [ ] Tạo/xóa Classroom
-- [ ] Invite link + class code
+- [x] Tạo/xóa Classroom
+- [x] Invite link + class code
 - [ ] **Classroom Library**: tạo folder + tạo exercise (dùng lại Project Editor)
-- [ ] Giao bài tập (chọn từ Library / My Uploads / Discover)
-- [ ] Student xem + practice bài tập
-- [ ] Nộp bài cơ bản (ghi nhận accuracy)
+- [x] Giao bài tập (chọn từ Library / My Uploads / Discover)
+- [x] Student xem + practice bài tập
+- [x] Nộp bài cơ bản (ghi nhận accuracy)
+- [x] Edit/Delete Assignment (teacher)
+- [x] Practice Recording & Audio Submission (MP3 encoding, upload)
+- [x] i18n cho tất cả 6 trang Classroom (9 ngôn ngữ)
 
 ### Phase 2 — Teacher Dashboard (1-2 tuần)
 - [ ] Bảng tiến trình toàn lớp (ai hoàn thành / chưa)
-- [ ] Phản hồi text cho từng submission
+- [x] Phản hồi text cho từng submission (collection `submission_feedback`)
+- [x] Chấm điểm (grade 0-100) cho từng submission
 - [ ] Notifications cho deadline + phản hồi
 
 ### Phase 3 — Nâng cao (2+ tuần)
+- [ ] Enforce `waitModeRequired` — tự bật Wait Mode khi student vào Play từ assignment
+- [ ] Enforce `deadline` — chặn nộp bài sau deadline
+- [ ] Phân biệt logic chấm điểm giữa Practice / Assessment / Performance
 - [ ] Bài kiểm tra với Wait Mode bắt buộc
 - [ ] Biểu đồ tiến bộ cá nhân (accuracy theo thời gian)
 - [ ] So sánh ẩn danh với lớp (motivation)
