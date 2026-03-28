@@ -579,20 +579,22 @@ API helpers:
 > **Status:** Planned | **Design Doc:** [pdf_sheet_music_design.md](pdf_sheet_music_design.md)
 
 ### 19.1 Overview
-Standalone module for musicians to upload, organize, and view PDF sheet music. Not tied to Projects — PDF Sheet Music has its own library (`/sheets`), dedicated viewer, and folder management.
+Standalone module for musicians to upload, organize, and view PDF sheet music. Not tied to Projects — PDF Sheet Music has its own library (`/dashboard/pdfs`), dedicated viewer, and folder management. Designed primarily for musicians who need a convenient way to read sheet music while playing.
 
 ### 19.2 Planned Features
 | Phase | Features |
 |---|---|
-| Phase 1 (MVP) | PDF Library with folders/tags/search, Viewer with auto-scroll, half-page turn, performance mode, keyboard shortcuts |
-| Phase 2 | Setlist mode, Classroom integration (share PDF, attach to assignment), dark mode invert, foot pedal support |
-| Phase 3 | Annotation (Premium), offline caching, PDF download (Premium) |
+| Phase 1 (MVP) | PDF Library with folders/tags/search, Viewer with auto-scroll, half-page turn, performance mode, bookmarks, keyboard shortcuts |
+| Phase 2 | Navigation Map (repeat handling: D.C., D.S., Coda), Setlist mode, Classroom integration, ecosystem cross-links, dark mode, foot pedal |
+| Phase 3 | Measure Markers (ô nhịp overlay + audio sync via Smart Row approach), Annotation, offline caching |
+| Phase 4 | Monetization (publish/sell PDFs, Product abstraction layer, Discover integration) |
 
 ### 19.3 Technical Stack
 - `react-pdf` + `pdfjs-dist` for client-side rendering
 - Appwrite collections: `sheet_music`, `sheet_music_folders`
 - Appwrite Storage bucket: `sheet-pdfs` (max 20MB per file)
 - Lazy-loaded via `next/dynamic` to avoid bundle impact
+- Measure markers use CSS percentage-based positioning (zoom-independent)
 
 ---
 

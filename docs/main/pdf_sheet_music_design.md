@@ -1,6 +1,6 @@
 # PDF Sheet Music — Thiết Kế Hệ Thống
 
-**Phiên bản:** 2.0  
+**Phiên bản:** 3.0  
 **Cập nhật:** 2026-03-28  
 **Trạng thái:** Thiết kế — chưa triển khai
 
@@ -15,11 +15,15 @@
 3. [Sheet Music Library — Thư Viện PDF](#3-sheet-music-library--thư-viện-pdf)
 4. [PDF Viewer — Thiết Kế Trình Xem](#4-pdf-viewer--thiết-kế-trình-xem)
 5. [Tối Ưu Cho Người Chơi Nhạc](#5-tối-ưu-cho-người-chơi-nhạc)
-6. [Tích Hợp với Classroom](#6-tích-hợp-với-classroom)
-7. [Phân Quyền & Giới Hạn](#7-phân-quyền--giới-hạn)
-8. [Components & Libraries](#8-components--libraries)
-9. [Roadmap Triển Khai](#9-roadmap-triển-khai)
-10. [Rủi Ro & Hạn Chế](#10-rủi-ro--hạn-chế)
+6. [Navigation Map — Xử Lý Bản Nhạc Có Lặp Lại](#6-navigation-map--xử-lý-bản-nhạc-có-lặp-lại)
+7. [Measure Markers — Đánh Dấu Ô Nhịp & Audio Sync](#7-measure-markers--đánh-dấu-ô-nhịp--audio-sync)
+8. [Tích Hợp với Classroom](#8-tích-hợp-với-classroom)
+9. [Tích Hợp Ecosystem](#9-tích-hợp-ecosystem)
+10. [Monetization — Bán PDF](#10-monetization--bán-pdf)
+11. [Phân Quyền & Giới Hạn](#11-phân-quyền--giới-hạn)
+12. [Components & Libraries](#12-components--libraries)
+13. [Roadmap Triển Khai](#13-roadmap-triển-khai)
+14. [Rủi Ro & Hạn Chế](#14-rủi-ro--hạn-chế)
 
 ---
 
@@ -83,6 +87,11 @@ PDF Sheet Music là **module độc lập** trong Backing & Score, tồn tại s
 | `folderId` | string | ❌ | Folder ID để tổ chức |
 | `lastOpenedAt` | datetime | ❌ | Mở lần cuối (sort "Recently Viewed") |
 | `favorite` | boolean | ❌ | Đánh dấu yêu thích |
+| `relatedProjectId` | string | ❌ | Link đến Project (cùng bài nhạc, khác format) |
+| `wikiCompositionId` | string | ❌ | Link đến Wiki Composition |
+| `priceCents` | integer | ❌ | Giá bán (0 = miễn phí, null = chưa publish) |
+| `isPublished` | boolean | ❌ | Hiển thị trên marketplace |
+| `previewPages` | integer | ❌ | Số trang cho xem miễn phí (default: 1) |
 
 **Permissions:** Document-level — chỉ owner đọc/sửa/xóa (private by default)
 
@@ -360,9 +369,151 @@ Setlist: "Concert 28/3/2026"
 
 ---
 
-## 6. Tích Hợp với Classroom
+## 6. Navigation Map — Xử Lý Bản Nhạc Có Lặp Lại
 
-### 6.1 Teacher Share PDF
+> Auto-scroll tuyến tính chỉ phù hợp bản nhạc không lặp. Đa số bản nhạc thực tế có repeat bars, D.C., D.S., Coda → cần giải pháp khác.
+
+### 6.1 Vấn Đề
+
+Bản nhạc thường có cấu trúc lặp:
+- **Repeat bars** `||: ... :||` → chơi đoạn 2 lần
+- **D.C. (Da Capo)** → quay về đầu bài
+- **D.S. (Dal Segno)** → nhảy đến dấu Segno
+- **Coda** → nhảy đến đoạn kết
+
+Auto-scroll cuộn từ trang 1→2→3 không phản ánh lộ trình đọc thực tế.
+
+### 6.2 Giải Pháp: Bookmarks + Navigation Sequence
+
+**Phase 1 (MVP) — Bookmarks:**
+- User đặt sẵn 4-5 bookmarks (Verse, Chorus, Bridge, Coda...)
+- Tap nhanh bookmarks để nhảy đến section tương ứng
+- Quick-jump bar: thanh thumbnail nhỏ ở dưới viewer
+
+**Phase 2 — Navigation Map:**
+- User đánh dấu sections trên PDF (tên + vùng chọn)
+- Kéo thả sắp xếp **lộ trình đọc thực tế**:
+
+```
+Ví dụ: Bản nhạc 3 trang có D.C. al Coda
+
+Lộ trình đọc (Navigation Sequence):
+  Step 1: Page 1 — Intro + Verse 1
+  Step 2: Page 1 — Verse 2 (repeat)
+  Step 3: Page 2 — Chorus
+  Step 4: Page 1 — D.C. (quay về đầu)
+  Step 5: Page 2 — đến "To Coda"
+  Step 6: Page 3 — Coda
+```
+
+- Auto-scroll theo navigation sequence → nhảy trang tự động khi cần
+- Visual indicator: mũi tên "Jump to page X" khi gần đến điểm nhảy
+
+### 6.3 Data Model
+
+```typescript
+interface NavigationStep {
+  page: number;        // Trang PDF (0-based)
+  sectionName?: string; // "Verse", "Chorus", "Coda"...
+  startY?: number;     // Vị trí bắt đầu trên trang (% từ trên)
+  endY?: number;       // Vị trí kết thúc (% từ trên)
+}
+
+// Lưu trong sheet_music document
+interface SheetMusicDocument {
+  // ... existing fields ...
+  navigationMap?: string; // JSON.stringify(NavigationStep[])
+}
+```
+
+---
+
+## 7. Measure Markers — Đánh Dấu Ô Nhịp & Audio Sync
+
+> **Phase:** Advanced (Phase 3+) — Tính năng mạnh, cho phép sync PDF với audio playback giống MusicXML.
+
+### 7.1 Khả Thi Kỹ Thuật
+
+**Có thể làm.** Nguyên lý: vẽ overlay layer lên trên PDF canvas.
+
+```
+┌──────────────────────────────────────────────┐
+│ PDF Page (render bởi pdf.js)                  │
+│                                                │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │
+│  │ M1  │ │ M2  │ │ M3  │ │ M4  │  ← Dòng 1  │
+│  └─────┘ └─────┘ └─────┘ └─────┘            │
+│                                                │
+│  M = Measure marker (user vẽ bounding box)    │
+│  Overlay = <div> absolute-positioned trên PDF  │
+└──────────────────────────────────────────────┘
+```
+
+### 7.2 Zoom Không Ảnh Hưởng
+
+Lưu tọa độ dạng **tỉ lệ %** thay vì pixel:
+
+```typescript
+interface MeasureMarker {
+  page: number;      // Trang PDF
+  measure: number;   // Số ô nhịp
+  x: number;         // 0.084 = 8.4% từ trái
+  y: number;         // 0.119 = 11.9% từ trên
+  width: number;     // 0.218 = chiếm 21.8% chiều rộng
+  height: number;    // 0.071 = chiếm 7.1% chiều cao
+}
+
+// Render bằng CSS: left: 8.4%, top: 11.9%, width: 21.8%...
+// Khi zoom → container thay đổi → tất cả tự scale chính xác
+```
+
+### 7.3 Sync Với Audio/Timemap
+
+Khi đã có measure markers + timemap (từ audio sync):
+
+```
+MeasureMarker[] + TimemapEntry[] = Playhead trên PDF!
+
+Audio đang chơi → currentTimeMs = 45000
+    → Tìm trong timemap: measure 12 bắt đầu tại 44500ms
+    → Tìm trong markers: measure 12 ở page 2, vị trí (x=0.5, y=0.3)
+    → Highlight marker đó + auto-scroll đến vị trí
+```
+
+### 7.4 UX Đánh Dấu — Smart Row Approach
+
+Đánh dấu từng ô nhịp rất mất công (~64 ô nhịp cho bản 4 trang). Giải pháp:
+
+| Approach | Mô tả | Thời gian |
+|---|---|---|
+| **A) Manual** | Click-drag từng ô nhịp | 5-10 phút |
+| **B) Smart Row** ✅ | Đánh dấu cả DÒNG nhạc + nhập số ô nhịp → tự chia đều | 1-2 phút |
+| **C) OMR (AI)** | Tự nhận diện ô nhịp từ PDF | Full auto (tương lai) |
+
+**Smart Row (đề xuất cho MVP):**
+```
+Bước 1: User kéo vùng chọn cho cả DÒNG nhạc (chỉ 8 dòng thay vì 64 ô nhịp)
+Bước 2: Nhập "4 ô nhịp" → hệ thống chia đều dòng thành 4 phần
+Bước 3: Fine-tune nếu cần (drag border giữa các ô)
+```
+
+### 7.5 Độ Khó Đánh Giá
+
+| Khía cạnh | Độ khó |
+|---|---|
+| Vẽ overlay markers | ⭐⭐ Dễ |
+| Lưu/load tọa độ % | ⭐ Rất dễ |
+| Zoom/resize responsive | ⭐ Rất dễ (CSS % positioning) |
+| Highlight ô nhịp đang chơi | ⭐⭐ Dễ |
+| Sync với timemap | ⭐⭐ Dễ (copy logic từ MusicXML engine) |
+| Smart Row UX | ⭐⭐⭐ Trung bình |
+| OMR auto-detection | ⭐⭐⭐⭐⭐ Cực khó (cần ML pipeline riêng) |
+
+---
+
+## 8. Tích Hợp với Classroom
+
+### 8.1 Teacher Share PDF
 
 Teacher có thể share PDF từ thư viện cá nhân cho cả lớp:
 
@@ -376,7 +527,7 @@ PDF xuất hiện trong tab "Materials" / "Tài liệu" của classroom
 Students xem PDF qua viewer (read-only, không download)
 ```
 
-### 6.2 Assignment Attachment
+### 8.2 Assignment Attachment
 
 Khi tạo Assignment, teacher có thể attach 1 PDF sheet music:
 
@@ -388,7 +539,7 @@ Create Assignment
     └── Chọn từ thư viện cá nhân
 ```
 
-### 6.3 Schema Change — `AssignmentDocument`
+### 8.3 Schema Change — `AssignmentDocument`
 
 | Field mới | Type | Mô tả |
 |---|---|---|
@@ -396,9 +547,97 @@ Create Assignment
 
 ---
 
-## 7. Phân Quyền & Giới Hạn
+## 9. Tích Hợp Ecosystem
 
-### 7.1 Permission Matrix
+### 9.1 Cross-References
+
+PDF Sheet Music có thể liên kết với các module khác qua optional fields:
+
+| Liên kết | Field | Mô tả |
+|---|---|---|
+| PDF ↔ Project | `relatedProjectId` | Cùng bài nhạc, khác format (VD: PDF Chopin ↔ Audio backing Chopin) |
+| PDF ↔ Wiki | `wikiCompositionId` | Liên kết với bài viết Wiki Composition |
+| PDF ↔ Favorites | Mở rộng `targetType` | Cho phép favorite PDF sheets |
+| PDF ↔ Discover | `isPublished` | Published PDFs xuất hiện trên Discover |
+
+### 9.2 Discover Integration (Tương lai)
+
+Khi PDF có `isPublished = true`, hiện trên Discover dưới tab riêng:
+
+```
+Discover Tabs: [Scores] [Sheets] [Courses] [Collections]
+                         ↑ PDF sheets published
+```
+
+---
+
+## 10. Monetization — Bán PDF
+
+> **Phase:** Tương lai — khi marketplace sẵn sàng
+
+### 10.1 Mô Hình Bán
+
+| Mô hình | Mô tả | Khi nào |
+|---|---|---|
+| **Free upload** | Thư viện cá nhân, không bán | Hiện tại |
+| **Subscription-gated** | Premium PDFs chỉ user Premium xem được | Gần |
+| **Per-item purchase** | Bán riêng lẻ qua LemonSqueezy | Trung hạn |
+| **Bundle** | Combo audio + PDF + notes | Xa |
+
+### 10.2 Per-Item Purchase Flow
+
+```
+Creator upload PDF → Set price ($1.99) → Publish
+    ↓
+Buyer xem preview (1 trang đầu) → Mua → Unlock full PDF + download
+```
+
+### 10.3 Product Abstraction Layer (Tương lai)
+
+Để tránh tạo checkout flow riêng cho mỗi loại content, cần "Product" layer thống nhất:
+
+```
+                    ┌─────────────┐
+                    │   Product   │  ← Abstraction layer
+                    │             │
+                    │ type:       │
+                    │  musicxml   │
+                    │  pdf        │
+                    │  course     │
+                    │  bundle     │
+                    │             │
+                    │ priceCents  │
+                    │ creatorId   │
+                    │ sourceId    │
+                    └──────┬──────┘
+                           │
+            ┌──────────────┼──────────────┐
+            ▼              ▼              ▼
+     ┌──────────┐   ┌──────────┐   ┌──────────┐
+     │ Project  │   │ Sheet    │   │ Course   │
+     │ (source) │   │ Music    │   │ (source) │
+     └──────────┘   └──────────┘   └──────────┘
+```
+
+### 10.4 Purchases Collection (Dự kiến)
+
+```typescript
+interface PurchaseDocument {
+  buyerId: string;
+  sellerId: string;
+  itemType: "pdf" | "project" | "course" | "bundle";
+  itemId: string;
+  pricePaidCents: number;
+  lsOrderId?: string;  // LemonSqueezy order ID
+  $createdAt: string;
+}
+```
+
+---
+
+## 11. Phân Quyền & Giới Hạn
+
+### 11.1 Permission Matrix
 
 | Hành động | Free | Premium |
 |:---|:---:|:---:|
@@ -407,11 +646,15 @@ Create Assignment
 | Auto-Scroll | ✅ | ✅ |
 | Performance Mode | ✅ | ✅ |
 | Half-Page Turn | ✅ | ✅ |
+| Bookmarks | ✅ | ✅ |
 | Setlist Mode | ❌ | ✅ |
+| Navigation Map | ❌ | ✅ |
+| Measure Markers | ❌ | ✅ |
 | Download PDF | ❌ | ✅ |
 | Annotation | ❌ | ✅ |
+| Publish/Sell PDF | ❌ | ✅ |
 
-### 7.2 Storage Limits
+### 11.2 Storage Limits
 
 | Tier | Max files | Max per file | Total storage |
 |---|---|---|---|
@@ -420,7 +663,7 @@ Create Assignment
 
 ---
 
-## 8. Components & Libraries
+## 12. Components & Libraries
 
 ### 8.1 Dependencies
 
@@ -465,7 +708,7 @@ const PdfViewer = dynamic(
 
 ---
 
-## 9. Roadmap Triển Khai
+## 13. Roadmap Triển Khai
 
 ### Phase 1 — MVP Library + Viewer (2 tuần)
 
@@ -478,39 +721,53 @@ const PdfViewer = dynamic(
 - [ ] Keyboard shortcuts (←→, +−, F, W)
 - [ ] Performance Mode (fullscreen, tap-to-turn)
 - [ ] Half-Page Turn mode
-- [ ] Auto-Scroll with speed control
-- [ ] DashboardSidebar: thêm "Sheet Music" menu item
+- [ ] Auto-Scroll with speed control + tempo presets
+- [ ] Bookmarks (đánh dấu sections, quick-jump bar)
 - [ ] Mobile optimization: pinch-zoom, swipe, landscape
-- [ ] i18n (10 languages)
+- [ ] i18n (9 languages)
 
-### Phase 2 — Enhanced Features (1-2 tuần)
+### Phase 2 — Enhanced Navigation (1-2 tuần)
 
+- [ ] Navigation Map (xử lý bản nhạc có lặp — D.C., D.S., Coda)
 - [ ] Setlist Mode (concatenate multiple PDFs)
 - [ ] Classroom integration (share PDF, attach to assignment)
+- [ ] Ecosystem links: `relatedProjectId`, `wikiCompositionId`
 - [ ] Dark mode (invert PDF colors)
 - [ ] Two-page side-by-side view (landscape/desktop)
 - [ ] Foot pedal support (Bluetooth keyboard events)
 - [ ] Wake Lock API (prevent screen sleep)
 
-### Phase 3 — Premium Features (2+ tuần)
+### Phase 3 — Advanced Features (2+ tuần)
 
+- [ ] Measure Markers (đánh dấu ô nhịp — Smart Row approach)
+- [ ] Audio sync (playhead trên PDF qua timemap)
 - [ ] Annotation (highlight, text notes, freehand drawing)
 - [ ] Offline caching (Service Worker)
 - [ ] PDF download (Premium only)
 - [ ] Shared annotations in Classroom
 
+### Phase 4 — Monetization (khi marketplace sẵn sàng)
+
+- [ ] Publish PDF to marketplace (`isPublished`, `priceCents`)
+- [ ] Preview mode (chỉ hiện N trang đầu cho free)
+- [ ] Purchase flow qua LemonSqueezy
+- [ ] Product abstraction layer (unified checkout)
+- [ ] Discover integration ("Sheets" tab)
+
 ---
 
-## 10. Rủi Ro & Hạn Chế
+## 14. Rủi Ro & Hạn Chế
 
 | Rủi ro | Ảnh hưởng | Giải pháp |
 |---|---|---|
-| pdf.js bundle ~500KB | Initial load chậm | Dynamic import, chỉ load ở routes `/sheets/*` |
+| pdf.js bundle ~500KB | Initial load chậm | Dynamic import, chỉ load ở routes `/dashboard/pdfs/*` |
 | PDF nhiều trang → lag | Render chậm trên mobile | Virtualize: chỉ render trang đang hiện + ±1 |
 | Copyright content | Legal risk | Terms of Use: user chịu trách nhiệm bản quyền |
 | CORS storage | Không render được | Cấu hình Appwrite CORS headers |
 | Wake Lock API support | Không phải browser nào cũng hỗ trợ | Feature detection, graceful fallback |
+| Measure markers mất công | User mất 1-2 phút đánh dấu | Smart Row approach giảm 5x effort |
+| OMR auto-detection | Cần ML pipeline phức tạp | Để tương lai hoặc dùng API bên thứ ba |
 
 ---
 
-*Tài liệu liên quan: [system_design.md](system_design.md) | [product_features.md](product_features.md)*
+*Tài liệu liên quan: [system_design.md](system_design.md) | [product_features.md](product_features.md) | [system_review_2026_03_28.md](system_review_2026_03_28.md)*

@@ -1195,10 +1195,15 @@ Do quy mô thiết kế lớn, tính năng PDF Sheet Music được tách thành
 📄 **Xem chi tiết:** [pdf_sheet_music_design.md](pdf_sheet_music_design.md)
 
 **Tóm tắt:**
-- **Module độc lập** — không gắn vào Project, có route `/sheets` và collections riêng
+- **Module độc lập** — không gắn vào Project, có route `/dashboard/pdfs` và collections riêng (`sheet_music`, `sheet_music_folders`)
 - Thư viện cá nhân: upload, tổ chức theo folders, search, favorites
-- PDF Viewer tối ưu cho nhạc sĩ: auto-scroll, half-page turn, performance mode
-- Setlist Mode: ghép nhiều PDF thành chuỗi liên tục (Phase 2)
-- Tích hợp Classroom: teacher share PDF cho học sinh (Phase 2)
-- Annotation: highlight, ghi chú trên PDF (Phase 3, Premium)
+- PDF Viewer tối ưu cho nhạc sĩ: auto-scroll, half-page turn, performance mode, bookmarks
+- Navigation Map: xử lý bản nhạc có lặp (D.C., D.S., Coda) — Phase 2
+- Measure Markers: đánh dấu ô nhịp + audio sync (Smart Row approach) — Phase 3
+- Setlist Mode: ghép nhiều PDF thành chuỗi liên tục — Phase 2
+- Tích hợp Classroom: teacher share PDF cho học sinh — Phase 2
+- Tích hợp Ecosystem: `relatedProjectId`, `wikiCompositionId`, Discover tab
+- Monetization: publish/sell PDF, Product abstraction layer — Phase 4
+
+📊 **Đánh giá tổng thể hệ thống:** [system_review_2026_03_28.md](system_review_2026_03_28.md)
 
