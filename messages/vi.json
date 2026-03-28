@@ -144,6 +144,11 @@
     "movedToFolder": "Đã chuyển!",
     "failedMoveToFolder": "Không thể chuyển",
     "pdfs": "PDFs",
+    "newSubfolder": "+ Tạo thư mục con",
+    "renameSidebar": "Đổi tên",
+    "deleteSidebar": "Xóa",
+    "deleteFolderTitle": "Xóa thư mục",
+    "sidebarDeleteFolderDesc": "Xóa \"{name}\" và toàn bộ nội dung? Không thể hoàn tác.",
     "projectsNav": "Dự án"
   },
   "Login": {

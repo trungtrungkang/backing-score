@@ -6,7 +6,7 @@ import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus,
-  FolderOpen, Settings, Eye, EyeOff, Music4, Trash2, ListMusic
+  FolderOpen, Settings, Eye, EyeOff, Music4, Trash2, ListMusic, PanelLeftOpen
 } from "lucide-react";
 import {
   listMyPlaylists,
@@ -37,6 +37,7 @@ export default function CollectionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { confirm } = useDialogs();
 
   useEffect(() => {
@@ -112,11 +113,15 @@ export default function CollectionsPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex border-t border-zinc-200 dark:border-zinc-900">
       {/* Sidebar */}
-      <DashboardSidebar />
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
         <div className="max-w-5xl mx-auto">
+          {/* Mobile sidebar toggle */}
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+            <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">Menu</span>
+          </button>
           {/* Header Row */}
           <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div>

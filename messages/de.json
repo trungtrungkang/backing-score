@@ -141,6 +141,11 @@
     "movedToFolder": "Verschoben!",
     "failedMoveToFolder": "Verschieben fehlgeschlagen",
     "pdfs": "PDFs",
+    "newSubfolder": "+ Neuer Unterordner",
+    "renameSidebar": "Umbenennen",
+    "deleteSidebar": "Löschen",
+    "deleteFolderTitle": "Ordner löschen",
+    "sidebarDeleteFolderDesc": "\"{name}\" und Inhalt löschen? Nicht rückgängig machbar.",
     "projectsNav": "Projekte"
   },
   "Login": {

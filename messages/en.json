@@ -144,6 +144,11 @@
     "movedToFolder": "Moved!",
     "failedMoveToFolder": "Failed to move",
     "pdfs": "PDFs",
+    "newSubfolder": "+ New subfolder",
+    "renameSidebar": "Rename",
+    "deleteSidebar": "Delete",
+    "deleteFolderTitle": "Delete folder",
+    "sidebarDeleteFolderDesc": "Delete \"{name}\" and all its contents? This cannot be undone.",
     "projectsNav": "Projects"
   },
   "Login": {

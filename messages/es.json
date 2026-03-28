@@ -141,6 +141,11 @@
     "movedToFolder": "¡Movido!",
     "failedMoveToFolder": "Error al mover",
     "pdfs": "PDFs",
+    "newSubfolder": "+ Nueva subcarpeta",
+    "renameSidebar": "Renombrar",
+    "deleteSidebar": "Eliminar",
+    "deleteFolderTitle": "Eliminar carpeta",
+    "sidebarDeleteFolderDesc": "¿Eliminar \"{name}\" y todo su contenido? No se puede deshacer.",
     "projectsNav": "Proyectos"
   },
   "Login": {

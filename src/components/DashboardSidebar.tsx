@@ -55,6 +55,7 @@ function FolderTreeNode({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  t,
 }: {
   folder: FolderNode;
   allFolders: FolderNode[];
@@ -65,6 +66,7 @@ function FolderTreeNode({
   onCreateFolder: (name: string, parentId: string | null) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;
   onRenameFolder: (folderId: string, newName: string) => Promise<void>;
+  t: (key: string, values?: Record<string, string>) => string;
 }) {
   const router = useRouter();
   const { confirm } = useDialogs();
@@ -113,8 +115,8 @@ function FolderTreeNode({
   const handleDelete = async () => {
     setShowMenu(false);
     const ok = await confirm({
-      title: "Delete folder",
-      description: `Delete "${folder.name}" and all its contents? This cannot be undone.`,
+      title: t("deleteFolderTitle"),
+      description: t("sidebarDeleteFolderDesc", { name: folder.name }),
     });
     if (ok) await onDeleteFolder(folder.$id);
   };
@@ -216,7 +218,7 @@ function FolderTreeNode({
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   >
                     <Plus className="w-3 h-3" />
-                    New subfolder
+                    {t("newSubfolder")}
                   </button>
                 )}
                 <button
@@ -229,7 +231,7 @@ function FolderTreeNode({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 >
                   <Pencil className="w-3 h-3" />
-                  Rename
+                  {t("renameSidebar")}
                 </button>
                 <button
                   onClick={(e) => {
@@ -239,7 +241,7 @@ function FolderTreeNode({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <Trash2 className="w-3 h-3" />
-                  Delete
+                  {t("deleteSidebar")}
                 </button>
               </div>
             )}
@@ -262,6 +264,7 @@ function FolderTreeNode({
               onCreateFolder={onCreateFolder}
               onDeleteFolder={onDeleteFolder}
               onRenameFolder={onRenameFolder}
+              t={t}
             />
           ))}
 
@@ -323,6 +326,7 @@ function TreeSection({
   onRenameFolder,
   isActive,
   specialNodes,
+  t,
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -336,6 +340,7 @@ function TreeSection({
   onRenameFolder: (folderId: string, newName: string) => Promise<void>;
   isActive: boolean;
   specialNodes?: { key: string; label: string; icon: React.ComponentType<{ className?: string }>; href: string }[];
+  t: (key: string, values?: Record<string, string>) => string;
 }) {
   const [expanded, setExpanded] = useState(isActive);
   const [creating, setCreating] = useState(false);
@@ -436,6 +441,7 @@ function TreeSection({
               onCreateFolder={onCreateFolder}
               onDeleteFolder={onDeleteFolder}
               onRenameFolder={onRenameFolder}
+              t={t}
             />
           ))}
 
@@ -600,6 +606,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: b
               !isActive("/dashboard/analytics") &&
               !isActive("/dashboard/courses")
             }
+            t={t}
             />
 
 
@@ -620,6 +627,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: b
               { key: "favorites", label: tPdfs("favorites"), icon: Bookmark, href: "/dashboard/pdfs?filter=favorites" },
               { key: "recent", label: tPdfs("recent"), icon: Clock, href: "/dashboard/pdfs?filter=recent" },
             ]}
+            t={t}
           />
 
           {/* Static items */}

@@ -141,6 +141,11 @@
     "movedToFolder": "已移动！",
     "failedMoveToFolder": "移动失败",
     "pdfs": "PDFs",
+    "newSubfolder": "+ 新建子文件夹",
+    "renameSidebar": "重命名",
+    "deleteSidebar": "删除",
+    "deleteFolderTitle": "删除文件夹",
+    "sidebarDeleteFolderDesc": "删除「{name}」及其所有内容？不可撤销。",
     "projectsNav": "项目"
   },
   "Login": {

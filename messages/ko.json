@@ -141,6 +141,11 @@
     "movedToFolder": "이동되었습니다!",
     "failedMoveToFolder": "이동에 실패했습니다",
     "pdfs": "PDFs",
+    "newSubfolder": "+ 하위 폴더 만들기",
+    "renameSidebar": "이름 바꾸기",
+    "deleteSidebar": "삭제",
+    "deleteFolderTitle": "폴더 삭제",
+    "sidebarDeleteFolderDesc": "\"{name}\"와 모든 내용을 삭제하시겠습니까? 취소할 수 없습니다.",
     "projectsNav": "프로젝트"
   },
   "Login": {

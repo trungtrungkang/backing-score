@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Loader2,
   BookOpen,
+  PanelLeftOpen,
 } from "lucide-react";
 import { listMyClassrooms, ClassroomDocument } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export default function ClassroomListPage() {
   const t = useTranslations("Classroom");
   const [classrooms, setClassrooms] = useState<ClassroomDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -58,10 +60,14 @@ export default function ClassroomListPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex">
-      <DashboardSidebar />
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 bg-white dark:bg-zinc-950/30">
         <div className="max-w-5xl mx-auto">
+          {/* Mobile sidebar toggle */}
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+            <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">Menu</span>
+          </button>
           {/* Header */}
           <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div>

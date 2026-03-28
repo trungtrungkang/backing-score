@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { listMyProjects, ProjectDocument } from "@/lib/appwrite";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { BarChart3, TrendingUp, Music4, Trophy, Menu, X } from "lucide-react";
+import { BarChart3, TrendingUp, Music4, Trophy, PanelLeftOpen } from "lucide-react";
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -44,24 +44,12 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex">
-      <DashboardSidebar />
-
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileMenuOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-900 shadow-2xl">
-            <div className="p-4 flex justify-end">
-              <button onClick={() => setMobileMenuOpen(false)}><X className="w-5 h-5 text-zinc-500" /></button>
-            </div>
-            <DashboardSidebar />
-          </div>
-        </div>
-      )}
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 bg-white dark:bg-zinc-950/30">
         <div className="max-w-5xl mx-auto">
           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-            <Menu className="w-5 h-5" /> <span className="text-sm font-medium">Menu</span>
+            <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">Menu</span>
           </button>
 
           <header className="mb-12">

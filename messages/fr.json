@@ -141,6 +141,11 @@
     "movedToFolder": "Déplacé !",
     "failedMoveToFolder": "Échec du déplacement",
     "pdfs": "PDFs",
+    "newSubfolder": "+ Nouveau sous-dossier",
+    "renameSidebar": "Renommer",
+    "deleteSidebar": "Supprimer",
+    "deleteFolderTitle": "Supprimer le dossier",
+    "sidebarDeleteFolderDesc": "Supprimer « {name} » et tout son contenu ? Irréversible.",
     "projectsNav": "Projets"
   },
   "Login": {
