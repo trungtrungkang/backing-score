@@ -678,6 +678,17 @@
     "tapTempo": "Gõ nhịp",
     "timeSignature": "Nhịp",
     "spreadView": "Xem 2 trang",
+    "viewMode": "Chế độ xem",
+    "fitHeight": "Vừa chiều cao",
+    "pedalMode": "Pedal lật trang",
+    "pedalDescription": "Dùng pedal Bluetooth để lật trang rảnh tay. Cấu hình phím bên dưới.",
+    "addKey": "Thêm phím",
+    "pressAnyKey": "Nhấn phím bất kỳ...",
+    "enablePedal": "Bật Pedal",
+    "fullscreen": "Toàn màn hình",
+    "exitFullscreen": "Thoát toàn màn hình",
+    "pdfNotFound": "Không tìm thấy PDF",
+    "pdfNotFoundDescription": "Tài liệu này không tồn tại hoặc bạn không có quyền xem.",
     "files": "{count} tệp"
   }
 }

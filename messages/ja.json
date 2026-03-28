@@ -667,6 +667,17 @@
     "tapTempo": "タップテンポ",
     "timeSignature": "拍子",
     "spreadView": "見開き表示",
+    "viewMode": "表示モード",
+    "fitHeight": "高さに合わせる",
+    "pedalMode": "ペダルでページめくり",
+    "pedalDescription": "Bluetoothフットペダルでハンズフリーでページをめくります。下でキー設定を行ってください。",
+    "addKey": "キーを追加",
+    "pressAnyKey": "任意のキーを押してください...",
+    "enablePedal": "ペダルを有効化",
+    "fullscreen": "フルスクリーン",
+    "exitFullscreen": "フルスクリーン解除",
+    "pdfNotFound": "PDFが見つかりません",
+    "pdfNotFoundDescription": "このドキュメントは存在しないか、閲覧権限がありません。",
     "files": "{count}件"
   }
 }

@@ -667,6 +667,17 @@
     "tapTempo": "Tap-Tempo",
     "timeSignature": "Taktart",
     "spreadView": "Zwei-Seiten-Ansicht",
+    "viewMode": "Anzeigemodus",
+    "fitHeight": "An Höhe anpassen",
+    "pedalMode": "Fußpedal Seitenwender",
+    "pedalDescription": "Verwenden Sie ein Bluetooth-Fußpedal zum freihändigen Umblättern. Konfigurieren Sie die Tasten unten.",
+    "addKey": "Taste hinzufügen",
+    "pressAnyKey": "Beliebige Taste drücken...",
+    "enablePedal": "Pedal aktivieren",
+    "fullscreen": "Vollbild",
+    "exitFullscreen": "Vollbild beenden",
+    "pdfNotFound": "PDF nicht gefunden",
+    "pdfNotFoundDescription": "Dieses Dokument existiert nicht oder Sie haben keine Berechtigung, es anzusehen.",
     "files": "{count} Dateien"
   }
 }

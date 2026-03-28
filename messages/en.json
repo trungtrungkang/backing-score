@@ -710,6 +710,17 @@
     "tapTempo": "Tap Tempo",
     "timeSignature": "Time Sig.",
     "spreadView": "Two-Page Spread",
+    "viewMode": "View Mode",
+    "fitHeight": "Fit Height",
+    "pedalMode": "Page-Turn Pedal",
+    "pedalDescription": "Use a Bluetooth foot pedal to turn pages hands-free. Configure key mappings below.",
+    "addKey": "Add Key",
+    "pressAnyKey": "Press any key...",
+    "enablePedal": "Enable Pedal",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "pdfNotFound": "PDF Not Found",
+    "pdfNotFoundDescription": "This document doesn't exist or you don't have permission to view it.",
     "files": "{count} files"
   }
 }

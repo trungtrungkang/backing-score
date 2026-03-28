@@ -17,8 +17,13 @@ import {
   ChevronDown,
   Columns2,
   Timer,
+  ArrowDownToLine,
+  PanelTop,
+  Footprints,
+  MoreVertical,
 } from "lucide-react";
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface PdfViewerProps {
   pdfUrl: string;
@@ -39,9 +44,13 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
   // State
   const [numPages, setNumPages] = useState(pageCount);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const saved = localStorage.getItem(`pdf-lastpage-${title}`);
+    return saved ? Math.max(1, Math.min(Number(saved), pageCount)) : 1;
+  });
   const [scale, setScale] = useState(1);
-  const [containerWidth, setContainerWidth] = useState(0); // start at 0, wait for measurement
+  const [containerWidth, setContainerWidth] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [halfPageTurn, setHalfPageTurn] = useState(false);
   const [performanceMode, setPerformanceMode] = useState(false);
@@ -73,10 +82,39 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     });
   };
 
-  // Spread view (two-page)
-  const [spreadView, setSpreadView] = useState(false);
+  // View mode: fitWidth (default), fitHeight, twoPages
+  type ViewMode = 'fitWidth' | 'fitHeight' | 'twoPages';
+  const [viewMode, setViewMode] = useState<ViewMode>('fitWidth');
+  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [showScreenMenu, setShowScreenMenu] = useState(false);
   const isNarrow = containerWidth > 0 && containerWidth < 900;
-  const effectiveSpread = spreadView && !isNarrow;
+  const effectiveSpread = viewMode === 'twoPages' && !isNarrow;
+  const [spreadPairStart, setSpreadPairStart] = useState(1); // first page of current pair
+
+  // ─── Pedal ───
+  const pedalStorageKey = `pdf-pedal-config`;
+  const [pedalEnabled, setPedalEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(`${pedalStorageKey}-enabled`) === 'true';
+  });
+  const [pedalNextKeys, setPedalNextKeys] = useState<string[]>(() => {
+    if (typeof window === "undefined") return ['PageDown', 'ArrowRight', 'ArrowDown'];
+    try {
+      const saved = localStorage.getItem(`${pedalStorageKey}-next`);
+      return saved ? JSON.parse(saved) : ['PageDown', 'ArrowRight', 'ArrowDown'];
+    } catch { return ['PageDown', 'ArrowRight', 'ArrowDown']; }
+  });
+  const [pedalPrevKeys, setPedalPrevKeys] = useState<string[]>(() => {
+    if (typeof window === "undefined") return ['PageUp', 'ArrowLeft', 'ArrowUp'];
+    try {
+      const saved = localStorage.getItem(`${pedalStorageKey}-prev`);
+      return saved ? JSON.parse(saved) : ['PageUp', 'ArrowLeft', 'ArrowUp'];
+    } catch { return ['PageUp', 'ArrowLeft', 'ArrowUp']; }
+  });
+  const [showPedalPanel, setShowPedalPanel] = useState(false);
+  const [pedalFlash, setPedalFlash] = useState<'next' | 'prev' | null>(null);
+  const [isListeningKey, setIsListeningKey] = useState<'next' | 'prev' | null>(null);
+  const pedalFlashTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   // ─── Metronome ───
   const [metronomeOn, setMetronomeOn] = useState(false);
@@ -169,7 +207,6 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    // Set initial width immediately
     setContainerWidth(el.clientWidth);
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -213,7 +250,15 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
       const pdf = pdfDocRef.current;
       if (!pdf || containerWidth === 0) return;
 
-      const canvas = document.getElementById(`pdf-canvas-${pageNum}`) as HTMLCanvasElement | null;
+      let canvasId: string;
+      if (effectiveSpread) {
+        // In spread mode, canvases use stable IDs: spread-0, spread-1
+        const idx = pageNum - spreadPairStart;
+        canvasId = `pdf-canvas-spread-${idx}`;
+      } else {
+        canvasId = `pdf-canvas-${pageNum}`;
+      }
+      const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
       if (!canvas) return;
 
       // Cancel any existing render on this canvas
@@ -234,9 +279,27 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         const page = await pdf.getPage(pageNum);
         if (gen !== renderGeneration.current) return;
 
-        const pageWidth = (effectiveSpread ? (containerWidth / 2 - 16) : containerWidth) * scale;
         const baseViewport = page.getViewport({ scale: 1 });
-        const renderScale = pageWidth / baseViewport.width;
+        let renderScale: number;
+        if (effectiveSpread) {
+          // Fit to half-width AND scroll-area height, pick smaller
+          const scrollH = scrollRef.current?.clientHeight || 600;
+          const availWidth = containerWidth / 2 - 20;
+          const availHeight = scrollH - 24;
+          const scaleW = availWidth / baseViewport.width;
+          const scaleH = availHeight / baseViewport.height;
+          renderScale = Math.min(scaleW, scaleH);
+        } else if (viewMode === 'fitHeight') {
+          // Fit page height to scroll container height
+          const scrollH = scrollRef.current?.clientHeight || 600;
+          const availHeight = scrollH - 24;
+          renderScale = availHeight / baseViewport.height;
+        } else {
+          // fitWidth (default)
+          const pageWidth = containerWidth * scale;
+          renderScale = pageWidth / baseViewport.width;
+        }
+        if (renderScale <= 0 || !isFinite(renderScale)) return;
         const viewport = page.getViewport({ scale: renderScale });
 
         canvas.width = viewport.width;
@@ -260,7 +323,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         console.error(`Failed to render page ${pageNum}:`, err);
       }
     },
-    [containerWidth, scale]
+    [containerWidth, scale, effectiveSpread, spreadPairStart, viewMode]
   );
 
   // Re-render all pages when PDF loads, scale changes, or container resizes
@@ -281,45 +344,92 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
     // Small delay to let DOM settle after state change
     const timer = setTimeout(() => {
-      for (let i = 1; i <= numPages; i++) {
-        renderPage(i, gen);
+      if (effectiveSpread) {
+        // Only render visible pair
+        const pages = [spreadPairStart];
+        if (spreadPairStart + 1 <= numPages) pages.push(spreadPairStart + 1);
+        pages.forEach((p) => renderPage(p, gen));
+      } else {
+        for (let i = 1; i <= numPages; i++) {
+          renderPage(i, gen);
+        }
       }
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [numPages, renderPage, containerWidth, scale, pdfLoading, effectiveSpread]);
+  }, [numPages, renderPage, containerWidth, scale, pdfLoading, effectiveSpread, spreadPairStart]);
+
+  // Scroll to saved page on initial load
+  const hasRestored = useRef(false);
+  useEffect(() => {
+    if (pdfLoading || hasRestored.current) return;
+    hasRestored.current = true;
+    if (currentPage > 1) {
+      setTimeout(() => {
+        const el = document.getElementById(`pdf-page-${currentPage}`);
+        if (el) el.scrollIntoView({ block: "start" });
+      }, 200);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfLoading]);
 
   // Page navigation
   const goToPage = useCallback(
     (page: number) => {
       const clamped = Math.max(1, Math.min(page, numPages));
       setCurrentPage(clamped);
+      localStorage.setItem(`pdf-lastpage-${title}`, String(clamped));
       const el = document.getElementById(`pdf-page-${clamped}`);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     },
     [numPages]
   );
+  // Check if a page's top is aligned with the scroll container (within tolerance)
+  const isPageAligned = useCallback((pageNum: number) => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    const pageEl = document.getElementById(`pdf-page-${pageNum}`);
+    if (!pageEl) return true;
+    const containerRect = el.getBoundingClientRect();
+    const pageRect = pageEl.getBoundingClientRect();
+    return Math.abs(pageRect.top - containerRect.top) < 20;
+  }, []);
 
   const prevPage = useCallback(() => {
-    if (halfPageTurn && scrollRef.current) {
+    if (effectiveSpread) {
+      setSpreadPairStart((s) => Math.max(1, s - 2));
+    } else if (halfPageTurn && scrollRef.current) {
       scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: "smooth" });
+    } else if (currentPage <= 1 && scrollRef.current) {
+      scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight, behavior: "smooth" });
+    } else if (!isPageAligned(currentPage)) {
+      // Current page not aligned — scroll to align it first
+      goToPage(currentPage);
     } else {
       goToPage(currentPage - 1);
     }
-  }, [currentPage, goToPage, halfPageTurn]);
+  }, [currentPage, goToPage, halfPageTurn, effectiveSpread, isPageAligned]);
 
   const nextPage = useCallback(() => {
-    if (halfPageTurn && scrollRef.current) {
+    if (effectiveSpread) {
+      setSpreadPairStart((s) => Math.min(numPages, s + 2));
+    } else if (halfPageTurn && scrollRef.current) {
       scrollRef.current.scrollBy({ top: scrollRef.current.clientHeight / 2, behavior: "smooth" });
+    } else if (currentPage >= numPages && scrollRef.current) {
+      // Already on last page — scroll down by one viewport height
+      scrollRef.current.scrollBy({ top: scrollRef.current.clientHeight, behavior: "smooth" });
+    } else if (!isPageAligned(currentPage)) {
+      // Current page not aligned — scroll to align it first
+      goToPage(currentPage);
     } else {
       goToPage(currentPage + 1);
     }
-  }, [currentPage, goToPage, halfPageTurn]);
+  }, [currentPage, goToPage, halfPageTurn, effectiveSpread, numPages, isPageAligned]);
 
   // Zoom
-  const zoomIn = () => setScale((s) => Math.min(s + 0.25, 3));
-  const zoomOut = () => setScale((s) => Math.max(s - 0.25, 0.5));
-  const fitWidth = () => setScale(1);
+  const zoomIn = () => { if (viewMode === 'fitWidth') setScale((s) => Math.min(s + 0.25, 3)); };
+  const zoomOut = () => { if (viewMode === 'fitWidth') setScale((s) => Math.max(s - 0.25, 0.5)); };
+  const fitWidth = () => { setViewMode('fitWidth'); setScale(1); setShowViewMenu(false); };
 
   // Auto-scroll
   useEffect(() => {
@@ -338,23 +448,43 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     return () => cancelAnimationFrame(autoScrollRAF.current);
   }, [autoScrolling, scrollSpeed]);
 
-  // Fullscreen
+  // Fullscreen (native API with CSS fallback)
+  const canNativeFs = typeof document !== 'undefined' && document.fullscreenEnabled;
   const toggleFullscreen = async () => {
-    if (!document.fullscreenElement) {
-      await containerRef.current?.requestFullscreen();
+    if (!isFullscreen) {
+      if (canNativeFs) {
+        await containerRef.current?.requestFullscreen();
+      }
       setIsFullscreen(true);
     } else {
-      await document.exitFullscreen();
+      if (canNativeFs && document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
       setIsFullscreen(false);
+      setPerformanceMode(false);
     }
   };
 
+  // Sync fullscreen state when user exits via Escape or browser controls
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+        setPerformanceMode(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
   // Performance mode
   const togglePerformanceMode = () => {
-    setPerformanceMode((v) => !v);
     if (!performanceMode) {
-      containerRef.current?.requestFullscreen().catch(() => {});
+      if (canNativeFs) containerRef.current?.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
+      setPerformanceMode(true);
+    } else {
+      setPerformanceMode(false);
     }
   };
 
@@ -363,25 +493,61 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     const el = scrollRef.current;
     if (!el) return;
     const handleScroll = () => {
+      let newPage = currentPage;
       for (let i = 1; i <= numPages; i++) {
         const pageEl = document.getElementById(`pdf-page-${i}`);
         if (pageEl) {
           const rect = pageEl.getBoundingClientRect();
           const containerRect = el.getBoundingClientRect();
           if (rect.top <= containerRect.top + containerRect.height / 3) {
-            setCurrentPage(i);
+            newPage = i;
           }
         }
+      }
+      if (newPage !== currentPage) {
+        setCurrentPage(newPage);
+        localStorage.setItem(`pdf-lastpage-${title}`, String(newPage));
       }
     };
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
   }, [numPages]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts + pedal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
+
+      // Pedal key listening mode (for remapping)
+      if (isListeningKey) {
+        e.preventDefault();
+        const key = e.key;
+        if (isListeningKey === 'next') {
+          const updated = pedalNextKeys.includes(key) ? pedalNextKeys : [...pedalNextKeys, key];
+          setPedalNextKeys(updated);
+          localStorage.setItem(`${pedalStorageKey}-next`, JSON.stringify(updated));
+        } else {
+          const updated = pedalPrevKeys.includes(key) ? pedalPrevKeys : [...pedalPrevKeys, key];
+          setPedalPrevKeys(updated);
+          localStorage.setItem(`${pedalStorageKey}-prev`, JSON.stringify(updated));
+        }
+        setIsListeningKey(null);
+        return;
+      }
+
+      // Pedal flash indicator
+      if (pedalEnabled) {
+        if (pedalNextKeys.includes(e.key)) {
+          setPedalFlash('next');
+          if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
+          pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
+        } else if (pedalPrevKeys.includes(e.key)) {
+          setPedalFlash('prev');
+          if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
+          pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
+        }
+      }
+
       switch (e.key) {
         case "ArrowLeft":
         case "PageUp":
@@ -419,11 +585,16 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         case "Escape":
           if (performanceMode) setPerformanceMode(false);
           break;
+        case "b":
+        case "B":
+          e.preventDefault();
+          toggleBookmark(currentPage);
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [prevPage, nextPage, performanceMode]);
+  }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey]);
 
   // Performance mode tap
   const handlePerformanceTap = () => {
@@ -434,11 +605,11 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col h-full bg-zinc-950 ${performanceMode ? "cursor-none" : ""}`}
+      className={`flex flex-col h-full bg-zinc-950 ${performanceMode ? "cursor-none" : ""} ${isFullscreen && !canNativeFs ? "fixed inset-0 z-[9999]" : ""}`}
     >
       {/* Scroll container */}
-      <div ref={scrollRef} className="flex-1 overflow-auto" onClick={handlePerformanceTap}>
-        <div className="flex flex-col items-center py-4 gap-4">
+      <div ref={scrollRef} className={`flex-1 min-h-0 ${effectiveSpread ? 'overflow-hidden' : 'overflow-auto'}`} onClick={handlePerformanceTap}>
+        <div className={`flex flex-col items-center ${effectiveSpread ? 'h-full' : 'py-4 gap-4'}`}>
           {pdfLoading && (
             <div className="flex items-center justify-center h-[60vh]">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
@@ -451,25 +622,32 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
           {!pdfLoading && !pdfError && (
             effectiveSpread ? (
-              /* Two-page spread */
-              <div className="grid grid-cols-2 gap-4 px-2" style={{ maxWidth: containerWidth * scale }}>
-                {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
-                  <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg relative">
-                    {bookmarkedPages.has(pageNum) && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
-                      </div>
-                    )}
-                    <canvas
-                      id={`pdf-canvas-${pageNum}`}
-                      className="bg-white"
-                      style={{ maxWidth: "100%" }}
-                    />
-                  </div>
-                ))}
+              /* Two-page spread — paginated, fit to viewport */
+              <div className="flex items-center justify-center gap-4 w-full h-full">
+                {[0, 1].map((idx) => {
+                  const pageNum = spreadPairStart + idx;
+                  if (pageNum > numPages) return null;
+                  return (
+                    <div
+                      key={`spread-${idx}`}
+                      id={`pdf-page-${pageNum}`}
+                      className="relative shadow-lg"
+                    >
+                      {bookmarkedPages.has(pageNum) && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
+                        </div>
+                      )}
+                      <canvas
+                        id={`pdf-canvas-spread-${idx}`}
+                        className="bg-white block"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              /* Single page view */
+              /* Single page — continuous scroll */
               Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
                 <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2 relative">
                   {bookmarkedPages.has(pageNum) && (
@@ -491,250 +669,312 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
       {/* Bottom toolbar */}
       {!performanceMode && (
-        <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-t border-zinc-800 flex-shrink-0 select-none">
-          {/* Page navigation */}
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 flex-shrink-0 select-none">
+          {/* Left group: Page nav */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={prevPage}
-              disabled={currentPage <= 1 && !halfPageTurn}
+              disabled={effectiveSpread ? spreadPairStart <= 1 : (currentPage <= 1 && !halfPageTurn)}
               className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="text-xs text-zinc-400 min-w-[80px] text-center">
-              {t("pageOf", { current: currentPage, total: numPages })}
+              {effectiveSpread
+                ? `${spreadPairStart}-${Math.min(spreadPairStart + 1, numPages)} / ${numPages}`
+                : t("pageOf", { current: currentPage, total: numPages })}
             </span>
             <button
               onClick={nextPage}
-              disabled={currentPage >= numPages && !halfPageTurn}
+              disabled={effectiveSpread ? spreadPairStart + 1 >= numPages : (currentPage >= numPages && !halfPageTurn)}
               className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Zoom */}
-          <div className="flex items-center gap-1">
+          {/* Center group: Zoom + View mode */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={zoomOut}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              disabled={viewMode !== 'fitWidth'}
+              className="hidden sm:flex p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
               title={t("zoomOut")}
             >
               <ZoomOut className="w-4 h-4" />
             </button>
-            <button
-              onClick={fitWidth}
-              className="px-2 py-1 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-              title={t("fitWidth")}
-            >
-              {Math.round(scale * 100)}%
-            </button>
+
+            <Popover open={showViewMenu} onOpenChange={setShowViewMenu}>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors" title={t("fitWidth")}>
+                  {viewMode === 'twoPages' && <Columns2 className="w-3 h-3" />}
+                  {viewMode === 'fitHeight' && <ArrowDownToLine className="w-3 h-3" />}
+                  {viewMode === 'fitWidth' && `${Math.round(scale * 100)}%`}
+                  {viewMode === 'fitHeight' && ` ${t('fitHeight')}`}
+                  {viewMode === 'twoPages' && ` ${t('spreadView')}`}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="center" collisionPadding={8} className="w-auto min-w-[160px] p-0 bg-zinc-900 border-zinc-700">
+                <div className="py-1">
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t('viewMode')}</div>
+                  <button onClick={() => { setViewMode('fitWidth'); setScale(1); setShowViewMenu(false); }} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${viewMode === 'fitWidth' ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}><PanelTop className="w-3.5 h-3.5" />{t('fitWidth')}</button>
+                  <button onClick={() => { setViewMode('fitHeight'); setShowViewMenu(false); }} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${viewMode === 'fitHeight' ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}><ArrowDownToLine className="w-3.5 h-3.5" />{t('fitHeight')}</button>
+                  <button onClick={() => { setViewMode('twoPages'); setShowViewMenu(false); }} disabled={isNarrow} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${viewMode === 'twoPages' ? 'text-indigo-400 font-semibold' : 'text-zinc-300'} ${isNarrow ? 'opacity-30 cursor-not-allowed' : ''}`}><Columns2 className="w-3.5 h-3.5" />{t('spreadView')}</button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <button
               onClick={zoomIn}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              disabled={viewMode !== 'fitWidth'}
+              className="hidden sm:flex p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
               title={t("zoomIn")}
             >
               <ZoomIn className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Feature toggles */}
-          <div className="flex items-center gap-1">
-            {/* Auto-scroll */}
-            <div className="flex items-center gap-1">
+          {/* Right group: Feature toggles */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* === Desktop-only features (hidden on mobile, shown in three-dot menu) === */}
+            <div className="hidden sm:contents">
+              {/* Half-page turn */}
               <button
-                onClick={() => setAutoScrolling((v) => !v)}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${
-                  autoScrolling
-                    ? "bg-indigo-600 text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                }`}
-                title={t("autoScroll")}
+                onClick={() => setHalfPageTurn((v) => !v)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${halfPageTurn ? "bg-amber-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                title={t("halfPageTurn")}
               >
-                {autoScrolling ? (
-                  <Pause className="w-3.5 h-3.5" />
-                ) : (
-                  <Play className="w-3.5 h-3.5" />
-                )}
-                Auto
-              </button>
-              {autoScrolling && (
-                <input
-                  type="range"
-                  min={5}
-                  max={150}
-                  value={scrollSpeed}
-                  onChange={(e) => setScrollSpeed(Number(e.target.value))}
-                  className="w-20 h-1 accent-indigo-500"
-                  title={t("speed")}
-                />
-              )}
-            </div>
-
-            {/* Half-page turn */}
-            <button
-              onClick={() => setHalfPageTurn((v) => !v)}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${
-                halfPageTurn
-                  ? "bg-amber-600 text-white"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-              }`}
-              title={t("halfPageTurn")}
-            >
-              <ChevronsUp className="w-3.5 h-3.5" />½
-            </button>
-
-            {/* Spread view toggle */}
-            <button
-              onClick={() => setSpreadView((v) => !v)}
-              className={`p-1.5 rounded-md transition-colors ${spreadView ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"} ${isNarrow ? "opacity-30 cursor-not-allowed" : ""}`}
-              title={t("spreadView")}
-              disabled={isNarrow}
-            >
-              <Columns2 className="w-4 h-4" />
-            </button>
-
-            {/* Metronome toggle + panel */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  if (!metronomeOn) setShowMetronomePanel((v) => !v);
-                  else { setMetronomeOn(false); setShowMetronomePanel(false); }
-                }}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                title={t("metronome")}
-              >
-                <Timer className="w-3.5 h-3.5" />
-                {metronomeOn && (
-                  <span className="font-mono">{bpm}</span>
-                )}
-                {/* Visual beat dots */}
-                {metronomeOn && (
-                  <span className="flex gap-0.5 ml-1">
-                    {Array.from({ length: timeSignature[0] }, (_, i) => (
-                      <span
-                        key={i}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentBeat ? (i === 0 ? "bg-amber-400 scale-125" : "bg-white scale-110") : "bg-zinc-600"}`}
-                      />
-                    ))}
-                  </span>
-                )}
+                <ChevronsUp className="w-3.5 h-3.5" />½
               </button>
 
-              {showMetronomePanel && !metronomeOn && (
-                <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-3 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
+              {/* Page-turn pedal */}
+              <Popover open={showPedalPanel && !pedalEnabled} onOpenChange={(open) => { if (!open) setShowPedalPanel(false); }}>
+                <PopoverTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (pedalEnabled) { setPedalEnabled(false); setShowPedalPanel(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'false'); }
+                      else setShowPedalPanel((v) => !v);
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-all ${pedalEnabled ? pedalFlash ? "bg-emerald-400 text-black scale-105" : "bg-emerald-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                    title={t("pedalMode")}
+                  >
+                    <Footprints className="w-3.5 h-3.5" />
+                    {pedalEnabled && <span className={`w-1.5 h-1.5 rounded-full transition-colors ${pedalFlash ? 'bg-white' : 'bg-emerald-300'}`} />}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[240px] p-3 bg-zinc-900 border-zinc-700">
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("pedalMode")}</div>
+                  <p className="text-[11px] text-zinc-400 mb-3">{t("pedalDescription")}</p>
+                  <div className="mb-2">
+                    <div className="text-[10px] text-zinc-500 mb-1">{t("next")} →</div>
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {pedalNextKeys.map((k) => (
+                        <span key={k} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-300 font-mono">
+                          {k}
+                          <button onClick={() => { const updated = pedalNextKeys.filter((x) => x !== k); setPedalNextKeys(updated); localStorage.setItem(`${pedalStorageKey}-next`, JSON.stringify(updated)); }} className="text-zinc-500 hover:text-red-400 ml-0.5">×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <button onClick={() => setIsListeningKey('next')} className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${isListeningKey === 'next' ? 'border-indigo-500 text-indigo-400 animate-pulse' : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}>
+                      {isListeningKey === 'next' ? t("pressAnyKey") : `+ ${t("addKey")}`}
+                    </button>
+                  </div>
+                  <div className="mb-3">
+                    <div className="text-[10px] text-zinc-500 mb-1">← {t("prev")}</div>
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {pedalPrevKeys.map((k) => (
+                        <span key={k} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-300 font-mono">
+                          {k}
+                          <button onClick={() => { const updated = pedalPrevKeys.filter((x) => x !== k); setPedalPrevKeys(updated); localStorage.setItem(`${pedalStorageKey}-prev`, JSON.stringify(updated)); }} className="text-zinc-500 hover:text-red-400 ml-0.5">×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <button onClick={() => setIsListeningKey('prev')} className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${isListeningKey === 'prev' ? 'border-indigo-500 text-indigo-400 animate-pulse' : 'border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}>
+                      {isListeningKey === 'prev' ? t("pressAnyKey") : `+ ${t("addKey")}`}
+                    </button>
+                  </div>
+                  <button onClick={() => { setPedalEnabled(true); setShowPedalPanel(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'true'); }} className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors">
+                    ▶ {t("enablePedal")}
+                  </button>
+                </PopoverContent>
+              </Popover>
+
+              {/* Metronome */}
+              <Popover open={showMetronomePanel && !metronomeOn} onOpenChange={(open) => { if (!open) setShowMetronomePanel(false); }}>
+                <PopoverTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (!metronomeOn) setShowMetronomePanel((v) => !v);
+                      else { setMetronomeOn(false); setShowMetronomePanel(false); }
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                    title={t("metronome")}
+                  >
+                    <Timer className="w-3.5 h-3.5" />
+                    {metronomeOn && <span className="font-mono">{bpm}</span>}
+                    {metronomeOn && (
+                      <span className="flex gap-0.5 ml-1">
+                        {Array.from({ length: timeSignature[0] }, (_, i) => (
+                          <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentBeat ? (i === 0 ? "bg-amber-400 scale-125" : "bg-white scale-110") : "bg-zinc-600"}`} />
+                        ))}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[200px] p-3 bg-zinc-900 border-zinc-700">
                   <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("metronome")}</div>
-
-                  {/* BPM slider */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs text-zinc-400 w-8">{t("bpm")}</span>
-                    <input
-                      type="range"
-                      min={40}
-                      max={240}
-                      value={bpm}
-                      onChange={(e) => setBpm(Number(e.target.value))}
-                      className="flex-1 h-1.5 accent-indigo-500"
-                    />
-                    <input
-                      type="number"
-                      min={40}
-                      max={240}
-                      value={bpm}
-                      onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value))))}
-                      className="w-14 bg-zinc-800 text-white text-xs text-center rounded px-1 py-1 border border-zinc-700 font-mono"
-                    />
+                    <input type="range" min={40} max={240} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-1.5 accent-indigo-500" />
+                    <input type="number" min={40} max={240} value={bpm} onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value))))} className="w-14 bg-zinc-800 text-white text-xs text-center rounded px-1 py-1 border border-zinc-700 font-mono" />
                   </div>
-
-                  {/* Tap Tempo */}
-                  <button
-                    onClick={handleTapTempo}
-                    className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors"
-                  >
-                    {t("tapTempo")}
-                  </button>
-
-                  {/* Time signature */}
+                  <button onClick={handleTapTempo} className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors">{t("tapTempo")}</button>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs text-zinc-400">{t("timeSignature")}</span>
                     <div className="flex gap-1">
                       {([[2,4],[3,4],[4,4],[6,8]] as [number,number][]).map(([n,d]) => (
-                        <button
-                          key={`${n}/${d}`}
-                          onClick={() => setTimeSignature([n, d])}
-                          className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
-                            timeSignature[0] === n && timeSignature[1] === d
-                              ? "bg-indigo-600 text-white"
-                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                          }`}
-                        >
-                          {n}/{d}
-                        </button>
+                        <button key={`${n}/${d}`} onClick={() => setTimeSignature([n, d])} className={`px-2 py-1 rounded text-xs font-mono transition-colors ${timeSignature[0] === n && timeSignature[1] === d ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>{n}/{d}</button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Start button */}
-                  <button
-                    onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }}
-                    className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors"
-                  >
-                    ▶ Start
-                  </button>
-                </div>
-              )}
+                  <button onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }} className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors">▶ Start</button>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* Bookmark current page */}
-            <div className="relative">
-              <button
-                onClick={() => toggleBookmark(currentPage)}
-                className={`p-1.5 rounded-md transition-colors ${bookmarkedPages.has(currentPage) ? "text-amber-400 bg-amber-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                title={t("bookmark")}
-              >
-                {bookmarkedPages.has(currentPage) ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-              </button>
-              {bookmarkedPages.size > 0 && (
+            {/* === Always visible === */}
+            {/* Bookmark */}
+            <Popover open={showBookmarkMenu && bookmarkedPages.size > 0} onOpenChange={setShowBookmarkMenu}>
+              <div className="flex items-center">
                 <button
-                  onClick={() => setShowBookmarkMenu((v) => !v)}
-                  className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors"
+                  onClick={() => toggleBookmark(currentPage)}
+                  className={`p-1.5 rounded-md transition-colors ${bookmarkedPages.has(currentPage) ? "text-amber-400 bg-amber-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                  title={t("bookmark")}
                 >
-                  <ChevronDown className="w-3 h-3" />
+                  {bookmarkedPages.has(currentPage) ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                 </button>
-              )}
-              {showBookmarkMenu && bookmarkedPages.size > 0 && (
-                <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[120px] z-50" onMouseLeave={() => setShowBookmarkMenu(false)}>
+                {bookmarkedPages.size > 0 && (
+                  <PopoverTrigger asChild>
+                    <button className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors">
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </PopoverTrigger>
+                )}
+              </div>
+              <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[120px] p-0 bg-zinc-900 border-zinc-700">
+                <div className="py-1">
                   <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t("bookmark")}s</div>
                   {[...bookmarkedPages].sort((a, b) => a - b).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => { goToPage(p); setShowBookmarkMenu(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 flex items-center gap-2 ${p === currentPage ? "text-amber-400 font-semibold" : "text-zinc-300"}`}
-                    >
+                    <button key={p} onClick={() => { goToPage(p); setShowBookmarkMenu(false); }} className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 flex items-center gap-2 ${p === currentPage ? "text-amber-400 font-semibold" : "text-zinc-300"}`}>
                       <BookmarkCheck className="w-3 h-3 text-amber-400" />
                       {t("pageOf", { current: String(p), total: String(numPages) })}
                     </button>
                   ))}
                 </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Screen mode (desktop only) */}
+            <div className="hidden sm:block">
+              <Popover open={showScreenMenu} onOpenChange={setShowScreenMenu}>
+                <PopoverTrigger asChild>
+                  <button className={`p-1.5 rounded-md transition-colors ${isFullscreen || performanceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[180px] p-0 bg-zinc-900 border-zinc-700">
+                  <div className="py-1">
+                    <button onClick={() => { toggleFullscreen(); setShowScreenMenu(false); }} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${isFullscreen ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}>
+                      {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                      {isFullscreen ? t("exitFullscreen") : t("fullscreen")}
+                    </button>
+                    <button onClick={() => { togglePerformanceMode(); setShowScreenMenu(false); }} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${performanceMode ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}>
+                      <Maximize className="w-3.5 h-3.5" />
+                      {t("performanceMode")}
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Auto-scroll */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setAutoScrolling((v) => !v)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${autoScrolling ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                title={t("autoScroll")}
+              >
+                {autoScrolling ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                Auto
+              </button>
+              {autoScrolling && (
+                <input type="range" min={5} max={150} value={scrollSpeed} onChange={(e) => setScrollSpeed(Number(e.target.value))} className="w-20 h-1 accent-indigo-500" title={t("speed")} />
               )}
             </div>
 
-            {/* Performance mode */}
-            <button
-              onClick={togglePerformanceMode}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-              title={t("performanceMode")}
-            >
-              <Maximize className="w-4 h-4" />
-            </button>
-
-            {/* Fullscreen */}
-            <button
-              onClick={toggleFullscreen}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-            >
-              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-            </button>
+            {/* === Mobile-only: three-dot menu === */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="sm:hidden p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[180px] p-0 bg-zinc-900 border-zinc-700">
+                <div className="py-1">
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t("viewMode")}</div>
+                  {/* Half-page turn */}
+                  <button
+                    onClick={() => setHalfPageTurn((v) => !v)}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${halfPageTurn ? 'text-amber-400 font-semibold' : 'text-zinc-300'}`}
+                  >
+                    <ChevronsUp className="w-3.5 h-3.5" />
+                    {t("halfPageTurn")} {halfPageTurn && "✓"}
+                  </button>
+                  {/* Pedal */}
+                  <button
+                    onClick={() => {
+                      if (pedalEnabled) { setPedalEnabled(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'false'); }
+                      else { setPedalEnabled(true); localStorage.setItem(`${pedalStorageKey}-enabled`, 'true'); }
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${pedalEnabled ? 'text-emerald-400 font-semibold' : 'text-zinc-300'}`}
+                  >
+                    <Footprints className="w-3.5 h-3.5" />
+                    {t("pedalMode")} {pedalEnabled && "✓"}
+                  </button>
+                  {/* Metronome */}
+                  <button
+                    onClick={() => {
+                      if (metronomeOn) { setMetronomeOn(false); }
+                      else { setMetronomeOn(true); }
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${metronomeOn ? 'text-green-400 font-semibold' : 'text-zinc-300'}`}
+                  >
+                    <Timer className="w-3.5 h-3.5" />
+                    {t("metronome")} {metronomeOn ? `(${bpm})` : ""} {metronomeOn && "✓"}
+                  </button>
+                  <div className="my-1 border-t border-zinc-800" />
+                  {/* Zoom */}
+                  <button onClick={zoomOut} disabled={viewMode !== 'fitWidth'} className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors text-zinc-300 disabled:opacity-30">
+                    <ZoomOut className="w-3.5 h-3.5" />{t("zoomOut")}
+                  </button>
+                  <button onClick={zoomIn} disabled={viewMode !== 'fitWidth'} className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors text-zinc-300 disabled:opacity-30">
+                    <ZoomIn className="w-3.5 h-3.5" />{t("zoomIn")}
+                  </button>
+                  <div className="my-1 border-t border-zinc-800" />
+                  {/* Fullscreen */}
+                  <button onClick={() => toggleFullscreen()} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${isFullscreen ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}>
+                    {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                    {isFullscreen ? t("exitFullscreen") : t("fullscreen")}
+                  </button>
+                  {/* Performance mode */}
+                  <button onClick={() => togglePerformanceMode()} className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${performanceMode ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}>
+                    <Maximize className="w-3.5 h-3.5" />
+                    {t("performanceMode")}
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       )}

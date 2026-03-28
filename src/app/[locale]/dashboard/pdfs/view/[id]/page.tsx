@@ -40,7 +40,8 @@ export default function PdfViewPage() {
         // Update lastOpenedAt
         touchSheetLastOpened(id).catch(() => {});
       } catch (err) {
-        setError(String(err));
+        console.error("Failed to load PDF:", err);
+        setError("not_found");
       } finally {
         setLoading(false);
       }
@@ -59,8 +60,10 @@ export default function PdfViewPage() {
   if (error || !sheet) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] bg-zinc-950 text-white gap-4">
-        <p className="text-red-400">{error || "PDF not found"}</p>
-        <Link href="/dashboard/pdfs" className="text-indigo-400 hover:underline">
+        <div className="text-6xl mb-2">📄</div>
+        <p className="text-zinc-300 text-lg font-medium">{t("pdfNotFound")}</p>
+        <p className="text-zinc-500 text-sm max-w-md text-center">{t("pdfNotFoundDescription")}</p>
+        <Link href="/dashboard/pdfs" className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
           {t("backToLibrary")}
         </Link>
       </div>
@@ -68,24 +71,24 @@ export default function PdfViewPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col bg-zinc-950">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex-shrink-0">
+    <div className="h-[calc(100vh-4rem)] h-[calc(100dvh-4rem)] flex flex-col bg-zinc-950 overflow-hidden">
+      {/* Top bar — hidden on mobile to maximize viewer space */}
+      <header className="hidden sm:flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 flex-shrink-0 gap-2 min-h-[44px]">
         <Link
           href="/dashboard/pdfs"
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm"
+          className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors text-sm shrink-0"
         >
           <ChevronLeft className="w-4 h-4" />
-          {t("backToLibrary")}
+          <span>{t("backToLibrary")}</span>
         </Link>
-        <h1 className="text-sm font-medium text-white truncate max-w-md">
+        <h1 className="text-sm font-medium text-white truncate text-center flex-1 min-w-0">
           {sheet.title}
         </h1>
-        <div className="w-32" /> {/* Spacer for centering */}
+        <div className="w-24 shrink-0" />
       </header>
 
       {/* Viewer */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <PdfViewerCore pdfUrl={pdfUrl} pageCount={sheet.pageCount} title={sheet.title} />
       </div>
     </div>

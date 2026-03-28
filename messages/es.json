@@ -667,6 +667,17 @@
     "tapTempo": "Tap Tempo",
     "timeSignature": "Compás",
     "spreadView": "Vista doble página",
+    "viewMode": "Modo de vista",
+    "fitHeight": "Ajustar a la altura",
+    "pedalMode": "Pedal pasa-páginas",
+    "pedalDescription": "Usa un pedal Bluetooth para pasar páginas sin manos. Configura las teclas abajo.",
+    "addKey": "Agregar tecla",
+    "pressAnyKey": "Presiona cualquier tecla...",
+    "enablePedal": "Activar pedal",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "pdfNotFound": "PDF no encontrado",
+    "pdfNotFoundDescription": "Este documento no existe o no tienes permiso para verlo.",
     "files": "{count} archivos"
   }
 }

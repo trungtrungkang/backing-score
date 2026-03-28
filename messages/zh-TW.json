@@ -667,6 +667,17 @@
     "tapTempo": "敲擊設速",
     "timeSignature": "拍號",
     "spreadView": "雙頁檢視",
+    "viewMode": "檢視模式",
+    "fitHeight": "適合高度",
+    "pedalMode": "踏板翻頁",
+    "pedalDescription": "使用藍牙腳踏板免手翻頁。在下方配置按鍵映射。",
+    "addKey": "添加按鍵",
+    "pressAnyKey": "按任意鍵...",
+    "enablePedal": "啟用踏板",
+    "fullscreen": "全螢幕",
+    "exitFullscreen": "退出全螢幕",
+    "pdfNotFound": "找不到PDF",
+    "pdfNotFoundDescription": "該文件不存在或您沒有查看權限。",
     "files": "{count}個檔案"
   }
 }

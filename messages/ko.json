@@ -667,6 +667,17 @@
     "tapTempo": "탭 템포",
     "timeSignature": "박자",
     "spreadView": "2페이지 보기",
+    "viewMode": "보기 모드",
+    "fitHeight": "높이 맞춤",
+    "pedalMode": "페달 페이지 넘기기",
+    "pedalDescription": "블루투스 풋 페달로 핸즈프리 페이지 넘기기. 아래에서 키 매핑을 설정하세요.",
+    "addKey": "키 추가",
+    "pressAnyKey": "아무 키나 누르세요...",
+    "enablePedal": "페달 활성화",
+    "fullscreen": "전체 화면",
+    "exitFullscreen": "전체 화면 해제",
+    "pdfNotFound": "PDF를 찾을 수 없습니다",
+    "pdfNotFoundDescription": "이 문서가 존재하지 않거나 볼 수 있는 권한이 없습니다.",
     "files": "{count}개"
   }
 }

@@ -667,6 +667,17 @@
     "tapTempo": "Tap Tempo",
     "timeSignature": "Mesure",
     "spreadView": "Vue double page",
+    "viewMode": "Mode d'affichage",
+    "fitHeight": "Ajuster à la hauteur",
+    "pedalMode": "Pédale tourne-page",
+    "pedalDescription": "Utilisez une pédale Bluetooth pour tourner les pages sans les mains. Configurez les touches ci-dessous.",
+    "addKey": "Ajouter une touche",
+    "pressAnyKey": "Appuyez sur une touche...",
+    "enablePedal": "Activer la pédale",
+    "fullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran",
+    "pdfNotFound": "PDF introuvable",
+    "pdfNotFoundDescription": "Ce document n'existe pas ou vous n'avez pas la permission de le consulter.",
     "files": "{count} fichiers"
   }
 }
