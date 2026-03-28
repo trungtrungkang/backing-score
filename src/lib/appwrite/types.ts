@@ -329,3 +329,20 @@ export interface SheetMusicFolderDocument {
   order: number;
   parentFolderId?: string | null;
 }
+
+export interface SetlistDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  userId: string;
+  name: string;
+  // JSON stringified array of SetlistItem
+  items: string;
+}
+
+export interface SetlistItem {
+  sheetMusicId: string;
+  title: string;
+  pageCount: number;
+  // we do not store pdfUrl here because it expires, we fetch it dynamically
+}

@@ -23,6 +23,7 @@ import {
   Pencil,
   Trash2,
   Check,
+  ListMusic,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
@@ -649,6 +650,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
             specialNodes={[
               { key: "favorites", label: tPdfs("favorites"), icon: Bookmark, href: "/dashboard/pdfs?filter=favorites" },
               { key: "recent", label: tPdfs("recent"), icon: Clock, href: "/dashboard/pdfs?filter=recent" },
+              { key: "setlists", label: tPdfs("setlists") || "Setlists", icon: ListMusic, href: "/dashboard/pdfs/setlists" },
             ]}
             onDropSheet={onDropSheet}
             t={t}

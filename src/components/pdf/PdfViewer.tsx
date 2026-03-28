@@ -27,6 +27,8 @@ import {
   X,
   List,
   Route,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
 import Draggable from 'react-draggable';
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
@@ -41,9 +43,24 @@ interface PdfViewerProps {
   title: string;
   initialNavMap?: ParsedSheetNavMap | null;
   readOnlyMap?: boolean;
+  onNextSong?: () => void;
+  onPrevSong?: () => void;
+  hasNextSong?: boolean;
+  hasPrevSong?: boolean;
 }
 
-export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, initialNavMap, readOnlyMap = false }: PdfViewerProps) {
+export default function PdfViewer({ 
+  sheetMusicId, 
+  pdfUrl, 
+  pageCount, 
+  title, 
+  initialNavMap, 
+  readOnlyMap = false,
+  onNextSong,
+  onPrevSong,
+  hasNextSong,
+  hasPrevSong
+}: PdfViewerProps) {
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -57,11 +74,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
 
   // State
   const [numPages, setNumPages] = useState(pageCount);
-  const [currentPage, setCurrentPage] = useState(() => {
-    if (typeof window === "undefined") return 1;
-    const saved = localStorage.getItem(`pdf-lastpage-${title}`);
-    return saved ? Math.max(1, Math.min(Number(saved), pageCount)) : 1;
-  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1);
   const [containerWidth, setContainerWidth] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -89,6 +102,20 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
   const [autoScrolling, setAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(30);
   const lastTimeRef = useRef(0);
+
+  // Bulletproof state reset when PDF changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSpreadPairStart(1);
+    setAutoScrolling(false);
+    setPdfLoading(true);
+    setPdfError("");
+    setNumPages(pageCount);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+    // Note: Do not reset preferences like viewMode or scale, users prefer those to stick between songs
+  }, [pdfUrl, pageCount]);
 
   // Dark mode (invert PDF colors)
   const [darkMode, setDarkMode] = useState(false);
@@ -453,26 +480,13 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     return () => clearTimeout(timer);
   }, [numPages, renderPage, containerWidth, scale, pdfLoading, effectiveSpread, spreadPairStart]);
 
-  // Scroll to saved page on initial load
-  const hasRestored = useRef(false);
-  useEffect(() => {
-    if (pdfLoading || hasRestored.current) return;
-    hasRestored.current = true;
-    if (currentPage > 1) {
-      setTimeout(() => {
-        const el = document.getElementById(`pdf-page-${currentPage}`);
-        if (el) el.scrollIntoView({ block: "start" });
-      }, 200);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pdfLoading]);
+
 
   // Page navigation
   const goToPage = useCallback(
     (page: number, yPercent?: number) => {
       const clamped = Math.max(1, Math.min(page, numPages));
       setCurrentPage(clamped);
-      localStorage.setItem(`pdf-lastpage-${title}`, String(clamped));
       
       const el = document.getElementById(`pdf-page-${clamped}`);
       if (el && scrollRef.current) {
@@ -509,6 +523,12 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
 
   const jumpToNextSequenceIndex = () => {
     if (!navMap || navMap.sequence.length === 0 || bottomBarMode !== 'sequence') return;
+    
+    if (navSeqIndex === navMap.sequence.length - 1 && onNextSong) {
+      onNextSong();
+      return;
+    }
+
     const nextIdx = (navSeqIndex + 1) % navMap.sequence.length;
     setNavSeqIndex(nextIdx);
     const bmId = navMap.sequence[nextIdx];
@@ -518,6 +538,12 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
 
   const jumpToPrevSequenceIndex = () => {
     if (!navMap || navMap.sequence.length === 0 || bottomBarMode !== 'sequence') return;
+    
+    if (navSeqIndex === 0 && onPrevSong) {
+      onPrevSong();
+      return;
+    }
+
     const nextIdx = navSeqIndex - 1 < 0 ? navMap.sequence.length - 1 : navSeqIndex - 1;
     setNavSeqIndex(nextIdx);
     const bmId = navMap.sequence[nextIdx];
@@ -557,9 +583,15 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           }
         }
       }
+
+      if (el.scrollTop <= 20 && onPrevSong) {
+        onPrevSong();
+        return;
+      }
+
       el.scrollTo({ top: 0, behavior: autoScrolling ? "auto" : "smooth" });
     }
-  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling]);
+  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling, onPrevSong]);
 
   const nextPage = useCallback(() => {
     if (effectiveSpread) {
@@ -590,9 +622,23 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           }
         }
       }
+      
+      const lastPageEl = document.getElementById(`pdf-page-${numPages}`);
+      if (lastPageEl) {
+        const lastPageBottom = lastPageEl.getBoundingClientRect().bottom;
+        const containerBottom = el.getBoundingClientRect().bottom;
+        if (lastPageBottom <= containerBottom + 20) {
+          // Reached the absolute end of the PDF
+          if (onNextSong) {
+            onNextSong();
+            return;
+          }
+        }
+      }
+
       el.scrollTo({ top: el.scrollHeight, behavior: autoScrolling ? "auto" : "smooth" });
     }
-  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling]);
+  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling, onNextSong]);
 
   // Zoom
   const zoomIn = () => { if (viewMode === 'fitWidth') setScale((s) => Math.min(s + 0.25, 3)); };
@@ -672,8 +718,9 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     if (!el) return;
     const handleScroll = () => {
       let newPage = 1;
-      // If scrolled to bottom, force last page
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+      // If scrolled to bottom, force last page (only if scrollable)
+      const isScrollable = el.scrollHeight > el.clientHeight + 10;
+      const atBottom = isScrollable && el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
       if (atBottom) {
         newPage = numPages;
       } else {
@@ -689,13 +736,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         }
       }
       
-      setCurrentPage((prev) => {
-        if (prev !== newPage) {
-          localStorage.setItem(`pdf-lastpage-${title}`, String(newPage));
-          return newPage;
-        }
-        return prev;
-      });
+      setCurrentPage(newPage);
 
       // Update Y percent if NavMap panel is open to avoid unnecessary rendering loops when closed
       if (showNavMapPanel) {
@@ -935,9 +976,19 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none">
           {/* Left group: Page nav */}
           <div className="flex items-center gap-1 shrink-0">
+            {hasPrevSong !== undefined && (
+              <button
+                onClick={() => onPrevSong?.()}
+                disabled={!hasPrevSong}
+                className={`p-1.5 mr-1 rounded-md transition-colors ${!hasPrevSong ? 'text-zinc-700 opacity-50' : 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'}`}
+                title="Previous Song"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={prevPage}
-              disabled={effectiveSpread ? spreadPairStart <= 1 : (currentPage <= 1 && !halfPageTurn)}
+              disabled={(effectiveSpread ? spreadPairStart <= 1 : (currentPage <= 1 && !halfPageTurn)) && !hasPrevSong}
               className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -949,11 +1000,21 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
             </span>
             <button
               onClick={nextPage}
-              disabled={effectiveSpread ? spreadPairStart + 1 >= numPages : (currentPage >= numPages && !halfPageTurn)}
+              disabled={(effectiveSpread ? spreadPairStart + 1 >= numPages : (currentPage >= numPages && !halfPageTurn)) && !hasNextSong}
               className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
+            {hasNextSong !== undefined && (
+              <button
+                onClick={() => onNextSong?.()}
+                disabled={!hasNextSong}
+                className={`p-1.5 ml-1 rounded-md transition-colors ${!hasNextSong ? 'text-zinc-700 opacity-50' : 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'}`}
+                title="Next Song"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Center group: Zoom + View mode */}

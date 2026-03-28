@@ -166,3 +166,12 @@ export {
   saveNavMap,
   deleteNavMap,
 } from "./nav-maps";
+
+export type { SetlistDocument, SetlistItem } from "./types";
+export {
+  createSetlist,
+  getSetlist,
+  listMySetlists,
+  updateSetlist,
+  deleteSetlist,
+} from "./setlists";

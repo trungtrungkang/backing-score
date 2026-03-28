@@ -42,6 +42,7 @@ export const APPWRITE_PROJECT_FOLDERS_COLLECTION_ID = "project_folders";
 export const APPWRITE_SHEET_MUSIC_COLLECTION_ID = "sheet_music";
 export const APPWRITE_SHEET_MUSIC_FOLDERS_COLLECTION_ID = "sheet_music_folders";
 export const APPWRITE_SHEET_PDFS_BUCKET_ID = "sheet_pdfs";
+export const APPWRITE_SETLISTS_COLLECTION_ID = "setlists";
 
 export function isAppwriteConfigured(): boolean {
   return !!(
