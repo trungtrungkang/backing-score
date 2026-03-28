@@ -747,6 +747,14 @@
     "files": "{count} files",
     "darkModePdf": "Dark Mode",
     "lightMode": "Light Mode",
-    "back": "Back"
+    "back": "Back",
+    "shareToClassroom": "Share to Classroom",
+    "sharedToClassroom": "Shared to classroom!",
+    "alreadyShared": "Already shared to this classroom",
+    "shareToClassroomFailed": "Failed to share",
+    "shareNote": "Note (optional)",
+    "shareNotePlaceholder": "e.g., Practice pages 2–3",
+    "selectClassroom": "Select classroom",
+    "noClassrooms": "No classrooms found"
   }
 }

@@ -702,6 +702,14 @@
     "pdfNotFound": "PDF를 찾을 수 없습니다",
     "pdfNotFoundDescription": "이 문서가 존재하지 않거나 볼 수 있는 권한이 없습니다.",
     "files": "{count}개",
-    "back": "뒤로"
+    "back": "뒤로",
+    "shareToClassroom": "클래스에 공유",
+    "sharedToClassroom": "공유됨!",
+    "alreadyShared": "이미 공유됨",
+    "shareToClassroomFailed": "공유 실패",
+    "shareNote": "메모 (선택)",
+    "shareNotePlaceholder": "예: 2~3페이지",
+    "selectClassroom": "클래스 선택",
+    "noClassrooms": "클래스 없음"
   }
 }

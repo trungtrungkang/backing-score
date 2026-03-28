@@ -702,6 +702,14 @@
     "pdfNotFound": "PDF introuvable",
     "pdfNotFoundDescription": "Ce document n'existe pas ou vous n'avez pas la permission de le consulter.",
     "files": "{count} fichiers",
-    "back": "Retour"
+    "back": "Retour",
+    "shareToClassroom": "Partager avec la classe",
+    "sharedToClassroom": "Partagé !",
+    "alreadyShared": "Déjà partagé",
+    "shareToClassroomFailed": "Échec du partage",
+    "shareNote": "Note (optionnel)",
+    "shareNotePlaceholder": "ex. Pages 2–3",
+    "selectClassroom": "Sélectionner la classe",
+    "noClassrooms": "Aucune classe"
   }
 }

@@ -702,6 +702,14 @@
     "pdfNotFound": "PDF nicht gefunden",
     "pdfNotFoundDescription": "Dieses Dokument existiert nicht oder Sie haben keine Berechtigung, es anzusehen.",
     "files": "{count} Dateien",
-    "back": "Zurück"
+    "back": "Zurück",
+    "shareToClassroom": "Mit Klasse teilen",
+    "sharedToClassroom": "Geteilt!",
+    "alreadyShared": "Bereits geteilt",
+    "shareToClassroomFailed": "Teilen fehlgeschlagen",
+    "shareNote": "Notiz (optional)",
+    "shareNotePlaceholder": "z.B. Seiten 2–3 üben",
+    "selectClassroom": "Klasse wählen",
+    "noClassrooms": "Keine Klassen"
   }
 }

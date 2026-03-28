@@ -30,8 +30,11 @@ import {
   uploadSheetPdf,
   getThumbnailUrl,
   backfillThumbnails,
+  listMyClassrooms,
+  shareToClassroom,
   type SheetMusicDocument,
   type SheetMusicFolderDocument,
+  type ClassroomDocument,
 } from "@/lib/appwrite";
 import { extractPdfMetadata } from "@/lib/pdf-utils";
 import {
@@ -57,6 +60,8 @@ import {
   Eye,
   Grid3X3,
   PanelLeftOpen,
+  Share2,
+  GraduationCap,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -174,6 +179,14 @@ export default function PdfsLibraryPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [backfillProgress, setBackfillProgress] = useState("");
+
+  // Classroom share state
+  const [shareDialogSheet, setShareDialogSheet] = useState<SheetMusicDocument | null>(null);
+  const [myClassrooms, setMyClassrooms] = useState<ClassroomDocument[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
+  const [classroomsLoading, setClassroomsLoading] = useState(false);
+  const [sharingToClassroom, setSharingToClassroom] = useState(false);
+  const [classroomShareNote, setClassroomShareNote] = useState("");
 
   // Load data
   const loadData = useCallback(async () => {
@@ -353,6 +366,45 @@ export default function PdfsLibraryPage() {
       loadData();
     } catch (err) {
       toast.error(String(err));
+    }
+  };
+
+  // Open share-to-classroom dialog
+  const openShareToClassroom = async (sheet: SheetMusicDocument) => {
+    setShareDialogSheet(sheet);
+    setClassroomShareNote("");
+    if (!classroomsLoaded) {
+      setClassroomsLoading(true);
+      try {
+        const classrooms = await listMyClassrooms();
+        // Only show classrooms where user is teacher
+        setMyClassrooms(classrooms);
+        setClassroomsLoaded(true);
+      } catch { /* best-effort */ }
+      setClassroomsLoading(false);
+    }
+  };
+
+  const handleShareToClassroom = async (classroomId: string) => {
+    if (!shareDialogSheet || sharingToClassroom) return;
+    setSharingToClassroom(true);
+    try {
+      await shareToClassroom({
+        classroomId,
+        sheetMusicId: shareDialogSheet.$id,
+        note: classroomShareNote.trim() || undefined,
+      });
+      toast.success(t("sharedToClassroom"));
+      setShareDialogSheet(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("already shared")) {
+        toast.error(t("alreadyShared"));
+      } else {
+        toast.error(t("shareToClassroomFailed"));
+      }
+    } finally {
+      setSharingToClassroom(false);
     }
   };
 
@@ -728,6 +780,17 @@ export default function PdfsLibraryPage() {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
+                                openShareToClassroom(sheet);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Share2 className="w-4 h-4" />
+                              {t("shareToClassroom")}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleDeleteSheet(sheet.$id);
                               }}
                               className="flex items-center gap-2 cursor-pointer text-red-500 focus:text-red-500"
@@ -809,6 +872,16 @@ export default function PdfsLibraryPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
+                            openShareToClassroom(sheet);
+                          }}
+                        >
+                          <Share2 className="w-4 h-4 mr-2" />
+                          {t("shareToClassroom")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleDeleteSheet(sheet.$id);
                           }}
                           className="text-red-500"
@@ -845,6 +918,74 @@ export default function PdfsLibraryPage() {
           }}
         />
       </main>
+
+      {/* Share to Classroom Dialog */}
+      {shareDialogSheet && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShareDialogSheet(null)}>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-zinc-900 dark:text-white">{t("shareToClassroom")}</h3>
+              <button onClick={() => setShareDialogSheet(null)} className="text-zinc-400 hover:text-zinc-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Selected PDF info */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-4">
+              <FileText className="w-5 h-5 text-indigo-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{shareDialogSheet.title}</div>
+                <div className="text-xs text-zinc-500">{shareDialogSheet.pageCount} {t("pages", { count: shareDialogSheet.pageCount })}</div>
+              </div>
+            </div>
+
+            {/* Note input */}
+            <div className="mb-4">
+              <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("shareNote")}</label>
+              <input
+                value={classroomShareNote}
+                onChange={(e) => setClassroomShareNote(e.target.value)}
+                placeholder={t("shareNotePlaceholder")}
+                className="w-full h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            {/* Classroom list */}
+            <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-2 block">{t("selectClassroom")}</label>
+            <div className="max-h-48 overflow-auto space-y-2">
+              {classroomsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+                </div>
+              ) : myClassrooms.length === 0 ? (
+                <p className="text-sm text-zinc-500 text-center py-6">{t("noClassrooms")}</p>
+              ) : (
+                myClassrooms.map((cr) => (
+                  <button
+                    key={cr.$id}
+                    onClick={() => handleShareToClassroom(cr.$id)}
+                    disabled={sharingToClassroom}
+                    className="w-full text-left flex items-center gap-3 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-colors"
+                  >
+                    <GraduationCap className="w-5 h-5 text-indigo-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{cr.name}</div>
+                      {cr.instrumentFocus && (
+                        <div className="text-xs text-zinc-500">{cr.instrumentFocus}</div>
+                      )}
+                    </div>
+                    {sharingToClassroom ? (
+                      <Loader2 className="w-4 h-4 text-zinc-400 animate-spin shrink-0" />
+                    ) : (
+                      <Share2 className="w-4 h-4 text-zinc-400 shrink-0" />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

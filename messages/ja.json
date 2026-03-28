@@ -702,6 +702,14 @@
     "pdfNotFound": "PDFが見つかりません",
     "pdfNotFoundDescription": "このドキュメントは存在しないか、閲覧権限がありません。",
     "files": "{count}件",
-    "back": "戻る"
+    "back": "戻る",
+    "shareToClassroom": "クラスに共有",
+    "sharedToClassroom": "共有しました！",
+    "alreadyShared": "既に共有済み",
+    "shareToClassroomFailed": "共有に失敗",
+    "shareNote": "メモ（任意）",
+    "shareNotePlaceholder": "例：2〜3ページを練習",
+    "selectClassroom": "クラスを選択",
+    "noClassrooms": "クラスなし"
   }
 }

@@ -713,6 +713,14 @@
     "pdfNotFound": "Không tìm thấy PDF",
     "pdfNotFoundDescription": "Tài liệu này không tồn tại hoặc bạn không có quyền xem.",
     "files": "{count} tệp",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "shareToClassroom": "Chia sẻ cho lớp",
+    "sharedToClassroom": "Đã chia sẻ!",
+    "alreadyShared": "Đã chia sẻ cho lớp này",
+    "shareToClassroomFailed": "Chia sẻ thất bại",
+    "shareNote": "Ghi chú (tùy chọn)",
+    "shareNotePlaceholder": "VD: Luyện trang 2–3",
+    "selectClassroom": "Chọn lớp học",
+    "noClassrooms": "Không tìm thấy lớp"
   }
 }

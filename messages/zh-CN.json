@@ -702,6 +702,14 @@
     "pdfNotFound": "找不到PDF",
     "pdfNotFoundDescription": "该文档不存在或您没有查看权限。",
     "files": "{count}个文件",
-    "back": "返回"
+    "back": "返回",
+    "shareToClassroom": "分享到班级",
+    "sharedToClassroom": "已分享！",
+    "alreadyShared": "已分享过",
+    "shareToClassroomFailed": "分享失败",
+    "shareNote": "备注（可选）",
+    "shareNotePlaceholder": "如：练习第2-3页",
+    "selectClassroom": "选择班级",
+    "noClassrooms": "没有班级"
   }
 }
