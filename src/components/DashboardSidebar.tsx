@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDialogs } from "@/components/ui/dialog-provider";
 import {
   listProjectFolders,
   listSheetFolders,
@@ -66,6 +67,7 @@ function FolderTreeNode({
   onRenameFolder: (folderId: string, newName: string) => Promise<void>;
 }) {
   const router = useRouter();
+  const { confirm } = useDialogs();
   const children = allFolders.filter((f) => f.parentFolderId === folder.$id);
   const hasChildren = children.length > 0;
   const isActive = sectionActive && activeFolderId === folder.$id;
@@ -106,6 +108,15 @@ function FolderTreeNode({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = async () => {
+    setShowMenu(false);
+    const ok = await confirm({
+      title: "Delete folder",
+      description: `Delete "${folder.name}" and all its contents? This cannot be undone.`,
+    });
+    if (ok) await onDeleteFolder(folder.$id);
   };
 
   const canCreateChild = depth < MAX_DEPTH;
@@ -191,7 +202,7 @@ function FolderTreeNode({
             </button>
             {showMenu && (
               <div
-                className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg py-1 z-50 min-w-[120px]"
+                className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg py-1 z-50 whitespace-nowrap"
                 onMouseLeave={() => setShowMenu(false)}
               >
                 {canCreateChild && (
@@ -221,12 +232,9 @@ function FolderTreeNode({
                   Rename
                 </button>
                 <button
-                  onClick={async (e) => {
+                  onClick={(e) => {
                     e.stopPropagation();
-                    setShowMenu(false);
-                    if (confirm("Delete this folder and all its contents?")) {
-                      await onDeleteFolder(folder.$id);
-                    }
+                    handleDelete();
                   }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
