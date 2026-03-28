@@ -152,7 +152,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   useEffect(() => {
     if (!metronomeOn) {
       if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current.close().catch(() => { });
         audioCtxRef.current = null;
       }
       cancelAnimationFrame(metronomeTimerRef.current);
@@ -198,7 +198,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
     return () => {
       clearTimeout(metronomeTimerRef.current);
-      ctx.close().catch(() => {});
+      ctx.close().catch(() => { });
       audioCtxRef.current = null;
     };
   }, [metronomeOn, bpm, timeSignature]);
@@ -215,6 +215,36 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     });
     observer.observe(el);
     return () => observer.disconnect();
+  }, []);
+
+  // Lock body scroll to prevent iOS Safari outer scroll
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+
+    // Save original styles
+    const origHtmlOverflow = html.style.overflow;
+    const origBodyOverflow = body.style.overflow;
+    const origBodyPosition = body.style.position;
+    const origBodyTop = body.style.top;
+    const origBodyWidth = body.style.width;
+
+    // Lock scroll — position:fixed is required for iOS Safari
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+
+    return () => {
+      html.style.overflow = origHtmlOverflow;
+      body.style.overflow = origBodyOverflow;
+      body.style.position = origBodyPosition;
+      body.style.top = origBodyTop;
+      body.style.width = origBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
   }, []);
 
   // Load PDF document
@@ -398,33 +428,61 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   const prevPage = useCallback(() => {
     if (effectiveSpread) {
       setSpreadPairStart((s) => Math.max(1, s - 2));
-    } else if (halfPageTurn && scrollRef.current) {
-      scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: "smooth" });
-    } else if (currentPage <= 1 && scrollRef.current) {
-      scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight, behavior: "smooth" });
-    } else if (!isPageAligned(currentPage)) {
-      // Current page not aligned — scroll to align it first
-      goToPage(currentPage);
-    } else {
-      goToPage(currentPage - 1);
+    } else if (scrollRef.current) {
+      if (halfPageTurn) {
+        if (scrollRef.current.scrollTop <= 0) return; // already at top
+        scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: "smooth" });
+        return;
+      }
+      // Find the previous page to scroll to
+      const el = scrollRef.current;
+      const containerTop = el.getBoundingClientRect().top;
+      for (let i = numPages; i >= 1; i--) {
+        const pageEl = document.getElementById(`pdf-page-${i}`);
+        if (pageEl) {
+          const pageTop = pageEl.getBoundingClientRect().top;
+          if (pageTop < containerTop - 10) {
+            pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
+        }
+      }
+      el.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [currentPage, goToPage, halfPageTurn, effectiveSpread, isPageAligned]);
+  }, [halfPageTurn, effectiveSpread, numPages]);
 
   const nextPage = useCallback(() => {
     if (effectiveSpread) {
       setSpreadPairStart((s) => Math.min(numPages, s + 2));
-    } else if (halfPageTurn && scrollRef.current) {
-      scrollRef.current.scrollBy({ top: scrollRef.current.clientHeight / 2, behavior: "smooth" });
-    } else if (currentPage >= numPages && scrollRef.current) {
-      // Already on last page — scroll down by one viewport height
-      scrollRef.current.scrollBy({ top: scrollRef.current.clientHeight, behavior: "smooth" });
-    } else if (!isPageAligned(currentPage)) {
-      // Current page not aligned — scroll to align it first
-      goToPage(currentPage);
-    } else {
-      goToPage(currentPage + 1);
+    } else if (scrollRef.current) {
+      if (halfPageTurn) {
+        const el = scrollRef.current;
+        // Find the bottom of the last page to limit scrolling
+        const lastPageEl = document.getElementById(`pdf-page-${numPages}`);
+        if (lastPageEl) {
+          const lastPageBottom = lastPageEl.getBoundingClientRect().bottom;
+          const containerBottom = el.getBoundingClientRect().bottom;
+          if (lastPageBottom <= containerBottom) return; // already showing all content
+        }
+        el.scrollBy({ top: el.clientHeight / 2, behavior: "smooth" });
+        return;
+      }
+      // Find the next page to scroll to
+      const el = scrollRef.current;
+      const containerTop = el.getBoundingClientRect().top;
+      for (let i = 1; i <= numPages; i++) {
+        const pageEl = document.getElementById(`pdf-page-${i}`);
+        if (pageEl) {
+          const pageTop = pageEl.getBoundingClientRect().top;
+          if (pageTop > containerTop + 10) {
+            pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
+        }
+      }
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }
-  }, [currentPage, goToPage, halfPageTurn, effectiveSpread, numPages, isPageAligned]);
+  }, [halfPageTurn, effectiveSpread, numPages]);
 
   // Zoom
   const zoomIn = () => { if (viewMode === 'fitWidth') setScale((s) => Math.min(s + 0.25, 3)); };
@@ -480,7 +538,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   // Performance mode
   const togglePerformanceMode = () => {
     if (!performanceMode) {
-      if (canNativeFs) containerRef.current?.requestFullscreen().catch(() => {});
+      if (canNativeFs) containerRef.current?.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
       setPerformanceMode(true);
     } else {
@@ -493,25 +551,34 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     const el = scrollRef.current;
     if (!el) return;
     const handleScroll = () => {
-      let newPage = currentPage;
-      for (let i = 1; i <= numPages; i++) {
-        const pageEl = document.getElementById(`pdf-page-${i}`);
-        if (pageEl) {
-          const rect = pageEl.getBoundingClientRect();
-          const containerRect = el.getBoundingClientRect();
-          if (rect.top <= containerRect.top + containerRect.height / 3) {
-            newPage = i;
+      let newPage = 1;
+      // If scrolled to bottom, force last page
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+      if (atBottom) {
+        newPage = numPages;
+      } else {
+        for (let i = 1; i <= numPages; i++) {
+          const pageEl = document.getElementById(`pdf-page-${i}`);
+          if (pageEl) {
+            const rect = pageEl.getBoundingClientRect();
+            const containerRect = el.getBoundingClientRect();
+            if (rect.top <= containerRect.top + containerRect.height / 3) {
+              newPage = i;
+            }
           }
         }
       }
-      if (newPage !== currentPage) {
-        setCurrentPage(newPage);
-        localStorage.setItem(`pdf-lastpage-${title}`, String(newPage));
-      }
+      setCurrentPage((prev) => {
+        if (prev !== newPage) {
+          localStorage.setItem(`pdf-lastpage-${title}`, String(newPage));
+          return newPage;
+        }
+        return prev;
+      });
     };
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
-  }, [numPages]);
+  }, [numPages, title]);
 
   // Keyboard shortcuts + pedal
   useEffect(() => {
@@ -596,6 +663,35 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey]);
 
+  // Swipe gesture for page navigation on touch devices
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartRef.current.x;
+      const dy = touch.clientY - touchStartRef.current.y;
+      touchStartRef.current = null;
+      // Only trigger if horizontal swipe > 50px and more horizontal than vertical
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) nextPage();  // swipe left → next
+        else prevPage();         // swipe right → prev
+      }
+    };
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [nextPage, prevPage]);
+
   // Performance mode tap
   const handlePerformanceTap = () => {
     if (!performanceMode) return;
@@ -607,9 +703,19 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
       ref={containerRef}
       className={`flex flex-col h-full bg-zinc-950 ${performanceMode ? "cursor-none" : ""} ${isFullscreen && !canNativeFs ? "fixed inset-0 z-[9999]" : ""}`}
     >
+      {/* Floating exit fullscreen button for touch devices */}
+      {isFullscreen && (
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+          className="fixed top-3 right-3 z-[10000] p-2 rounded-full bg-black/50 text-white/30 hover:text-white hover:bg-black/80 active:text-white active:bg-black/80 transition-all backdrop-blur-sm"
+          title="Exit fullscreen"
+        >
+          <Minimize className="w-5 h-5" />
+        </button>
+      )}
       {/* Scroll container */}
-      <div ref={scrollRef} className={`flex-1 min-h-0 ${effectiveSpread ? 'overflow-hidden' : 'overflow-auto'}`} onClick={handlePerformanceTap}>
-        <div className={`flex flex-col items-center ${effectiveSpread ? 'h-full' : 'py-4 gap-4'}`}>
+      <div ref={scrollRef} className={`flex-1 min-h-0 ${effectiveSpread ? 'overflow-hidden' : 'overflow-auto'} ${!performanceMode ? 'pb-28 sm:pb-14' : ''}`} onClick={handlePerformanceTap}>
+        <div className={`flex flex-col items-center ${effectiveSpread ? 'h-full' : 'py-0 gap-4'}`}>
           {pdfLoading && (
             <div className="flex items-center justify-center h-[60vh]">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
@@ -669,7 +775,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
       {/* Bottom toolbar */}
       {!performanceMode && (
-        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 flex-shrink-0 select-none">
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none">
           {/* Left group: Page nav */}
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -833,7 +939,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs text-zinc-400">{t("timeSignature")}</span>
                     <div className="flex gap-1">
-                      {([[2,4],[3,4],[4,4],[6,8]] as [number,number][]).map(([n,d]) => (
+                      {([[2, 4], [3, 4], [4, 4], [6, 8]] as [number, number][]).map(([n, d]) => (
                         <button key={`${n}/${d}`} onClick={() => setTimeSignature([n, d])} className={`px-2 py-1 rounded text-xs font-mono transition-colors ${timeSignature[0] === n && timeSignature[1] === d ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>{n}/{d}</button>
                       ))}
                     </div>
