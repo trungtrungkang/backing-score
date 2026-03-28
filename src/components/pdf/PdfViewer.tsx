@@ -490,16 +490,24 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   const fitWidth = () => { setViewMode('fitWidth'); setScale(1); setShowViewMenu(false); };
 
   // Auto-scroll
+  const scrollAccumulator = useRef(0);
   useEffect(() => {
     if (!autoScrolling || !scrollRef.current) {
       cancelAnimationFrame(autoScrollRAF.current);
+      scrollAccumulator.current = 0;
       return;
     }
     lastTimeRef.current = performance.now();
     const tick = (now: number) => {
       const delta = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
-      if (scrollRef.current) scrollRef.current.scrollTop += scrollSpeed * delta;
+      // Accumulate fractional pixels — mobile browsers ignore sub-pixel scrollTop
+      scrollAccumulator.current += scrollSpeed * delta;
+      if (scrollAccumulator.current >= 1 && scrollRef.current) {
+        const px = Math.floor(scrollAccumulator.current);
+        scrollRef.current.scrollTop += px;
+        scrollAccumulator.current -= px;
+      }
       autoScrollRAF.current = requestAnimationFrame(tick);
     };
     autoScrollRAF.current = requestAnimationFrame(tick);
@@ -843,40 +851,37 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
           {/* Right group: Feature toggles */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* === Desktop-only features (hidden on mobile, shown in three-dot menu) === */}
-            <div className="hidden sm:contents">
-              {/* Half-page turn */}
-              <button
-                onClick={() => setHalfPageTurn((v) => !v)}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${halfPageTurn ? "bg-amber-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                title={t("halfPageTurn")}
-              >
-                <ChevronsUp className="w-3.5 h-3.5" />½
-              </button>
+            {/* Half-page turn (desktop only) */}
+            <button
+              onClick={() => setHalfPageTurn((v) => !v)}
+              className={`hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${halfPageTurn ? "bg-amber-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+              title={t("halfPageTurn")}
+            >
+              <ChevronsUp className="w-3.5 h-3.5" />½
+            </button>
 
-              {/* Page-turn pedal */}
-              <Popover open={showPedalPanel && !pedalEnabled} onOpenChange={(open) => { if (!open) setShowPedalPanel(false); }}>
-                <PopoverTrigger asChild>
-                  <button
-                    onClick={() => {
-                      if (pedalEnabled) { setPedalEnabled(false); setShowPedalPanel(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'false'); }
-                      else setShowPedalPanel((v) => !v);
-                    }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-all ${pedalEnabled ? pedalFlash ? "bg-emerald-400 text-black scale-105" : "bg-emerald-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                    title={t("pedalMode")}
-                  >
-                    <Footprints className="w-3.5 h-3.5" />
-                    {pedalEnabled && <span className={`w-1.5 h-1.5 rounded-full transition-colors ${pedalFlash ? 'bg-white' : 'bg-emerald-300'}`} />}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[240px] p-3 bg-zinc-900 border-zinc-700">
+            {/* Page-turn pedal — always visible */}
+            <Popover open={showPedalPanel && !pedalEnabled} onOpenChange={(open) => { if (!open) setShowPedalPanel(false); }}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={() => {
+                    if (pedalEnabled) { setPedalEnabled(false); setShowPedalPanel(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'false'); }
+                    else setShowPedalPanel((v) => !v);
+                  }}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-xs transition-all ${pedalEnabled ? pedalFlash ? "bg-emerald-400 text-black scale-105" : "bg-emerald-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                  title={t("pedalMode")}
+                >
+                  <Footprints className="w-3.5 h-3.5" />
+                  {pedalEnabled && <span className={`w-1.5 h-1.5 rounded-full transition-colors ${pedalFlash ? 'bg-white' : 'bg-emerald-300'}`} />}
+                </button>
+              </PopoverTrigger>
+                <PopoverContent side="top" align="end" collisionPadding={16} className="w-[200px] p-3 bg-zinc-900 border-zinc-700">
                   <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("pedalMode")}</div>
-                  <p className="text-[11px] text-zinc-400 mb-3">{t("pedalDescription")}</p>
                   <div className="mb-2">
                     <div className="text-[10px] text-zinc-500 mb-1">{t("next")} →</div>
                     <div className="flex flex-wrap gap-1 mb-1">
                       {pedalNextKeys.map((k) => (
-                        <span key={k} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-300 font-mono">
+                        <span key={k} className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-zinc-800 rounded text-[9px] text-zinc-300 font-mono">
                           {k}
                           <button onClick={() => { const updated = pedalNextKeys.filter((x) => x !== k); setPedalNextKeys(updated); localStorage.setItem(`${pedalStorageKey}-next`, JSON.stringify(updated)); }} className="text-zinc-500 hover:text-red-400 ml-0.5">×</button>
                         </span>
@@ -890,7 +895,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                     <div className="text-[10px] text-zinc-500 mb-1">← {t("prev")}</div>
                     <div className="flex flex-wrap gap-1 mb-1">
                       {pedalPrevKeys.map((k) => (
-                        <span key={k} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-300 font-mono">
+                        <span key={k} className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-zinc-800 rounded text-[9px] text-zinc-300 font-mono">
                           {k}
                           <button onClick={() => { const updated = pedalPrevKeys.filter((x) => x !== k); setPedalPrevKeys(updated); localStorage.setItem(`${pedalStorageKey}-prev`, JSON.stringify(updated)); }} className="text-zinc-500 hover:text-red-400 ml-0.5">×</button>
                         </span>
@@ -904,50 +909,50 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                     ▶ {t("enablePedal")}
                   </button>
                 </PopoverContent>
-              </Popover>
+            </Popover>
 
-              {/* Metronome */}
-              <Popover open={showMetronomePanel && !metronomeOn} onOpenChange={(open) => { if (!open) setShowMetronomePanel(false); }}>
-                <PopoverTrigger asChild>
-                  <button
-                    onClick={() => {
-                      if (!metronomeOn) setShowMetronomePanel((v) => !v);
-                      else { setMetronomeOn(false); setShowMetronomePanel(false); }
-                    }}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
-                    title={t("metronome")}
-                  >
-                    <Timer className="w-3.5 h-3.5" />
-                    {metronomeOn && <span className="font-mono">{bpm}</span>}
-                    {metronomeOn && (
-                      <span className="flex gap-0.5 ml-1">
-                        {Array.from({ length: timeSignature[0] }, (_, i) => (
-                          <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentBeat ? (i === 0 ? "bg-amber-400 scale-125" : "bg-white scale-110") : "bg-zinc-600"}`} />
-                        ))}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[200px] p-3 bg-zinc-900 border-zinc-700">
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("metronome")}</div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-zinc-400 w-8">{t("bpm")}</span>
-                    <input type="range" min={40} max={240} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-1.5 accent-indigo-500" />
-                    <input type="number" min={40} max={240} value={bpm} onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value))))} className="w-14 bg-zinc-800 text-white text-xs text-center rounded px-1 py-1 border border-zinc-700 font-mono" />
-                  </div>
-                  <button onClick={handleTapTempo} className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors">{t("tapTempo")}</button>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-zinc-400">{t("timeSignature")}</span>
-                    <div className="flex gap-1">
-                      {([[2, 4], [3, 4], [4, 4], [6, 8]] as [number, number][]).map(([n, d]) => (
-                        <button key={`${n}/${d}`} onClick={() => setTimeSignature([n, d])} className={`px-2 py-1 rounded text-xs font-mono transition-colors ${timeSignature[0] === n && timeSignature[1] === d ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>{n}/{d}</button>
+            {/* Metronome — always visible */}
+            <Popover open={showMetronomePanel && !metronomeOn} onOpenChange={(open) => { if (!open) setShowMetronomePanel(false); }}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={() => {
+                    if (!metronomeOn) setShowMetronomePanel((v) => !v);
+                    else { setMetronomeOn(false); setShowMetronomePanel(false); }
+                  }}
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                  title={t("metronome")}
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                  {metronomeOn && <span className="font-mono">{bpm}</span>}
+                  {metronomeOn && (
+                    <span className="flex gap-0.5 ml-1">
+                      {Array.from({ length: timeSignature[0] }, (_, i) => (
+                        <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentBeat ? (i === 0 ? "bg-amber-400 scale-125" : "bg-white scale-110") : "bg-zinc-600"}`} />
                       ))}
-                    </div>
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[200px] p-3 bg-zinc-900 border-zinc-700">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("metronome")}</div>
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span className="text-xs text-zinc-400">{t("bpm")}</span>
+                  <button onClick={() => setBpm((b) => Math.max(40, b - 5))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">−</button>
+                  <span className="text-lg font-mono text-white w-10 text-center">{bpm}</span>
+                  <button onClick={() => setBpm((b) => Math.min(240, b + 5))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">+</button>
+                </div>
+                <button onClick={handleTapTempo} className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors">{t("tapTempo")}</button>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs text-zinc-400">{t("timeSignature")}</span>
+                  <div className="flex gap-1">
+                    {([[2, 4], [3, 4], [4, 4], [6, 8]] as [number, number][]).map(([n, d]) => (
+                      <button key={`${n}/${d}`} onClick={() => setTimeSignature([n, d])} className={`px-2 py-1 rounded text-xs font-mono transition-colors ${timeSignature[0] === n && timeSignature[1] === d ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>{n}/{d}</button>
+                    ))}
                   </div>
-                  <button onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }} className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors">▶ Start</button>
-                </PopoverContent>
-              </Popover>
-            </div>
+                </div>
+                <button onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }} className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors">▶ Start</button>
+              </PopoverContent>
+            </Popover>
 
             {/* === Always visible === */}
             {/* Bookmark */}
@@ -1004,8 +1009,8 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
               </Popover>
             </div>
 
-            {/* Auto-scroll */}
-            <div className="flex items-center gap-1">
+            {/* Auto-scroll (desktop only, in three-dot on mobile) */}
+            <div className="hidden sm:flex items-center gap-1">
               <button
                 onClick={() => setAutoScrolling((v) => !v)}
                 className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${autoScrolling ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
@@ -1015,7 +1020,11 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                 Auto
               </button>
               {autoScrolling && (
-                <input type="range" min={5} max={150} value={scrollSpeed} onChange={(e) => setScrollSpeed(Number(e.target.value))} className="w-20 h-1 accent-indigo-500" title={t("speed")} />
+                <div className="flex items-center gap-0.5">
+                  <button onClick={() => setScrollSpeed((s) => Math.max(5, s - 5))} className="px-1 py-0.5 rounded text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">−</button>
+                  <span className="text-xs text-zinc-400 font-mono w-6 text-center">{scrollSpeed}</span>
+                  <button onClick={() => setScrollSpeed((s) => Math.min(150, s + 5))} className="px-1 py-0.5 rounded text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">+</button>
+                </div>
               )}
             </div>
 
@@ -1026,9 +1035,26 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                   <MoreVertical className="w-4 h-4" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[180px] p-0 bg-zinc-900 border-zinc-700">
+              <PopoverContent side="top" align="end" collisionPadding={8} className="w-auto min-w-[200px] p-0 bg-zinc-900 border-zinc-700">
                 <div className="py-1">
-                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t("viewMode")}</div>
+                  {/* Auto-scroll */}
+                  <div className="px-3 py-1.5">
+                    <button
+                      onClick={() => setAutoScrolling((v) => !v)}
+                      className={`w-full text-left text-xs flex items-center gap-2 mb-1.5 ${autoScrolling ? 'text-indigo-400 font-semibold' : 'text-zinc-300'}`}
+                    >
+                      {autoScrolling ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      {t("autoScroll")} {autoScrolling && "✓"}
+                    </button>
+                    {autoScrolling && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <button onClick={() => setScrollSpeed((s) => Math.max(5, s - 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">−</button>
+                        <span className="text-xs text-zinc-400 font-mono flex-1 text-center">{scrollSpeed}</span>
+                        <button onClick={() => setScrollSpeed((s) => Math.min(150, s + 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">+</button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="my-1 border-t border-zinc-800" />
                   {/* Half-page turn */}
                   <button
                     onClick={() => setHalfPageTurn((v) => !v)}
@@ -1036,28 +1062,6 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                   >
                     <ChevronsUp className="w-3.5 h-3.5" />
                     {t("halfPageTurn")} {halfPageTurn && "✓"}
-                  </button>
-                  {/* Pedal */}
-                  <button
-                    onClick={() => {
-                      if (pedalEnabled) { setPedalEnabled(false); localStorage.setItem(`${pedalStorageKey}-enabled`, 'false'); }
-                      else { setPedalEnabled(true); localStorage.setItem(`${pedalStorageKey}-enabled`, 'true'); }
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${pedalEnabled ? 'text-emerald-400 font-semibold' : 'text-zinc-300'}`}
-                  >
-                    <Footprints className="w-3.5 h-3.5" />
-                    {t("pedalMode")} {pedalEnabled && "✓"}
-                  </button>
-                  {/* Metronome */}
-                  <button
-                    onClick={() => {
-                      if (metronomeOn) { setMetronomeOn(false); }
-                      else { setMetronomeOn(true); }
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${metronomeOn ? 'text-green-400 font-semibold' : 'text-zinc-300'}`}
-                  >
-                    <Timer className="w-3.5 h-3.5" />
-                    {t("metronome")} {metronomeOn ? `(${bpm})` : ""} {metronomeOn && "✓"}
                   </button>
                   <div className="my-1 border-t border-zinc-800" />
                   {/* Zoom */}
