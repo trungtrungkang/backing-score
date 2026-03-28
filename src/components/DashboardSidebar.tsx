@@ -680,14 +680,19 @@ export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: b
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={onMobileClose}
           />
           {/* Slide-in panel */}
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-zinc-950 p-5 flex flex-col gap-6 overflow-y-auto shadow-xl animate-in slide-in-from-left duration-200">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-zinc-950 p-5 pt-3 flex flex-col gap-4 overflow-y-auto shadow-xl animate-in slide-in-from-left duration-200">
+            <div className="flex justify-end">
+              <button onClick={onMobileClose} className="p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             {sidebarContent}
           </aside>
         </div>

@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
-import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X, FolderPlus, Folder, Loader2, ChevronRight } from "lucide-react";
+import { ShieldAlert, Plus, Trash2, LayoutDashboard, Clock, Globe, PlaySquare, CloudUpload, ListMusic, Music4, FolderOpen, GraduationCap, MoreVertical, Settings2, Crown, Eye, EyeOff, Play, Pencil, Search, Menu, X, FolderPlus, Folder, Loader2, ChevronRight, PanelLeftOpen } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -288,27 +288,14 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex">
       {/* Sidebar */}
-      <DashboardSidebar />
-
-      {/* Mobile Sidebar Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileMenuOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-900 shadow-2xl">
-            <div className="p-4 flex justify-end">
-              <button onClick={() => setMobileMenuOpen(false)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white"><X className="w-5 h-5" /></button>
-            </div>
-            <DashboardSidebar />
-          </div>
-        </div>
-      )}
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
         <div className="max-w-6xl mx-auto">
           {/* Mobile sidebar toggle */}
           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-            <Menu className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
+            <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
           </button>
 
 

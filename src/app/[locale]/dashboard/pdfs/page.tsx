@@ -56,6 +56,7 @@ import {
   ChevronRight,
   Eye,
   Grid3X3,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -376,10 +377,10 @@ export default function PdfsLibraryPage() {
 
       {/* Mobile menu toggle */}
       <button
-        className="md:hidden fixed bottom-20 left-4 z-50 bg-zinc-800 text-white p-3 rounded-full shadow-lg"
+        className="md:hidden fixed bottom-20 left-4 z-40 bg-zinc-800 text-white p-3 rounded-full shadow-lg"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
-        {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {mobileMenuOpen ? <X className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
       </button>
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-zinc-50 dark:bg-zinc-950">

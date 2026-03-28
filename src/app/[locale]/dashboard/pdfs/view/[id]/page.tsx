@@ -50,7 +50,7 @@ export default function PdfViewPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-zinc-950">
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)] bg-zinc-950">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
       </div>
     );
@@ -58,7 +58,7 @@ export default function PdfViewPage() {
 
   if (error || !sheet) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-white gap-4">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] bg-zinc-950 text-white gap-4">
         <p className="text-red-400">{error || "PDF not found"}</p>
         <Link href="/dashboard/pdfs" className="text-indigo-400 hover:underline">
           {t("backToLibrary")}
@@ -68,7 +68,7 @@ export default function PdfViewPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-zinc-950">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-zinc-950">
       {/* Top bar */}
       <header className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex-shrink-0">
         <Link
