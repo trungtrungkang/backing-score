@@ -12,6 +12,9 @@ import {
   Play,
   Pause,
   ChevronsUp,
+  Bookmark,
+  BookmarkCheck,
+  ChevronDown,
 } from "lucide-react";
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 
@@ -47,6 +50,26 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   const [autoScrolling, setAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(30);
   const lastTimeRef = useRef(0);
+
+  // Bookmarks — persisted in localStorage
+  const storageKey = `pdf-bookmarks-${title}`;
+  const [bookmarkedPages, setBookmarkedPages] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? new Set(JSON.parse(saved) as number[]) : new Set();
+    } catch { return new Set(); }
+  });
+  const [showBookmarkMenu, setShowBookmarkMenu] = useState(false);
+
+  const toggleBookmark = (page: number) => {
+    setBookmarkedPages((prev) => {
+      const next = new Set(prev);
+      if (next.has(page)) next.delete(page); else next.add(page);
+      localStorage.setItem(storageKey, JSON.stringify([...next].sort((a, b) => a - b)));
+      return next;
+    });
+  };
 
   // Measure container width
   useEffect(() => {
@@ -335,7 +358,12 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
           {!pdfLoading &&
             !pdfError &&
             Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
-              <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2">
+              <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2 relative">
+                {bookmarkedPages.has(pageNum) && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
+                  </div>
+                )}
                 <canvas
                   id={`pdf-canvas-${pageNum}`}
                   className="bg-white"
@@ -440,6 +468,40 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             >
               <ChevronsUp className="w-3.5 h-3.5" />½
             </button>
+
+            {/* Bookmark current page */}
+            <div className="relative">
+              <button
+                onClick={() => toggleBookmark(currentPage)}
+                className={`p-1.5 rounded-md transition-colors ${bookmarkedPages.has(currentPage) ? "text-amber-400 bg-amber-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                title={t("bookmark")}
+              >
+                {bookmarkedPages.has(currentPage) ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+              </button>
+              {bookmarkedPages.size > 0 && (
+                <button
+                  onClick={() => setShowBookmarkMenu((v) => !v)}
+                  className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              )}
+              {showBookmarkMenu && bookmarkedPages.size > 0 && (
+                <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[120px] z-50" onMouseLeave={() => setShowBookmarkMenu(false)}>
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t("bookmark")}s</div>
+                  {[...bookmarkedPages].sort((a, b) => a - b).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => { goToPage(p); setShowBookmarkMenu(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 flex items-center gap-2 ${p === currentPage ? "text-amber-400 font-semibold" : "text-zinc-300"}`}
+                    >
+                      <BookmarkCheck className="w-3 h-3 text-amber-400" />
+                      {t("pageOf", { current: String(p), total: String(numPages) })}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Performance mode */}
             <button

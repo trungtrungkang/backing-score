@@ -55,6 +55,7 @@ function FolderTreeNode({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onDropSheet,
   t,
 }: {
   folder: FolderNode;
@@ -66,6 +67,7 @@ function FolderTreeNode({
   onCreateFolder: (name: string, parentId: string | null) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;
   onRenameFolder: (folderId: string, newName: string) => Promise<void>;
+  onDropSheet?: (sheetId: string, folderId: string | null) => void;
   t: (key: string, values?: Record<string, string>) => string;
 }) {
   const router = useRouter();
@@ -81,6 +83,7 @@ function FolderTreeNode({
   const [renaming, setRenaming] = useState(false);
   const [renameName, setRenameName] = useState(folder.name);
   const [showMenu, setShowMenu] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   // Auto-expand if active child
   useEffect(() => {
@@ -125,7 +128,23 @@ function FolderTreeNode({
 
   return (
     <div className={depth === 1 ? "ml-3" : ""}>
-      <div className="flex items-center group">
+      <div
+        className={`flex items-center group ${dragOver ? "bg-indigo-50 dark:bg-indigo-500/10 rounded" : ""}`}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes("text/sheet-id")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            setDragOver(true);
+          }
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const sheetId = e.dataTransfer.getData("text/sheet-id");
+          if (sheetId && onDropSheet) onDropSheet(sheetId, folder.$id);
+        }}
+      >
         {/* Expand/collapse toggle */}
         {hasChildren ? (
           <button
@@ -264,6 +283,7 @@ function FolderTreeNode({
               onCreateFolder={onCreateFolder}
               onDeleteFolder={onDeleteFolder}
               onRenameFolder={onRenameFolder}
+              onDropSheet={onDropSheet}
               t={t}
             />
           ))}
@@ -324,6 +344,7 @@ function TreeSection({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onDropSheet,
   isActive,
   specialNodes,
   t,
@@ -338,6 +359,7 @@ function TreeSection({
   onCreateFolder: (name: string, parentId: string | null) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;
   onRenameFolder: (folderId: string, newName: string) => Promise<void>;
+  onDropSheet?: (sheetId: string, folderId: string | null) => void;
   isActive: boolean;
   specialNodes?: { key: string; label: string; icon: React.ComponentType<{ className?: string }>; href: string }[];
   t: (key: string, values?: Record<string, string>) => string;
@@ -441,6 +463,7 @@ function TreeSection({
               onCreateFolder={onCreateFolder}
               onDeleteFolder={onDeleteFolder}
               onRenameFolder={onRenameFolder}
+              onDropSheet={onDropSheet}
               t={t}
             />
           ))}
@@ -490,7 +513,7 @@ function TreeSection({
 }
 
 // ─── Main Sidebar ───
-export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void } = {}) {
+export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { mobileOpen?: boolean; onMobileClose?: () => void; onDropSheet?: (sheetId: string, folderId: string | null) => void } = {}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations("Dashboard");
@@ -627,6 +650,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: b
               { key: "favorites", label: tPdfs("favorites"), icon: Bookmark, href: "/dashboard/pdfs?filter=favorites" },
               { key: "recent", label: tPdfs("recent"), icon: Clock, href: "/dashboard/pdfs?filter=recent" },
             ]}
+            onDropSheet={onDropSheet}
             t={t}
           />
 

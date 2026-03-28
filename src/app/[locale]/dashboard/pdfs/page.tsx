@@ -373,7 +373,7 @@ export default function PdfsLibraryPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} onDropSheet={handleMoveToFolder} />
 
       {/* Mobile menu toggle */}
       <button
@@ -585,6 +585,11 @@ export default function PdfsLibraryPage() {
                 {sheets.map((sheet) => (
                   <div
                     key={sheet.$id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/sheet-id", sheet.$id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
                     className="group bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 dark:hover:border-indigo-500/30 transition-all cursor-pointer overflow-hidden"
                     onClick={() =>
                       router.push(`/dashboard/pdfs/view/${sheet.$id}`)
@@ -743,6 +748,11 @@ export default function PdfsLibraryPage() {
                 {sheets.map((sheet, idx) => (
                   <div
                     key={sheet.$id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/sheet-id", sheet.$id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
                     className={`flex items-center gap-4 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 cursor-pointer transition-colors ${
                       idx > 0
                         ? "border-t border-zinc-100 dark:border-zinc-800"
