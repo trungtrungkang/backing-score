@@ -23,6 +23,9 @@ import {
   Music4,
   BarChart3,
   Save,
+  FileText,
+  ExternalLink,
+  X,
 } from "lucide-react";
 import {
   getClassroom,
@@ -39,12 +42,18 @@ import {
   AssignmentDocument,
   SubmissionDocument,
   SubmissionFeedbackDocument,
+  listClassroomMaterials,
+  shareToClassroom,
+  removeClassroomMaterial,
+  ClassroomMaterialDocument,
+  listMySheetMusic,
+  SheetMusicDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
 
-type Tab = "assignments" | "members" | "settings" | "progress";
+type Tab = "assignments" | "members" | "materials" | "settings" | "progress";
 
 export default function ClassroomDetailPage() {
   const params = useParams();
@@ -71,6 +80,15 @@ export default function ClassroomDetailPage() {
   const [progressData, setProgressData] = useState<Map<string, SubmissionDocument[]>>(new Map());
   const [feedbackData, setFeedbackData] = useState<Map<string, SubmissionFeedbackDocument[]>>(new Map());
   const [progressLoaded, setProgressLoaded] = useState(false);
+  // Materials
+  const [materials, setMaterials] = useState<ClassroomMaterialDocument[]>([]);
+  const [materialsSheets, setMaterialsSheets] = useState<Map<string, SheetMusicDocument>>(new Map());
+  const [materialsLoaded, setMaterialsLoaded] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [mySheets, setMySheets] = useState<SheetMusicDocument[]>([]);
+  const [shareNote, setShareNote] = useState("");
+  const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const isTeacher = userRole === "teacher";
 
@@ -170,6 +188,79 @@ export default function ClassroomDetailPage() {
       .catch(() => setProgressLoaded(true));
   }, [activeTab, progressLoaded, assignments]);
 
+  // Load materials when materials tab is activated
+  useEffect(() => {
+    if (activeTab !== "materials" || materialsLoaded) return;
+    listClassroomMaterials(classroomId)
+      .then(async (mats) => {
+        setMaterials(mats);
+        // Fetch sheet music details for each material
+        const sheetIds = [...new Set(mats.map(m => m.sheetMusicId))];
+        const sheetsMap = new Map<string, SheetMusicDocument>();
+        await Promise.all(sheetIds.map(async (id) => {
+          try {
+            const { getSheetMusic } = await import("@/lib/appwrite");
+            const sheet = await getSheetMusic(id);
+            sheetsMap.set(id, sheet);
+          } catch { /* sheet may have been deleted */ }
+        }));
+        setMaterialsSheets(sheetsMap);
+        setMaterialsLoaded(true);
+      })
+      .catch(() => setMaterialsLoaded(true));
+  }, [activeTab, materialsLoaded, classroomId]);
+
+  const handleSharePdf = async () => {
+    if (!selectedSheetId || sharing) return;
+    setSharing(true);
+    try {
+      const mat = await shareToClassroom({
+        classroomId,
+        sheetMusicId: selectedSheetId,
+        note: shareNote.trim() || undefined,
+      });
+      setMaterials(prev => [mat, ...prev]);
+      // Add sheet info to map
+      const sheet = mySheets.find(s => s.$id === selectedSheetId);
+      if (sheet) setMaterialsSheets(prev => new Map(prev).set(selectedSheetId, sheet));
+      setShowShareDialog(false);
+      setSelectedSheetId(null);
+      setShareNote("");
+      toast.success(t("materialShared"));
+    } catch {
+      toast.error(t("failedShareMaterial"));
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleRemoveMaterial = async (materialId: string) => {
+    const ok = await confirm({
+      title: t("removeMaterial"),
+      description: t("removeMaterialDesc"),
+      confirmText: t("removeConfirm"),
+      cancelText: t("removeCancel"),
+    });
+    if (!ok) return;
+    try {
+      await removeClassroomMaterial(materialId);
+      setMaterials(prev => prev.filter(m => m.$id !== materialId));
+      toast.success(t("materialRemoved"));
+    } catch {
+      toast.error(t("failedRemoveMaterial"));
+    }
+  };
+
+  const openShareDialog = async () => {
+    setShowShareDialog(true);
+    if (mySheets.length === 0) {
+      try {
+        const result = await listMySheetMusic();
+        setMySheets(result.documents);
+      } catch { /* best-effort */ }
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!classroom || savingSettings) return;
     setSavingSettings(true);
@@ -219,6 +310,7 @@ export default function ClassroomDetailPage() {
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "assignments", label: t("assignments"), icon: <ClipboardList className="w-4 h-4" /> },
     { key: "members", label: t("membersCount", { count: members.length }), icon: <Users className="w-4 h-4" /> },
+    { key: "materials", label: t("materials"), icon: <FileText className="w-4 h-4" /> },
     ...(isTeacher ? [
       { key: "progress" as Tab, label: t("progress"), icon: <BarChart3 className="w-4 h-4" /> },
       { key: "settings" as Tab, label: t("settings"), icon: <Settings className="w-4 h-4" /> },
@@ -351,6 +443,125 @@ export default function ClassroomDetailPage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "materials" && (
+          <div>
+            {isTeacher && (
+              <div className="mb-4 flex justify-end">
+                <Button onClick={openShareDialog} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold">
+                  <Plus className="w-4 h-4 mr-2" /> {t("sharePdf")}
+                </Button>
+              </div>
+            )}
+
+            {materials.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 border border-dashed border-zinc-800 rounded-xl text-center">
+                <FileText className="w-10 h-10 text-zinc-700 mb-4" />
+                <p className="text-zinc-500 font-medium">{t("noMaterials")}</p>
+                {isTeacher && (
+                  <p className="text-zinc-600 text-sm mt-1">{t("noMaterialsHint")}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {materials.map((mat) => {
+                  const sheet = materialsSheets.get(mat.sheetMusicId);
+                  return (
+                    <div key={mat.$id} className="group flex items-center gap-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 text-indigo-500">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-zinc-900 dark:text-white truncate">
+                          {sheet?.title || mat.sheetMusicId}
+                        </h3>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
+                          {sheet?.pageCount && <span>{sheet.pageCount} pages</span>}
+                          {sheet?.composer && <span>{sheet.composer}</span>}
+                          {mat.note && <span className="italic text-zinc-400">"{mat.note}"</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link
+                          href={`/dashboard/pdfs/view/${mat.sheetMusicId}`}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" /> {t("openPdf")}
+                        </Link>
+                        {isTeacher && (
+                          <button
+                            onClick={() => handleRemoveMaterial(mat.$id)}
+                            className="text-zinc-400 hover:text-red-400 transition-colors p-1"
+                            title={t("removeMaterial")}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Share PDF Dialog */}
+            {showShareDialog && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowShareDialog(false)}>
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-lg text-zinc-900 dark:text-white">{t("sharePdf")}</h3>
+                    <button onClick={() => setShowShareDialog(false)} className="text-zinc-400 hover:text-zinc-200">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="max-h-60 overflow-auto space-y-2 mb-4">
+                    {mySheets.length === 0 ? (
+                      <p className="text-sm text-zinc-500 text-center py-8">{t("noSheetsToShare")}</p>
+                    ) : (
+                      mySheets.map((sheet) => (
+                        <button
+                          key={sheet.$id}
+                          onClick={() => setSelectedSheetId(sheet.$id)}
+                          className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            selectedSheetId === sheet.$id
+                              ? 'border-indigo-500 bg-indigo-500/10'
+                              : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                          }`}
+                        >
+                          <FileText className="w-5 h-5 text-indigo-500 shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{sheet.title}</div>
+                            <div className="text-xs text-zinc-500">{sheet.pageCount} pages{sheet.composer ? ` • ${sheet.composer}` : ''}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 block">{t("noteOptional")}</label>
+                    <input
+                      value={shareNote}
+                      onChange={(e) => setShareNote(e.target.value)}
+                      placeholder={t("notePlaceholder")}
+                      className="w-full h-10 px-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSharePdf}
+                    disabled={!selectedSheetId || sharing}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                  >
+                    {sharing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                    {t("shareToClassroom")}
+                  </Button>
+                </div>
               </div>
             )}
           </div>

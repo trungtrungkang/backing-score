@@ -117,12 +117,18 @@ export {
   getRecordingDownloadUrl,
 } from "./submissions";
 export type { SubmissionFeedbackDocument } from "./types";
+export type { ClassroomMaterialDocument } from "./types";
 export {
   createFeedback,
   listFeedback,
   updateFeedback,
   deleteFeedback,
 } from "./submission-feedback";
+export {
+  shareToClassroom,
+  listClassroomMaterials,
+  removeClassroomMaterial,
+} from "./classroom-materials";
 export type { ProjectFolderDocument } from "./types";
 export {
   createProjectFolder,

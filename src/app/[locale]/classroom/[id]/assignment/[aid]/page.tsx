@@ -24,6 +24,8 @@ import {
   X,
   Save,
   AlertTriangle,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
   getAssignment,
@@ -39,11 +41,13 @@ import {
   getRecordingDownloadUrl,
   createFeedback,
   listFeedback,
+  getSheetMusic,
   AssignmentDocument,
   ClassroomDocument,
   ProjectDocument,
   SubmissionDocument,
   SubmissionFeedbackDocument,
+  SheetMusicDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -223,6 +227,7 @@ export default function AssignmentDetailPage() {
   const [editDeadline, setEditDeadline] = useState("");
   const [editWaitMode, setEditWaitMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attachedSheet, setAttachedSheet] = useState<SheetMusicDocument | null>(null);
 
   const isTeacher = userRole === "teacher";
 
@@ -254,6 +259,14 @@ export default function AssignmentDetailPage() {
           const proj = await getProject(assign.sourceId);
           if (!cancelled) setProject(proj);
         } catch {}
+
+        // Load attached sheet music if any
+        if (assign.sheetMusicId) {
+          try {
+            const sheet = await getSheetMusic(assign.sheetMusicId);
+            if (!cancelled) setAttachedSheet(sheet);
+          } catch { /* sheet may have been deleted */ }
+        }
 
         if (membership.role === "teacher") {
           const subs = await listSubmissions(assignmentId);
@@ -472,6 +485,29 @@ export default function AssignmentDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Attached PDF Sheet Music */}
+        {attachedSheet && (
+          <Link
+            href={`/dashboard/pdfs/view/${attachedSheet.$id}`}
+            className="flex items-center gap-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 mb-6 hover:border-indigo-500/50 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 text-indigo-500">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-zinc-900 dark:text-white group-hover:text-indigo-400 transition-colors truncate">
+                {attachedSheet.title}
+              </h3>
+              <div className="text-xs text-zinc-500">
+                {attachedSheet.pageCount} pages{attachedSheet.composer ? ` • ${attachedSheet.composer}` : ''}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 group-hover:bg-indigo-500 text-white text-xs font-bold transition-colors shrink-0">
+              <ExternalLink className="w-3 h-3" /> {t("openPdf")}
+            </div>
+          </Link>
+        )}
 
         {/* Student View */}
         {!isTeacher && (

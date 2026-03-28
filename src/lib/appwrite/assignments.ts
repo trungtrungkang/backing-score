@@ -34,6 +34,7 @@ export async function createAssignment(params: {
   type: string;
   deadline?: string;
   waitModeRequired?: boolean;
+  sheetMusicId?: string;
 }): Promise<AssignmentDocument> {
   const user = await account.get();
 
@@ -50,6 +51,7 @@ export async function createAssignment(params: {
       type: params.type,
       deadline: params.deadline || null,
       waitModeRequired: params.waitModeRequired ?? false,
+      sheetMusicId: params.sheetMusicId || null,
     },
     [
       // Any authenticated user can read (we check membership in UI)
@@ -151,6 +153,7 @@ export async function updateAssignment(
     type?: string;
     deadline?: string | null;
     waitModeRequired?: boolean;
+    sheetMusicId?: string | null;
   }
 ): Promise<AssignmentDocument> {
   const body: Record<string, unknown> = {};
@@ -159,6 +162,7 @@ export async function updateAssignment(
   if (updates.type !== undefined) body.type = updates.type;
   if (updates.deadline !== undefined) body.deadline = updates.deadline;
   if (updates.waitModeRequired !== undefined) body.waitModeRequired = updates.waitModeRequired;
+  if (updates.sheetMusicId !== undefined) body.sheetMusicId = updates.sheetMusicId;
 
   const doc = await databases.updateDocument(dbId, collId, assignmentId, body);
   return doc as unknown as AssignmentDocument;

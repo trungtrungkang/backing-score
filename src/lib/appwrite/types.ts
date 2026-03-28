@@ -239,6 +239,18 @@ export interface AssignmentDocument {
   deadline?: string;
   /** Whether Wait Mode is required for this assignment */
   waitModeRequired: boolean;
+  /** Optional PDF sheet music attachment */
+  sheetMusicId?: string;
+}
+
+export interface ClassroomMaterialDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  classroomId: string;
+  sheetMusicId: string;
+  sharedById: string;
+  note?: string;
 }
 
 export interface SubmissionDocument {

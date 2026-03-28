@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Folder,
   ChevronRight,
+  FileText,
+  X,
 } from "lucide-react";
 import {
   createAssignment,
@@ -22,8 +24,10 @@ import {
   getClassroom,
   isClassroomMember,
   listProjectFolders,
+  listMySheetMusic,
   ProjectDocument,
   ProjectFolderDocument,
+  SheetMusicDocument,
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -52,6 +56,11 @@ export default function CreateAssignmentPage() {
   // Folder state for My Uploads tab
   const [folders, setFolders] = useState<ProjectFolderDocument[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+
+  // PDF attachment
+  const [selectedSheet, setSelectedSheet] = useState<SheetMusicDocument | null>(null);
+  const [mySheets, setMySheets] = useState<SheetMusicDocument[]>([]);
+  const [sheetsLoaded, setSheetsLoaded] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push("/login"); return; }
@@ -117,6 +126,7 @@ export default function CreateAssignmentPage() {
         type,
         deadline: deadline || undefined,
         waitModeRequired,
+        sheetMusicId: selectedSheet?.$id || undefined,
       });
       toast.success(t("assignCreated"));
       router.push(`/classroom/${classroomId}`);
@@ -283,6 +293,51 @@ export default function CreateAssignmentPage() {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Optional PDF Attachment */}
+          <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6">
+            <h3 className="font-bold text-zinc-900 dark:text-white mb-1">{t("attachPdf")}</h3>
+            <p className="text-xs text-zinc-500 mb-4">{t("attachPdfHint")}</p>
+
+            {selectedSheet ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/30">
+                <FileText className="w-5 h-5 text-indigo-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{selectedSheet.title}</div>
+                  <div className="text-xs text-zinc-500">{selectedSheet.pageCount} pages{selectedSheet.composer ? ` • ${selectedSheet.composer}` : ''}</div>
+                </div>
+                <button type="button" onClick={() => setSelectedSheet(null)} className="text-zinc-400 hover:text-red-400 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="max-h-48 overflow-auto space-y-1">
+                {!sheetsLoaded ? (
+                  <button type="button" onClick={async () => {
+                    try {
+                      const result = await listMySheetMusic();
+                      setMySheets(result.documents);
+                    } catch { /* best-effort */ }
+                    setSheetsLoaded(true);
+                  }} className="w-full py-3 text-center text-sm text-indigo-500 hover:text-indigo-400 font-medium transition-colors">
+                    {t("loadPdfs")}
+                  </button>
+                ) : mySheets.length === 0 ? (
+                  <p className="py-4 text-center text-zinc-500 text-sm">{t("noPdfsToAttach")}</p>
+                ) : (
+                  mySheets.map((sheet) => (
+                    <button key={sheet.$id} type="button" onClick={() => setSelectedSheet(sheet)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                    >
+                      <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span className="text-sm text-zinc-900 dark:text-white truncate flex-1">{sheet.title}</span>
+                      <span className="text-xs text-zinc-500 shrink-0">{sheet.pageCount}p</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3">
