@@ -128,13 +128,13 @@
 **Hiện tại:** 8 items + thêm PDFs = 9 items
 
 ```
-My Uploads | Collections | Favorites | Analytics | Classroom
+Projects | Collections | Favorites | Analytics | Classroom
 Creator Courses | User Guide | Premium | PDFs (mới)
 ```
 
 **Đề xuất:** Nhóm lại:
 ```
-LIBRARY (My Uploads, PDFs, Collections, Favorites)
+LIBRARY (Projects, PDFs, Collections, Favorites)
 TEACH (Classroom, Creator Courses)
 OTHER (Analytics, Guide, Premium)
 ```

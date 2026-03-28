@@ -37,6 +37,11 @@ export const APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID = "submission_feedback";
 export const APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID = "classroom_recordings";
 export const APPWRITE_PROJECT_FOLDERS_COLLECTION_ID = "project_folders";
 
+// Sheet Music (PDF) collections & bucket
+export const APPWRITE_SHEET_MUSIC_COLLECTION_ID = "sheet_music";
+export const APPWRITE_SHEET_MUSIC_FOLDERS_COLLECTION_ID = "sheet_music_folders";
+export const APPWRITE_SHEET_PDFS_BUCKET_ID = "sheet_pdfs";
+
 export function isAppwriteConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT &&

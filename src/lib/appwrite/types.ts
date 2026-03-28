@@ -288,3 +288,30 @@ export interface ProjectFolderDocument {
   order: number;
   parentFolderId?: string | null;
 }
+
+export interface SheetMusicDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  userId: string;
+  title: string;
+  fileId: string;
+  fileSize: number;
+  pageCount: number;
+  composer?: string;
+  instrument?: string;
+  tags?: string[];
+  folderId?: string | null;
+  lastOpenedAt?: string;
+  favorite?: boolean;
+}
+
+export interface SheetMusicFolderDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  userId: string;
+  name: string;
+  order: number;
+  parentFolderId?: string | null;
+}

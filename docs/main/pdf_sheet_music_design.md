@@ -159,11 +159,11 @@ interface SheetMusicFolderDocument {
 
 ### 3.2 Sidebar Integration — "PDFs" Root Folder
 
-Trong `DashboardSidebar`, "PDFs" là **menu item ngang hàng** với "My Uploads", có **folder con expand/collapse** giống hệt pattern My Uploads:
+Trong `DashboardSidebar`, "PDFs" là **menu item ngang hàng** với "Projects", có **folder con expand/collapse** giống hệt pattern Projects:
 
 ```
 Dashboard Sidebar:
-├── ☁️  My Uploads          → /dashboard
+├── ☁️  Projects          → /dashboard
 │   ├── 📁 Classical        → /dashboard?folder=xxx
 │   ├── 📁 Jazz             → /dashboard?folder=yyy
 │   └── 📁 Pop              → /dashboard?folder=zzz

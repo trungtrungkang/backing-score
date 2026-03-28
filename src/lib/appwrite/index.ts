@@ -131,3 +131,23 @@ export {
   deleteProjectFolder,
   moveProjectToFolder,
 } from "./project-folders";
+
+// Sheet Music (PDF)
+export type { SheetMusicDocument, SheetMusicFolderDocument } from "./types";
+export {
+  uploadSheetPdf,
+  listMySheetMusic,
+  getSheetMusic,
+  updateSheetMusic,
+  deleteSheetMusic,
+  moveSheetToFolder,
+  toggleSheetFavorite,
+  getSheetPdfUrl,
+  touchSheetLastOpened,
+} from "./sheet-music";
+export {
+  createSheetFolder,
+  listSheetFolders,
+  updateSheetFolder,
+  deleteSheetFolder,
+} from "./sheet-music-folders";

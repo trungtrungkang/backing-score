@@ -3,13 +3,14 @@
 import { Link } from "@/i18n/routing";
 import { usePathname } from "next/navigation";
 import {
-  CloudUpload, Bookmark, FolderOpen, Globe,
-  GraduationCap, Crown, BarChart3,
+  Music4, Bookmark, FolderOpen, Globe,
+  GraduationCap, Crown, BarChart3, FileText,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: CloudUpload, labelKey: "myUploadsNav", iconColor: "text-blue-400" },
+  { href: "/dashboard", icon: Music4, labelKey: "projectsNav", iconColor: "text-blue-400" },
+  { href: "/dashboard/pdfs", icon: FileText, labelKey: "pdfs", iconColor: "text-amber-400" },
   { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
   { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
   { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },

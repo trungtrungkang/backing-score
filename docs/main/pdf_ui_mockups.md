@@ -6,7 +6,7 @@
 
 ## 1. Library Page (`/dashboard/pdfs`)
 
-Sidebar có "PDFs" ngang hàng "My Uploads", expand ra folder tree. Content area hiện folders + PDF grid.
+Sidebar có "PDFs" ngang hàng "Projects", expand ra folder tree. Content area hiện folders + PDF grid.
 
 ![PDF Library Mockup](images/pdf_library_mockup.png)
 
