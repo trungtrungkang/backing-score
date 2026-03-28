@@ -633,7 +633,11 @@
     "attachPdf": "Đính kèm bản nhạc",
     "attachPdfHint": "Đính kèm PDF từ thư viện (tùy chọn).",
     "loadPdfs": "Tải PDF",
-    "noPdfsToAttach": "Chưa có PDF."
+    "noPdfsToAttach": "Chưa có PDF.",
+    "pagesUnit": "trang",
+    "justNow": "vừa xong",
+    "searchPdfs": "Tìm PDF...",
+    "noMatchingPdfs": "Không có PDF phù hợp"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -708,6 +712,7 @@
     "exitFullscreen": "Thoát toàn màn hình",
     "pdfNotFound": "Không tìm thấy PDF",
     "pdfNotFoundDescription": "Tài liệu này không tồn tại hoặc bạn không có quyền xem.",
-    "files": "{count} tệp"
+    "files": "{count} tệp",
+    "back": "Quay lại"
   }
 }

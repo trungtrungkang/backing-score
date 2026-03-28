@@ -630,7 +630,11 @@
     "attachPdf": "Noten anhängen",
     "attachPdfHint": "Optional ein PDF aus Ihrer Bibliothek anhängen.",
     "loadPdfs": "PDFs laden",
-    "noPdfsToAttach": "Keine PDFs vorhanden."
+    "noPdfsToAttach": "Keine PDFs vorhanden.",
+    "pagesUnit": "Seiten",
+    "justNow": "gerade",
+    "searchPdfs": "PDFs suchen...",
+    "noMatchingPdfs": "Keine passenden PDFs"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -697,6 +701,7 @@
     "exitFullscreen": "Vollbild beenden",
     "pdfNotFound": "PDF nicht gefunden",
     "pdfNotFoundDescription": "Dieses Dokument existiert nicht oder Sie haben keine Berechtigung, es anzusehen.",
-    "files": "{count} Dateien"
+    "files": "{count} Dateien",
+    "back": "Zurück"
   }
 }

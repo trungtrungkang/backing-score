@@ -630,7 +630,11 @@
     "attachPdf": "Joindre partition",
     "attachPdfHint": "Joindre un PDF (optionnel).",
     "loadPdfs": "Charger les PDFs",
-    "noPdfsToAttach": "Aucun PDF."
+    "noPdfsToAttach": "Aucun PDF.",
+    "pagesUnit": "pages",
+    "justNow": "à l'instant",
+    "searchPdfs": "Rechercher PDF...",
+    "noMatchingPdfs": "Aucun PDF correspondant"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -697,6 +701,7 @@
     "exitFullscreen": "Quitter le plein écran",
     "pdfNotFound": "PDF introuvable",
     "pdfNotFoundDescription": "Ce document n'existe pas ou vous n'avez pas la permission de le consulter.",
-    "files": "{count} fichiers"
+    "files": "{count} fichiers",
+    "back": "Retour"
   }
 }

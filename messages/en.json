@@ -665,7 +665,11 @@
     "attachPdf": "Attach Sheet Music",
     "attachPdfHint": "Optionally attach a PDF from your library.",
     "loadPdfs": "Load My PDFs",
-    "noPdfsToAttach": "No PDFs in your library."
+    "noPdfsToAttach": "No PDFs in your library.",
+    "pagesUnit": "pages",
+    "justNow": "just now",
+    "searchPdfs": "Search PDFs...",
+    "noMatchingPdfs": "No matching PDFs"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -742,6 +746,7 @@
     "pdfNotFoundDescription": "This document doesn't exist or you don't have permission to view it.",
     "files": "{count} files",
     "darkModePdf": "Dark Mode",
-    "lightMode": "Light Mode"
+    "lightMode": "Light Mode",
+    "back": "Back"
   }
 }

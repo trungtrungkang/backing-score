@@ -630,7 +630,11 @@
     "attachPdf": "附加樂譜",
     "attachPdfHint": "可選擇附加PDF。",
     "loadPdfs": "載入PDF",
-    "noPdfsToAttach": "暫無PDF。"
+    "noPdfsToAttach": "暫無PDF。",
+    "pagesUnit": "頁",
+    "justNow": "剛剛",
+    "searchPdfs": "搜尋PDF...",
+    "noMatchingPdfs": "無匹配PDF"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -697,6 +701,7 @@
     "exitFullscreen": "退出全螢幕",
     "pdfNotFound": "找不到PDF",
     "pdfNotFoundDescription": "該文件不存在或您沒有查看權限。",
-    "files": "{count}個檔案"
+    "files": "{count}個檔案",
+    "back": "返回"
   }
 }

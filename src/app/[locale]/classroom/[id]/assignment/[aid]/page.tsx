@@ -41,7 +41,6 @@ import {
   getRecordingDownloadUrl,
   createFeedback,
   listFeedback,
-  getSheetMusic,
   AssignmentDocument,
   ClassroomDocument,
   ProjectDocument,
@@ -260,11 +259,14 @@ export default function AssignmentDetailPage() {
           if (!cancelled) setProject(proj);
         } catch {}
 
-        // Load attached sheet music if any
+        // Load attached sheet music if any (use API proxy for student access)
         if (assign.sheetMusicId) {
           try {
-            const sheet = await getSheetMusic(assign.sheetMusicId);
-            if (!cancelled) setAttachedSheet(sheet);
+            const res = await fetch(`/api/sheet-music/${assign.sheetMusicId}`);
+            if (res.ok) {
+              const sheet = await res.json() as SheetMusicDocument;
+              if (!cancelled) setAttachedSheet(sheet);
+            }
           } catch { /* sheet may have been deleted */ }
         }
 
@@ -489,7 +491,7 @@ export default function AssignmentDetailPage() {
         {/* Attached PDF Sheet Music */}
         {attachedSheet && (
           <Link
-            href={`/dashboard/pdfs/view/${attachedSheet.$id}`}
+            href={`/dashboard/pdfs/view/${attachedSheet.$id}?shared=1&back=/classroom/${classroomId}/assignment/${assignmentId}`}
             className="flex items-center gap-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 mb-6 hover:border-indigo-500/50 transition-all group"
           >
             <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 text-indigo-500">

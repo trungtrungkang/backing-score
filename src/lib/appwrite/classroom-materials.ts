@@ -23,6 +23,16 @@ export async function shareToClassroom(params: {
 }): Promise<ClassroomMaterialDocument> {
   const user = await account.get();
 
+  // Check for duplicate: same PDF already shared to same classroom
+  const { documents: existing } = await databases.listDocuments(dbId, collId, [
+    Query.equal("classroomId", params.classroomId),
+    Query.equal("sheetMusicId", params.sheetMusicId),
+    Query.limit(1),
+  ]);
+  if (existing.length > 0) {
+    throw new Error("This PDF is already shared to this classroom.");
+  }
+
   const doc = await databases.createDocument(
     dbId,
     collId,

@@ -630,7 +630,11 @@
     "attachPdf": "Adjuntar partitura",
     "attachPdfHint": "Adjunte opcionalmente un PDF.",
     "loadPdfs": "Cargar PDFs",
-    "noPdfsToAttach": "No hay PDFs."
+    "noPdfsToAttach": "No hay PDFs.",
+    "pagesUnit": "páginas",
+    "justNow": "ahora",
+    "searchPdfs": "Buscar PDFs...",
+    "noMatchingPdfs": "Sin PDFs coincidentes"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -697,6 +701,7 @@
     "exitFullscreen": "Salir de pantalla completa",
     "pdfNotFound": "PDF no encontrado",
     "pdfNotFoundDescription": "Este documento no existe o no tienes permiso para verlo.",
-    "files": "{count} archivos"
+    "files": "{count} archivos",
+    "back": "Volver"
   }
 }

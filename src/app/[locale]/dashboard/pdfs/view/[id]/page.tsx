@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import {
@@ -23,8 +23,11 @@ const PdfViewerCore = dynamic(() => import("@/components/pdf/PdfViewer"), {
 
 export default function PdfViewPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const t = useTranslations("Pdfs");
   const id = params.id as string;
+  const isShared = searchParams.get("shared") === "1";
+  const backTo = searchParams.get("back") || null;
   const [sheet, setSheet] = useState<SheetMusicDocument | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -33,12 +36,23 @@ export default function PdfViewPage() {
   useEffect(() => {
     async function load() {
       try {
-        const doc = await getSheetMusic(id);
+        let doc: SheetMusicDocument;
+
+        if (isShared) {
+          // Shared mode: use server API proxy (no client-side Appwrite permissions needed)
+          const res = await fetch(`/api/sheet-music/${id}`);
+          if (!res.ok) throw new Error("not_found");
+          doc = await res.json() as SheetMusicDocument;
+        } else {
+          // Owner mode: direct Appwrite client call
+          doc = await getSheetMusic(id);
+          // Update lastOpenedAt only for owner
+          touchSheetLastOpened(id).catch(() => {});
+        }
+
         setSheet(doc);
-        // Use API proxy for caching — browser caches via HTTP Cache-Control headers
+        // Both modes use the API proxy for the actual PDF file
         setPdfUrl(`/api/files/${doc.fileId}?bucket=sheet_pdfs`);
-        // Update lastOpenedAt
-        touchSheetLastOpened(id).catch(() => {});
       } catch (err) {
         console.error("Failed to load PDF:", err);
         setError("not_found");
@@ -47,7 +61,7 @@ export default function PdfViewPage() {
       }
     }
     if (id) load();
-  }, [id]);
+  }, [id, isShared]);
 
   if (loading) {
     return (
@@ -63,7 +77,7 @@ export default function PdfViewPage() {
         <div className="text-6xl mb-2">📄</div>
         <p className="text-zinc-300 text-lg font-medium">{t("pdfNotFound")}</p>
         <p className="text-zinc-500 text-sm max-w-md text-center">{t("pdfNotFoundDescription")}</p>
-        <Link href="/dashboard/pdfs" className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+        <Link href={backTo || "/dashboard/pdfs"} className="mt-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
           {t("backToLibrary")}
         </Link>
       </div>
@@ -75,11 +89,11 @@ export default function PdfViewPage() {
       {/* Top bar — hidden on mobile to maximize viewer space */}
       <header className="hidden sm:flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 flex-shrink-0 gap-2 min-h-[44px]">
         <Link
-          href="/dashboard/pdfs"
+          href={backTo || "/dashboard/pdfs"}
           className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors text-sm shrink-0"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>{t("backToLibrary")}</span>
+          <span>{backTo ? t("back") : t("backToLibrary")}</span>
         </Link>
         <h1 className="text-sm font-medium text-white truncate text-center flex-1 min-w-0">
           {sheet.title}
@@ -94,3 +108,4 @@ export default function PdfViewPage() {
     </div>
   );
 }
+

@@ -630,7 +630,11 @@
     "attachPdf": "楽譜を添付",
     "attachPdfHint": "PDFを添付（任意）。",
     "loadPdfs": "PDFを読み込む",
-    "noPdfsToAttach": "PDFがありません。"
+    "noPdfsToAttach": "PDFがありません。",
+    "pagesUnit": "ページ",
+    "justNow": "たった今",
+    "searchPdfs": "PDF検索...",
+    "noMatchingPdfs": "一致するPDFなし"
   },
   "Pdfs": {
     "title": "PDFs",
@@ -697,6 +701,7 @@
     "exitFullscreen": "フルスクリーン解除",
     "pdfNotFound": "PDFが見つかりません",
     "pdfNotFoundDescription": "このドキュメントは存在しないか、閲覧権限がありません。",
-    "files": "{count}件"
+    "files": "{count}件",
+    "back": "戻る"
   }
 }

@@ -84,11 +84,14 @@ export default function ClassroomDetailPage() {
   const [materials, setMaterials] = useState<ClassroomMaterialDocument[]>([]);
   const [materialsSheets, setMaterialsSheets] = useState<Map<string, SheetMusicDocument>>(new Map());
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [mySheets, setMySheets] = useState<SheetMusicDocument[]>([]);
+  const [loadingSheets, setLoadingSheets] = useState(false);
   const [shareNote, setShareNote] = useState("");
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [shareSearch, setShareSearch] = useState("");
 
   const isTeacher = userRole === "teacher";
 
@@ -191,23 +194,27 @@ export default function ClassroomDetailPage() {
   // Load materials when materials tab is activated
   useEffect(() => {
     if (activeTab !== "materials" || materialsLoaded) return;
+    setMaterialsLoading(true);
     listClassroomMaterials(classroomId)
       .then(async (mats) => {
         setMaterials(mats);
-        // Fetch sheet music details for each material
+        // Fetch sheet music details via API proxy (works for all users)
         const sheetIds = [...new Set(mats.map(m => m.sheetMusicId))];
         const sheetsMap = new Map<string, SheetMusicDocument>();
         await Promise.all(sheetIds.map(async (id) => {
           try {
-            const { getSheetMusic } = await import("@/lib/appwrite");
-            const sheet = await getSheetMusic(id);
-            sheetsMap.set(id, sheet);
+            const res = await fetch(`/api/sheet-music/${id}`);
+            if (res.ok) {
+              const sheet = await res.json() as SheetMusicDocument;
+              sheetsMap.set(id, sheet);
+            }
           } catch { /* sheet may have been deleted */ }
         }));
         setMaterialsSheets(sheetsMap);
         setMaterialsLoaded(true);
       })
-      .catch(() => setMaterialsLoaded(true));
+      .catch(() => setMaterialsLoaded(true))
+      .finally(() => setMaterialsLoading(false));
   }, [activeTab, materialsLoaded, classroomId]);
 
   const handleSharePdf = async () => {
@@ -226,6 +233,7 @@ export default function ClassroomDetailPage() {
       setShowShareDialog(false);
       setSelectedSheetId(null);
       setShareNote("");
+      setShareSearch("");
       toast.success(t("materialShared"));
     } catch {
       toast.error(t("failedShareMaterial"));
@@ -253,13 +261,25 @@ export default function ClassroomDetailPage() {
 
   const openShareDialog = async () => {
     setShowShareDialog(true);
+    setShareSearch("");
     if (mySheets.length === 0) {
+      setLoadingSheets(true);
       try {
         const result = await listMySheetMusic();
         setMySheets(result.documents);
       } catch { /* best-effort */ }
+      setLoadingSheets(false);
     }
   };
+
+  // Filter sheets for share dialog: exclude already-shared + apply search
+  const filteredShareSheets = mySheets.filter(sheet => {
+    const alreadyShared = materials.some(m => m.sheetMusicId === sheet.$id);
+    if (alreadyShared) return false;
+    if (!shareSearch) return true;
+    return sheet.title.toLowerCase().includes(shareSearch.toLowerCase()) ||
+      (sheet.composer || "").toLowerCase().includes(shareSearch.toLowerCase());
+  });
 
   const handleSaveSettings = async () => {
     if (!classroom || savingSettings) return;
@@ -439,6 +459,11 @@ export default function ClassroomDetailPage() {
                         {a.waitModeRequired && (
                           <span className="text-amber-400 font-medium">{t("waitMode")}</span>
                         )}
+                        {a.sheetMusicId && (
+                          <span className="flex items-center gap-1 text-indigo-400">
+                            <FileText className="w-3 h-3" /> PDF
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -458,7 +483,11 @@ export default function ClassroomDetailPage() {
               </div>
             )}
 
-            {materials.length === 0 ? (
+            {materialsLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+              </div>
+            ) : materials.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 border border-dashed border-zinc-800 rounded-xl text-center">
                 <FileText className="w-10 h-10 text-zinc-700 mb-4" />
                 <p className="text-zinc-500 font-medium">{t("noMaterials")}</p>
@@ -470,6 +499,16 @@ export default function ClassroomDetailPage() {
               <div className="space-y-3">
                 {materials.map((mat) => {
                   const sheet = materialsSheets.get(mat.sheetMusicId);
+                  const sharedDate = new Date(mat.$createdAt);
+                  const sharedAgo = (() => {
+                    const diff = Date.now() - sharedDate.getTime();
+                    const days = Math.floor(diff / 86400000);
+                    if (days > 30) return sharedDate.toLocaleDateString();
+                    if (days > 0) return `${days}d ago`;
+                    const hours = Math.floor(diff / 3600000);
+                    if (hours > 0) return `${hours}h ago`;
+                    return t("justNow");
+                  })();
                   return (
                     <div key={mat.$id} className="group flex items-center gap-4 bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-indigo-500/10 text-indigo-500">
@@ -479,15 +518,16 @@ export default function ClassroomDetailPage() {
                         <h3 className="font-bold text-zinc-900 dark:text-white truncate">
                           {sheet?.title || mat.sheetMusicId}
                         </h3>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500">
-                          {sheet?.pageCount && <span>{sheet.pageCount} pages</span>}
+                        <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500 flex-wrap">
+                          {sheet?.pageCount && <span>{sheet.pageCount} {t("pagesUnit")}</span>}
                           {sheet?.composer && <span>{sheet.composer}</span>}
                           {mat.note && <span className="italic text-zinc-400">"{mat.note}"</span>}
+                          <span className="text-zinc-400">{sharedAgo}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Link
-                          href={`/dashboard/pdfs/view/${mat.sheetMusicId}`}
+                          href={`/dashboard/pdfs/view/${mat.sheetMusicId}?shared=1&back=/classroom/${classroomId}`}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors"
                         >
                           <ExternalLink className="w-3 h-3" /> {t("openPdf")}
@@ -519,11 +559,27 @@ export default function ClassroomDetailPage() {
                     </button>
                   </div>
 
+                  {/* Search input */}
+                  <div className="relative mb-3">
+                    <input
+                      value={shareSearch}
+                      onChange={(e) => setShareSearch(e.target.value)}
+                      placeholder={t("searchPdfs")}
+                      className="w-full h-9 pl-3 pr-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+
                   <div className="max-h-60 overflow-auto space-y-2 mb-4">
-                    {mySheets.length === 0 ? (
-                      <p className="text-sm text-zinc-500 text-center py-8">{t("noSheetsToShare")}</p>
+                    {loadingSheets ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
+                      </div>
+                    ) : filteredShareSheets.length === 0 ? (
+                      <p className="text-sm text-zinc-500 text-center py-8">
+                        {mySheets.length === 0 ? t("noSheetsToShare") : t("noMatchingPdfs")}
+                      </p>
                     ) : (
-                      mySheets.map((sheet) => (
+                      filteredShareSheets.map((sheet) => (
                         <button
                           key={sheet.$id}
                           onClick={() => setSelectedSheetId(sheet.$id)}
@@ -536,7 +592,7 @@ export default function ClassroomDetailPage() {
                           <FileText className="w-5 h-5 text-indigo-500 shrink-0" />
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{sheet.title}</div>
-                            <div className="text-xs text-zinc-500">{sheet.pageCount} pages{sheet.composer ? ` • ${sheet.composer}` : ''}</div>
+                            <div className="text-xs text-zinc-500">{sheet.pageCount} {t("pagesUnit")}{sheet.composer ? ` • ${sheet.composer}` : ''}</div>
                           </div>
                         </button>
                       ))
