@@ -25,6 +25,8 @@ import {
   Sun,
   Map as MapIcon,
   X,
+  List,
+  Route,
 } from "lucide-react";
 import Draggable from 'react-draggable';
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
@@ -73,7 +75,15 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
   const [showNavMapPanel, setShowNavMapPanel] = useState(false);
   const [navSeqIndex, setNavSeqIndex] = useState(-1);
   const [savingNavMap, setSavingNavMap] = useState(false);
-  const [followModeActive, setFollowModeActive] = useState(true);
+
+  type BottomBarMode = 'sequence' | 'bookmarks' | 'hidden';
+  const getInitialBottomBarMode = (): BottomBarMode => {
+    if (!initialNavMap) return 'hidden';
+    if (initialNavMap.sequence.length > 0) return 'sequence';
+    if (initialNavMap.bookmarks.length > 0) return 'bookmarks';
+    return 'hidden';
+  };
+  const [bottomBarMode, setBottomBarMode] = useState<BottomBarMode>(getInitialBottomBarMode());
 
   // Auto-scroll
   const [autoScrolling, setAutoScrolling] = useState(false);
@@ -498,7 +508,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
   }, [goToPage]);
 
   const jumpToNextSequenceIndex = () => {
-    if (!navMap || navMap.sequence.length === 0) return;
+    if (!navMap || navMap.sequence.length === 0 || bottomBarMode !== 'sequence') return;
     const nextIdx = (navSeqIndex + 1) % navMap.sequence.length;
     setNavSeqIndex(nextIdx);
     const bmId = navMap.sequence[nextIdx];
@@ -507,7 +517,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
   };
 
   const jumpToPrevSequenceIndex = () => {
-    if (!navMap || navMap.sequence.length === 0) return;
+    if (!navMap || navMap.sequence.length === 0 || bottomBarMode !== 'sequence') return;
     const nextIdx = navSeqIndex - 1 < 0 ? navMap.sequence.length - 1 : navSeqIndex - 1;
     setNavSeqIndex(nextIdx);
     const bmId = navMap.sequence[nextIdx];
@@ -734,7 +744,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
           pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
 
-          if (navMap && navMap.sequence.length > 0 && followModeActive) {
+          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') {
             jumpToNextSequenceIndex();
           } else {
             nextPage();
@@ -746,7 +756,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
           pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
 
-          if (navMap && navMap.sequence.length > 0 && followModeActive) {
+          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') {
             jumpToPrevSequenceIndex();
           } else {
             prevPage();
@@ -759,12 +769,12 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         case "ArrowLeft":
         case "PageUp":
           e.preventDefault();
-          if (navMap && navMap.sequence.length > 0 && followModeActive) { jumpToPrevSequenceIndex(); } else { prevPage(); }
+          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') { jumpToPrevSequenceIndex(); } else { prevPage(); }
           break;
         case "ArrowRight":
         case "PageDown":
           e.preventDefault();
-          if (navMap && navMap.sequence.length > 0 && followModeActive) { jumpToNextSequenceIndex(); } else { nextPage(); }
+          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') { jumpToNextSequenceIndex(); } else { nextPage(); }
           break;
         case " ":
           e.preventDefault();
@@ -801,7 +811,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey, navMap, followModeActive, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
+  }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey, navMap, bottomBarMode, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
 
   // Swipe gesture for page navigation on touch devices
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -821,9 +831,9 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
       // Only trigger if horizontal swipe > 50px and more horizontal than vertical
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (dx < 0) {
-           if (navMap && navMap.sequence.length > 0 && followModeActive) jumpToNextSequenceIndex(); else nextPage();
+           if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') jumpToNextSequenceIndex(); else nextPage();
         } else {
-           if (navMap && navMap.sequence.length > 0 && followModeActive) jumpToPrevSequenceIndex(); else prevPage();
+           if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') jumpToPrevSequenceIndex(); else prevPage();
         }
       }
     };
@@ -833,12 +843,12 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
       el.removeEventListener("touchstart", handleTouchStart);
       el.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [nextPage, prevPage, navMap, followModeActive, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
+  }, [nextPage, prevPage, navMap, bottomBarMode, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
 
   // Performance mode tap
   const handlePerformanceTap = () => {
     if (!performanceMode) return;
-    if (navMap && navMap.sequence.length > 0 && followModeActive) {
+    if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') {
       jumpToNextSequenceIndex();
     } else {
       nextPage();
@@ -1129,7 +1139,11 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
             <button
               onClick={() => {
                 setShowNavMapPanel(!showNavMapPanel);
-                if (!showNavMapPanel) setFollowModeActive(true); // Re-enable follow mode if opening map
+                if (!showNavMapPanel) {
+                  if (navMap && navMap.sequence.length > 0) setBottomBarMode('sequence');
+                  else if (navMap && navMap.bookmarks.length > 0) setBottomBarMode('bookmarks');
+                  else setBottomBarMode('hidden');
+                }
               }}
               className={`p-1.5 rounded-md transition-colors ${showNavMapPanel || (navMap?.sequence.length ? true : false) ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
               title="Navigation Map"
@@ -1286,28 +1300,80 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         )}
       </div>
 
-      {navMap && navMap.sequence.length > 0 && followModeActive && !showNavMapPanel && !performanceMode && !isFullscreen && (
-         <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-3 w-[calc(100%-32px)] sm:w-[340px] max-w-[340px] backdrop-blur-md bg-opacity-95">
-            <button
-               onClick={() => setFollowModeActive(false)}
-               className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all"
-               title="Dismiss"
-            >
-               <X className="w-3 h-3 sm:w-4 sm:h-4" />
-            </button>
-            <button onClick={jumpToPrevSequenceIndex} className="p-1.5 sm:p-2 ml-0.5 sm:ml-1 rounded-md sm:rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors stretch-0 shrink-0">
-               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <div className="flex-1 min-w-0 text-center px-1">
-               <div className="text-[9px] sm:text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-0.5">Reading Sequence</div>
-               <div className="text-xs sm:text-sm font-medium text-white truncate px-1">
-                  {navSeqIndex >= 0 ? navMap.bookmarks.find(b => b.id === navMap.sequence[navSeqIndex])?.name || `Step ${navSeqIndex + 1}` : "Follow Mode"}
+      {navMap && bottomBarMode !== 'hidden' && !showNavMapPanel && !performanceMode && !isFullscreen && (
+         <>
+         {/* Sequence Mode */}
+         {bottomBarMode === 'sequence' && navMap.sequence.length > 0 && (
+            <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-[340px] max-w-[340px] backdrop-blur-md bg-opacity-95">
+               <button
+                  onClick={() => setBottomBarMode('hidden')}
+                  className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all z-10 focus:outline-none"
+                  title="Dismiss"
+               >
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+               </button>
+               {navMap.bookmarks.length > 0 && (
+                 <>
+                   <button 
+                     onClick={(e) => { e.currentTarget.blur(); setBottomBarMode('bookmarks'); }} 
+                     className="p-1.5 sm:p-2 ml-0.5 rounded-md sm:rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400 transition-colors stretch-0 shrink-0 focus:outline-none" 
+                     title="Quick Bookmarks (List Mode)"
+                   >
+                      <List className="w-4 h-4 sm:w-5 sm:h-5" />
+                   </button>
+                   <div className="w-px h-6 bg-zinc-800 shrink-0 mx-0.5 sm:mx-1"></div>
+                 </>
+               )}
+               <button onClick={(e) => { e.currentTarget.blur(); jumpToPrevSequenceIndex(); }} className="p-1.5 sm:p-2 ml-0.5 rounded-md sm:rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors stretch-0 shrink-0 focus:outline-none">
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+               </button>
+               <div className="flex-1 min-w-0 text-center px-1">
+                  <div className="text-[9px] sm:text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-0.5">Reading Sequence</div>
+                  <div className="text-xs sm:text-sm font-medium text-white truncate px-1">
+                     {navSeqIndex >= 0 ? navMap.bookmarks.find(b => b.id === navMap.sequence[navSeqIndex])?.name || `Step ${navSeqIndex + 1}` : "Follow Mode"}
+                  </div>
+               </div>
+               <button onClick={(e) => { e.currentTarget.blur(); jumpToNextSequenceIndex(); }} className="p-1.5 sm:p-2 mr-0.5 sm:mr-1 rounded-md sm:rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/20 transition-all active:scale-95 focus:outline-none">
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+               </button>
+            </div>
+         )}
+         {/* Bookmarks Mode */}
+         {bottomBarMode === 'bookmarks' && navMap.bookmarks.length > 0 && (
+            <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-auto max-w-[calc(100%-32px)] sm:max-w-[700px] lg:max-w-[900px] backdrop-blur-md bg-opacity-95">
+               <button
+                  onClick={() => setBottomBarMode('hidden')}
+                  className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all z-10 focus:outline-none"
+                  title="Dismiss"
+               >
+                  <X className="w-3 h-3 sm:w-4 sm:h-4" />
+               </button>
+               {navMap.sequence.length > 0 && (
+                 <>
+                   <button 
+                     onClick={(e) => { e.currentTarget.blur(); setBottomBarMode('sequence'); }} 
+                     className="p-1.5 sm:p-2 ml-0.5 rounded-md sm:rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-indigo-400 transition-colors stretch-0 shrink-0 focus:outline-none" 
+                     title="Reading Sequence Mode"
+                   >
+                      <Route className="w-4 h-4 sm:w-5 sm:h-5" />
+                   </button>
+                   <div className="w-px h-6 bg-zinc-800 shrink-0 mx-0.5 sm:mx-1"></div>
+                 </>
+               )}
+               <div className="flex-1 w-full overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-1.5 sm:gap-2 px-1 py-0.5">
+                  {navMap.bookmarks.map(bm => (
+                     <button 
+                        key={bm.id} 
+                        onClick={(e) => { e.currentTarget.blur(); jumpToBookmark(bm); }}
+                        className="whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-medium rounded-lg bg-zinc-800/80 text-zinc-300 border border-zinc-700/50 hover:bg-emerald-600/20 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors flex-shrink-0 focus:outline-none"
+                     >
+                        {bm.name}
+                     </button>
+                  ))}
                </div>
             </div>
-            <button onClick={jumpToNextSequenceIndex} className="p-1.5 sm:p-2 mr-1 sm:mr-1.5 rounded-md sm:rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/20 transition-all active:scale-95">
-               <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-         </div>
+         )}
+         </>
       )}
     </div>
   );
