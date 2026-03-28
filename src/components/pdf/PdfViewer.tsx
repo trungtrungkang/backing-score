@@ -950,13 +950,10 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             </Popover>
 
             {/* Metronome — always visible */}
-            <Popover open={showMetronomePanel && !metronomeOn} onOpenChange={(open) => { if (!open) setShowMetronomePanel(false); }}>
+            <Popover open={showMetronomePanel} onOpenChange={setShowMetronomePanel}>
               <PopoverTrigger asChild>
                 <button
-                  onClick={() => {
-                    if (!metronomeOn) setShowMetronomePanel((v) => !v);
-                    else { setMetronomeOn(false); setShowMetronomePanel(false); }
-                  }}
+                  onClick={() => setShowMetronomePanel((v) => !v)}
                   className={`flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
                   title={t("metronome")}
                 >
@@ -975,9 +972,9 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                 <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("metronome")}</div>
                 <div className="flex items-center justify-center gap-3 mb-3">
                   <span className="text-xs text-zinc-400">{t("bpm")}</span>
-                  <button onClick={() => setBpm((b) => Math.max(40, b - 5))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">−</button>
+                  <button onClick={() => setBpm((b) => Math.max(40, b - 1))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">−</button>
                   <span className="text-lg font-mono text-white w-10 text-center">{bpm}</span>
-                  <button onClick={() => setBpm((b) => Math.min(240, b + 5))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">+</button>
+                  <button onClick={() => setBpm((b) => Math.min(240, b + 1))} className="w-7 h-7 flex items-center justify-center rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-sm font-bold transition-colors">+</button>
                 </div>
                 <button onClick={handleTapTempo} className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors">{t("tapTempo")}</button>
                 <div className="flex items-center gap-2 mb-3">
@@ -988,7 +985,11 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                     ))}
                   </div>
                 </div>
-                <button onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }} className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors">▶ Start</button>
+                {metronomeOn ? (
+                  <button onClick={() => setMetronomeOn(false)} className="w-full py-2 rounded-md bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors">■ Stop</button>
+                ) : (
+                  <button onClick={() => setMetronomeOn(true)} className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors">▶ Start</button>
+                )}
               </PopoverContent>
             </Popover>
 
