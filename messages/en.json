@@ -721,6 +721,8 @@
     "exitFullscreen": "Exit Fullscreen",
     "pdfNotFound": "PDF Not Found",
     "pdfNotFoundDescription": "This document doesn't exist or you don't have permission to view it.",
-    "files": "{count} files"
+    "files": "{count} files",
+    "darkModePdf": "Dark Mode",
+    "lightMode": "Light Mode"
   }
 }

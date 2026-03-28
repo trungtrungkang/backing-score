@@ -21,6 +21,8 @@ import {
   PanelTop,
   Footprints,
   MoreVertical,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -61,6 +63,12 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   const [autoScrolling, setAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(30);
   const lastTimeRef = useRef(0);
+
+  // Dark mode (invert PDF colors)
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Wake Lock — prevent screen sleep during performance/auto-scroll
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   // Bookmarks — persisted in localStorage
   const storageKey = `pdf-bookmarks-${title}`;
@@ -246,6 +254,36 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
       window.scrollTo(0, scrollY);
     };
   }, []);
+
+  // Wake Lock — keep screen on during performance mode or auto-scroll
+  useEffect(() => {
+    const shouldLock = performanceMode || autoScrolling;
+    if (!shouldLock) {
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+      return;
+    }
+    let cancelled = false;
+    async function requestLock() {
+      try {
+        if ('wakeLock' in navigator && !cancelled) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        }
+      } catch { /* user denied or not supported */ }
+    }
+    requestLock();
+    // Re-acquire on visibility change (browser releases on tab switch)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !cancelled) requestLock();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    };
+  }, [performanceMode, autoScrolling]);
 
   // Load PDF document
   useEffect(() => {
@@ -722,7 +760,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         </button>
       )}
       {/* Scroll container */}
-      <div ref={scrollRef} className={`flex-1 min-h-0 ${effectiveSpread ? 'overflow-hidden' : 'overflow-auto'} ${!performanceMode ? 'pb-28 sm:pb-14' : ''}`} onClick={handlePerformanceTap}>
+      <div ref={scrollRef} className={`flex-1 min-h-0 ${effectiveSpread ? 'overflow-hidden' : 'overflow-auto'} ${!performanceMode ? 'pb-28 sm:pb-14' : ''} ${darkMode ? '[&_canvas]:invert [&_canvas]:hue-rotate-180' : ''}`} onClick={handlePerformanceTap}>
         <div className={`flex flex-col items-center ${effectiveSpread ? 'h-full' : 'py-0 gap-4'}`}>
           {pdfLoading && (
             <div className="flex items-center justify-center h-[60vh]">
@@ -1028,6 +1066,15 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
               )}
             </div>
 
+            {/* Dark mode toggle (desktop) */}
+            <button
+              onClick={() => setDarkMode((v) => !v)}
+              className={`hidden sm:flex p-1.5 rounded-md transition-colors ${darkMode ? 'text-amber-400 bg-amber-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+              title={darkMode ? t('lightMode') : t('darkModePdf')}
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
             {/* === Mobile-only: three-dot menu === */}
             <Popover>
               <PopoverTrigger asChild>
@@ -1047,13 +1094,29 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                       {t("autoScroll")} {autoScrolling && "✓"}
                     </button>
                     {autoScrolling && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <button onClick={() => setScrollSpeed((s) => Math.max(5, s - 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">−</button>
-                        <span className="text-xs text-zinc-400 font-mono flex-1 text-center">{scrollSpeed}</span>
-                        <button onClick={() => setScrollSpeed((s) => Math.min(150, s + 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">+</button>
-                      </div>
+                      <>
+                        <div className="flex items-center gap-2 mt-1">
+                          <button onClick={() => setScrollSpeed((s) => Math.max(5, s - 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">−</button>
+                          <span className="text-xs text-zinc-400 font-mono flex-1 text-center">{scrollSpeed}</span>
+                          <button onClick={() => setScrollSpeed((s) => Math.min(150, s + 5))} className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs transition-colors">+</button>
+                        </div>
+                        <div className="flex gap-1 mt-1.5 flex-wrap">
+                          {[['Largo', 20], ['Andante', 40], ['Mod.', 60], ['Allegro', 90], ['Presto', 120]].map(([label, speed]) => (
+                            <button key={label as string} onClick={() => setScrollSpeed(speed as number)} className={`px-1.5 py-0.5 rounded text-[9px] transition-colors ${scrollSpeed === speed ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}>{label}</button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
+                  <div className="my-1 border-t border-zinc-800" />
+                  {/* Dark mode */}
+                  <button
+                    onClick={() => setDarkMode((v) => !v)}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${darkMode ? 'text-amber-400 font-semibold' : 'text-zinc-300'}`}
+                  >
+                    {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                    {darkMode ? t('lightMode') : t('darkModePdf')} {darkMode && "✓"}
+                  </button>
                   <div className="my-1 border-t border-zinc-800" />
                   {/* Half-page turn */}
                   <button
