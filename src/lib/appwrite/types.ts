@@ -302,6 +302,7 @@ export interface SheetMusicDocument {
   instrument?: string;
   tags?: string[];
   folderId?: string | null;
+  thumbnailId?: string | null;
   lastOpenedAt?: string;
   favorite?: boolean;
 }

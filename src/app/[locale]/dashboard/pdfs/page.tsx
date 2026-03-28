@@ -25,10 +25,11 @@ import {
   toggleSheetFavorite,
   moveSheetToFolder,
   uploadSheetPdf,
-  getSheetPdfUrl,
+  getThumbnailUrl,
   type SheetMusicDocument,
   type SheetMusicFolderDocument,
 } from "@/lib/appwrite";
+import { extractPdfMetadata } from "@/lib/pdf-utils";
 import {
   Plus,
   Upload,
@@ -132,16 +133,13 @@ export default function PdfsLibraryPage() {
       }
 
       try {
-        // Extract page count using pdf.js
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
-        const arrayBuf = await file.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data: arrayBuf }).promise;
-        const pageCount = pdf.numPages;
+        // Extract page count + generate thumbnail via pdf.js (CDN)
+        const { pageCount, thumbnailBlob } = await extractPdfMetadata(file);
 
         await uploadSheetPdf(file, {
           title: file.name.replace(/\.pdf$/i, ""),
           pageCount,
+          thumbnailBlob,
           folderId: currentFolderId,
         });
 
@@ -517,9 +515,18 @@ export default function PdfsLibraryPage() {
                       router.push(`/dashboard/pdfs/view/${sheet.$id}`)
                     }
                   >
-                    {/* Thumbnail placeholder */}
-                    <div className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center relative">
-                      <FileText className="w-12 h-12 text-zinc-300 dark:text-zinc-600" />
+                    {/* Thumbnail */}
+                    <div className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden">
+                      {sheet.thumbnailId ? (
+                        <img
+                          src={getThumbnailUrl(sheet.thumbnailId)}
+                          alt={sheet.title}
+                          className="w-full h-full object-cover object-top"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <FileText className="w-12 h-12 text-zinc-300 dark:text-zinc-600" />
+                      )}
                       {sheet.favorite && (
                         <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 right-2" />
                       )}

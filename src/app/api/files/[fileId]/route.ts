@@ -10,7 +10,8 @@ import { Client, Storage } from "node-appwrite";
 const ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 const API_KEY = process.env.APPWRITE_API_KEY;
-const BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_UPLOADS_BUCKET_ID ?? "uploads";
+const DEFAULT_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_UPLOADS_BUCKET_ID ?? "uploads";
+const ALLOWED_BUCKETS = new Set([DEFAULT_BUCKET_ID, "sheet_pdfs", "classroom_recordings"]);
 
 function getStorage() {
   if (!ENDPOINT || !PROJECT_ID || !API_KEY) {
@@ -26,6 +27,7 @@ const MIME_BY_EXT: Record<string, string> = {
   mxl: "application/vnd.recordare.musicxml",
   mid: "audio/midi",
   midi: "audio/midi",
+  pdf: "application/pdf",
 };
 
 const EXT_BY_MIME: Record<string, string> = {
@@ -48,6 +50,11 @@ export async function GET(
   if (!fileId) {
     return NextResponse.json({ error: "Missing fileId" }, { status: 400 });
   }
+
+  // Support multiple buckets via query param
+  const url = new URL(_request.url);
+  const bucketParam = url.searchParams.get("bucket") || DEFAULT_BUCKET_ID;
+  const BUCKET_ID = ALLOWED_BUCKETS.has(bucketParam) ? bucketParam : DEFAULT_BUCKET_ID;
 
   try {
     const storage = getStorage();
@@ -77,6 +84,7 @@ export async function GET(
       headers: {
         "Content-Type": mime,
         "Content-Disposition": disposition,
+        "Cache-Control": "public, max-age=3600, s-maxage=86400",
       },
     });
   } catch (e) {

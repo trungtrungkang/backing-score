@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import {
   getSheetMusic,
-  getSheetPdfUrl,
   touchSheetLastOpened,
   type SheetMusicDocument,
 } from "@/lib/appwrite";
@@ -36,7 +35,8 @@ export default function PdfViewPage() {
       try {
         const doc = await getSheetMusic(id);
         setSheet(doc);
-        setPdfUrl(getSheetPdfUrl(doc.fileId));
+        // Use API proxy for caching — browser caches via HTTP Cache-Control headers
+        setPdfUrl(`/api/files/${doc.fileId}?bucket=sheet_pdfs`);
         // Update lastOpenedAt
         touchSheetLastOpened(id).catch(() => {});
       } catch (err) {

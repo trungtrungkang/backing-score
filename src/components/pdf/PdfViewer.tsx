@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import "react-pdf/dist/Page/AnnotationLayer.css";
-import "react-pdf/dist/Page/TextLayer.css";
 import { useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -15,11 +12,8 @@ import {
   Play,
   Pause,
   ChevronsUp,
-  Bookmark,
 } from "lucide-react";
-
-// Configure pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 
 interface PdfViewerProps {
   pdfUrl: string;
@@ -27,39 +21,39 @@ interface PdfViewerProps {
   title: string;
 }
 
-// Tempo presets in pixels/second for auto-scroll
-const TEMPO_PRESETS = [
-  { name: "Largo", speed: 15 },
-  { name: "Andante", speed: 30 },
-  { name: "Moderato", speed: 50 },
-  { name: "Allegro", speed: 75 },
-  { name: "Presto", speed: 110 },
-];
-
 export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRAF = useRef<number>(0);
+  const pdfDocRef = useRef<PdfDocument | null>(null);
+
+  // Track active render tasks so we can cancel them
+  const activeRenders = useRef<Map<number, { cancel: () => void }>>(new Map());
+  const renderGeneration = useRef(0); // incremented on each full re-render
 
   // State
   const [numPages, setNumPages] = useState(pageCount);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1);
-  const [containerWidth, setContainerWidth] = useState(800);
+  const [containerWidth, setContainerWidth] = useState(0); // start at 0, wait for measurement
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [halfPageTurn, setHalfPageTurn] = useState(false);
   const [performanceMode, setPerformanceMode] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfError, setPdfError] = useState("");
 
-  // Auto-scroll state
+  // Auto-scroll
   const [autoScrolling, setAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(30); // pixels per second
+  const [scrollSpeed, setScrollSpeed] = useState(30);
   const lastTimeRef = useRef(0);
 
   // Measure container width
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    // Set initial width immediately
+    setContainerWidth(el.clientWidth);
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setContainerWidth(entry.contentRect.width);
@@ -69,22 +63,122 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     return () => observer.disconnect();
   }, []);
 
-  // Document loaded
-  const onDocumentLoadSuccess = ({ numPages: n }: { numPages: number }) => {
-    setNumPages(n);
-  };
+  // Load PDF document
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setPdfLoading(true);
+        setPdfError("");
+        const pdfjsLib = await loadPdfJs();
+        if (cancelled) return;
+        const pdf = await pdfjsLib.getDocument({ url: pdfUrl }).promise;
+        if (cancelled) return;
+        pdfDocRef.current = pdf;
+        setNumPages(pdf.numPages);
+        setPdfLoading(false);
+      } catch (err) {
+        if (!cancelled) {
+          setPdfError(String(err));
+          setPdfLoading(false);
+        }
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl]);
+
+  // Render a single page to its canvas (with cancel support)
+  const renderPage = useCallback(
+    async (pageNum: number, gen: number) => {
+      const pdf = pdfDocRef.current;
+      if (!pdf || containerWidth === 0) return;
+
+      const canvas = document.getElementById(`pdf-canvas-${pageNum}`) as HTMLCanvasElement | null;
+      if (!canvas) return;
+
+      // Cancel any existing render on this canvas
+      const existing = activeRenders.current.get(pageNum);
+      if (existing) {
+        try {
+          existing.cancel();
+        } catch {
+          /* ignore */
+        }
+        activeRenders.current.delete(pageNum);
+      }
+
+      // Abort if a newer generation was triggered
+      if (gen !== renderGeneration.current) return;
+
+      try {
+        const page = await pdf.getPage(pageNum);
+        if (gen !== renderGeneration.current) return;
+
+        const pageWidth = containerWidth * scale;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const renderScale = pageWidth / baseViewport.width;
+        const viewport = page.getViewport({ scale: renderScale });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const renderTask = page.render({ canvasContext: ctx, viewport });
+        activeRenders.current.set(pageNum, renderTask);
+
+        await renderTask.promise;
+        activeRenders.current.delete(pageNum);
+      } catch (err) {
+        // RenderingCancelledException is expected when we cancel
+        if (err && typeof err === "object" && "name" in err && (err as { name: string }).name === "RenderingCancelledException") {
+          return;
+        }
+        console.error(`Failed to render page ${pageNum}:`, err);
+      }
+    },
+    [containerWidth, scale]
+  );
+
+  // Re-render all pages when PDF loads, scale changes, or container resizes
+  useEffect(() => {
+    if (!pdfDocRef.current || containerWidth === 0) return;
+
+    // Cancel all previous renders
+    renderGeneration.current += 1;
+    const gen = renderGeneration.current;
+    activeRenders.current.forEach((task) => {
+      try {
+        task.cancel();
+      } catch {
+        /* ignore */
+      }
+    });
+    activeRenders.current.clear();
+
+    // Small delay to let DOM settle after state change
+    const timer = setTimeout(() => {
+      for (let i = 1; i <= numPages; i++) {
+        renderPage(i, gen);
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [numPages, renderPage, containerWidth, scale, pdfLoading]);
 
   // Page navigation
   const goToPage = useCallback(
     (page: number) => {
       const clamped = Math.max(1, Math.min(page, numPages));
       setCurrentPage(clamped);
-
-      // Scroll to page in continuous mode
-      const pageEl = document.getElementById(`pdf-page-${clamped}`);
-      if (pageEl) {
-        pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      const el = document.getElementById(`pdf-page-${clamped}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     },
     [numPages]
   );
@@ -116,18 +210,13 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
       cancelAnimationFrame(autoScrollRAF.current);
       return;
     }
-
     lastTimeRef.current = performance.now();
-
     const tick = (now: number) => {
       const delta = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop += scrollSpeed * delta;
-      }
+      if (scrollRef.current) scrollRef.current.scrollTop += scrollSpeed * delta;
       autoScrollRAF.current = requestAnimationFrame(tick);
     };
-
     autoScrollRAF.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(autoScrollRAF.current);
   }, [autoScrolling, scrollSpeed]);
@@ -156,7 +245,6 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-
     const handleScroll = () => {
       for (let i = 1; i <= numPages; i++) {
         const pageEl = document.getElementById(`pdf-page-${i}`);
@@ -169,7 +257,6 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         }
       }
     };
-
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
   }, [numPages]);
@@ -178,7 +265,6 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
-
       switch (e.key) {
         case "ArrowLeft":
         case "PageUp":
@@ -190,7 +276,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
           e.preventDefault();
           nextPage();
           break;
-        case " ": // Space — toggle auto-scroll
+        case " ":
           e.preventDefault();
           setAutoScrolling((v) => !v);
           break;
@@ -214,70 +300,53 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
           toggleFullscreen();
           break;
         case "Escape":
-          if (performanceMode) {
-            setPerformanceMode(false);
-          }
+          if (performanceMode) setPerformanceMode(false);
           break;
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [prevPage, nextPage, performanceMode]);
 
-  // Performance mode: tap to advance
+  // Performance mode tap
   const handlePerformanceTap = () => {
     if (!performanceMode) return;
     nextPage();
   };
-
-  const pageWidth = containerWidth * scale;
 
   return (
     <div
       ref={containerRef}
       className={`flex flex-col h-full bg-zinc-950 ${performanceMode ? "cursor-none" : ""}`}
     >
-      {/* Scroll container with all pages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto"
-        onClick={handlePerformanceTap}
-      >
+      {/* Scroll container */}
+      <div ref={scrollRef} className="flex-1 overflow-auto" onClick={handlePerformanceTap}>
         <div className="flex flex-col items-center py-4 gap-4">
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            loading={
-              <div className="flex items-center justify-center h-[60vh]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
-              </div>
-            }
-            error={
-              <div className="text-red-400 text-center py-20">
-                Failed to load PDF
-              </div>
-            }
-          >
-            {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
-              <div
-                key={pageNum}
-                id={`pdf-page-${pageNum}`}
-                className="shadow-lg mb-2"
-              >
-                <Page
-                  pageNumber={pageNum}
-                  width={pageWidth}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
+          {pdfLoading && (
+            <div className="flex items-center justify-center h-[60vh]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
+            </div>
+          )}
+
+          {pdfError && (
+            <div className="text-red-400 text-center py-20">Failed to load PDF: {pdfError}</div>
+          )}
+
+          {!pdfLoading &&
+            !pdfError &&
+            Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
+              <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2">
+                <canvas
+                  id={`pdf-canvas-${pageNum}`}
+                  className="bg-white"
+                  style={{ maxWidth: "100%" }}
                 />
               </div>
             ))}
-          </Document>
         </div>
       </div>
 
-      {/* Bottom toolbar — hidden in performance mode */}
+      {/* Bottom toolbar */}
       {!performanceMode && (
         <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-t border-zinc-800 flex-shrink-0 select-none">
           {/* Page navigation */}
@@ -328,7 +397,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
           {/* Feature toggles */}
           <div className="flex items-center gap-1">
-            {/* Auto-scroll toggle + speed */}
+            {/* Auto-scroll */}
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setAutoScrolling((v) => !v)}
@@ -369,8 +438,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
               }`}
               title={t("halfPageTurn")}
             >
-              <ChevronsUp className="w-3.5 h-3.5" />
-              ½
+              <ChevronsUp className="w-3.5 h-3.5" />½
             </button>
 
             {/* Performance mode */}
@@ -386,13 +454,8 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             <button
               onClick={toggleFullscreen}
               className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
-              {isFullscreen ? (
-                <Minimize className="w-4 h-4" />
-              ) : (
-                <Maximize className="w-4 h-4" />
-              )}
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
           </div>
         </div>

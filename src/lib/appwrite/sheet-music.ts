@@ -35,6 +35,7 @@ export async function uploadSheetPdf(
     tags?: string[];
     folderId?: string | null;
     pageCount: number;
+    thumbnailBlob?: Blob | null;
   }
 ): Promise<SheetMusicDocument> {
   if (file.type !== "application/pdf") {
@@ -70,6 +71,7 @@ export async function uploadSheetPdf(
       instrument: meta.instrument || null,
       tags: meta.tags || [],
       folderId: meta.folderId || null,
+      thumbnailId: null as string | null,
       favorite: false,
     },
     [
@@ -78,6 +80,28 @@ export async function uploadSheetPdf(
       Permission.delete(Role.user(user.$id)),
     ]
   );
+
+  // Upload thumbnail if provided
+  if (meta.thumbnailBlob) {
+    try {
+      const thumbId = ID.unique();
+      const thumbFile = new File([meta.thumbnailBlob], `thumb_${fileId}.jpg`, {
+        type: "image/jpeg",
+      });
+      await storage.createFile(bucketId, thumbId, thumbFile, [
+        Permission.read(Role.user(user.$id)),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id)),
+      ]);
+      // Update document with thumbnailId
+      await databases.updateDocument(dbId, collId, doc.$id, {
+        thumbnailId: thumbId,
+      });
+      (doc as unknown as SheetMusicDocument).thumbnailId = thumbId;
+    } catch (err) {
+      console.warn("Failed to upload thumbnail:", err);
+    }
+  }
 
   return doc as unknown as SheetMusicDocument;
 }
@@ -188,9 +212,22 @@ export async function toggleSheetFavorite(
   });
 }
 
-/** Get the URL to view/download a PDF file from storage. */
+/** Download a PDF file from storage and return a blob URL. */
+export async function getSheetPdfBlobUrl(fileId: string): Promise<string> {
+  const result = await storage.getFileDownload(bucketId, fileId);
+  // result is an ArrayBuffer from Appwrite SDK
+  const blob = new Blob([result], { type: "application/pdf" });
+  return URL.createObjectURL(blob);
+}
+
+/** Get the raw Appwrite URL (for reference only, requires auth). */
 export function getSheetPdfUrl(fileId: string): string {
   return storage.getFileView(bucketId, fileId);
+}
+
+/** Get a thumbnail URL via API proxy (cacheable). */
+export function getThumbnailUrl(thumbnailId: string): string {
+  return `/api/files/${thumbnailId}?bucket=sheet_pdfs`;
 }
 
 /** Update lastOpenedAt to now. */

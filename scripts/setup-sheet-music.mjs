@@ -72,7 +72,7 @@ async function createAttributesSafe(databases, databaseId, collectionId, attrs) 
     try {
       if (attr.type === "string") {
         await databases.createStringAttribute({
-          databaseId, collectionId, key: attr.key, size: attr.size, required: attr.required,
+          databaseId, collectionId, key: attr.key, size: attr.size, required: attr.required, array: attr.array || false,
         });
       } else if (attr.type === "integer") {
         await databases.createIntegerAttribute({
@@ -145,6 +145,8 @@ async function main() {
     { key: "composer",     type: "string",   required: false, size: 200 },
     { key: "instrument",   type: "string",   required: false, size: 100 },
     { key: "folderId",     type: "string",   required: false, size: 256 },
+    { key: "tags",          type: "string",   required: false, size: 100, array: true },
+    { key: "thumbnailId",  type: "string",   required: false, size: 256 },
     { key: "lastOpenedAt", type: "datetime", required: false },
     { key: "favorite",     type: "boolean",  required: false, xdefault: false },
   ]);
@@ -187,12 +189,24 @@ async function main() {
       ],
       fileSecurity: true,
       maximumFileSize: 20 * 1024 * 1024, // 20MB
-      allowedFileExtensions: ["pdf"],
+      allowedFileExtensions: ["pdf", "jpg", "jpeg"],
     });
-    console.log("✅ Created bucket: sheet_pdfs (20MB max, PDF only)");
+    console.log("✅ Created bucket: sheet_pdfs (20MB max, pdf+jpg)");
   } catch (e) {
     if (e.code === 409) {
-      console.log("⏭️  Bucket already exists: sheet_pdfs");
+      console.log("⏭️  Bucket already exists: sheet_pdfs — updating extensions...");
+      await storageClient.updateBucket({
+        bucketId: "sheet_pdfs",
+        name: "Sheet Music PDFs",
+        permissions: [
+          Permission.create(Role.users()),
+          Permission.read(Role.users()),
+        ],
+        fileSecurity: true,
+        maximumFileSize: 20 * 1024 * 1024,
+        allowedFileExtensions: ["pdf", "jpg", "jpeg"],
+      });
+      console.log("✅ Updated bucket: sheet_pdfs (now allows pdf+jpg)");
     } else throw e;
   }
 

@@ -143,6 +143,8 @@ export {
   moveSheetToFolder,
   toggleSheetFavorite,
   getSheetPdfUrl,
+  getSheetPdfBlobUrl,
+  getThumbnailUrl,
   touchSheetLastOpened,
 } from "./sheet-music";
 export {
