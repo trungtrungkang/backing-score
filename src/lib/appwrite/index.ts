@@ -160,3 +160,9 @@ export {
   updateSheetFolder,
   deleteSheetFolder,
 } from "./sheet-music-folders";
+export type { Bookmark, NavigationSequence, SheetNavMapDocument, ParsedSheetNavMap } from "./nav-maps";
+export {
+  getNavMap,
+  saveNavMap,
+  deleteNavMap,
+} from "./nav-maps";

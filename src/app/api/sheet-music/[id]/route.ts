@@ -34,6 +34,22 @@ export async function GET(
     const db = getDb();
     const doc = await db.getDocument(DATABASE_ID, SHEET_MUSIC_COLLECTION, id);
 
+    // Fetch nav map
+    let navMap = null;
+    try {
+      const { Query: NodeQuery } = await import("node-appwrite");
+      const { documents } = await db.listDocuments(DATABASE_ID, "sheet_nav_maps", [
+        NodeQuery.equal("sheetMusicId", id)
+      ]);
+      if (documents.length > 0) {
+        navMap = {
+          $id: documents[0].$id,
+          sequence: JSON.parse(documents[0].sequence || "[]"),
+          bookmarks: JSON.parse(documents[0].bookmarks || "[]"),
+        };
+      }
+    } catch { /* best-effort */ }
+
     // Return only safe metadata (not file permissions or internal fields)
     return NextResponse.json({
       $id: doc.$id,
@@ -44,6 +60,7 @@ export async function GET(
       fileId: doc.fileId,
       thumbnailId: doc.thumbnailId,
       tags: doc.tags,
+      navMap,
     });
   } catch (e) {
     const code = e && typeof e === "object" && "code" in e ? (e as { code: number }).code : 500;

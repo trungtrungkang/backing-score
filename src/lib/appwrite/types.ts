@@ -317,6 +317,7 @@ export interface SheetMusicDocument {
   thumbnailId?: string | null;
   lastOpenedAt?: string;
   favorite?: boolean;
+  navMap?: any; // ParsedSheetNavMap
 }
 
 export interface SheetMusicFolderDocument {

@@ -12,7 +12,7 @@ import {
   Play,
   Pause,
   ChevronsUp,
-  Bookmark,
+  Bookmark as BookmarkIcon,
   BookmarkCheck,
   ChevronDown,
   Columns2,
@@ -23,17 +23,22 @@ import {
   MoreVertical,
   Moon,
   Sun,
+  Map as MapIcon,
 } from "lucide-react";
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import PdfNavMapPanel from "./PdfNavMapPanel";
+import { saveNavMap, type ParsedSheetNavMap, type Bookmark, type NavigationSequence } from "@/lib/appwrite/nav-maps";
 
 interface PdfViewerProps {
+  sheetMusicId: string;
   pdfUrl: string;
   pageCount: number;
   title: string;
+  initialNavMap?: ParsedSheetNavMap | null;
 }
 
-export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) {
+export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, initialNavMap }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -58,6 +63,12 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
   const [performanceMode, setPerformanceMode] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState("");
+
+  // Nav Map State
+  const [navMap, setNavMap] = useState<ParsedSheetNavMap | null>(initialNavMap || null);
+  const [showNavMapPanel, setShowNavMapPanel] = useState(false);
+  const [navSeqIndex, setNavSeqIndex] = useState(-1);
+  const [savingNavMap, setSavingNavMap] = useState(false);
 
   // Auto-scroll
   const [autoScrolling, setAutoScrolling] = useState(false);
@@ -443,15 +454,61 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
 
   // Page navigation
   const goToPage = useCallback(
-    (page: number) => {
+    (page: number, yPercent?: number) => {
       const clamped = Math.max(1, Math.min(page, numPages));
       setCurrentPage(clamped);
       localStorage.setItem(`pdf-lastpage-${title}`, String(clamped));
+      
       const el = document.getElementById(`pdf-page-${clamped}`);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el && scrollRef.current) {
+         if (yPercent !== undefined) {
+           const containerTop = scrollRef.current.getBoundingClientRect().top;
+           const pageTop = el.getBoundingClientRect().top;
+           const targetScrollY = scrollRef.current.scrollTop + (pageTop - containerTop) + (el.offsetHeight * yPercent);
+           scrollRef.current.scrollTo({ top: targetScrollY, behavior: "smooth" });
+         } else {
+           el.scrollIntoView({ behavior: "smooth", block: "start" });
+         }
+      }
     },
-    [numPages]
+    [numPages, title]
   );
+
+  // ─── Nav Map Actions ───
+  const handleSaveNavMap = async (bookmarks: Bookmark[], sequence: NavigationSequence) => {
+    setSavingNavMap(true);
+    try {
+      const updated = await saveNavMap(sheetMusicId, bookmarks, sequence);
+      setNavMap(updated);
+    } catch (err) {
+      console.error(err);
+      alert(t("saveFailed") || "Failed to save Nav Map");
+    } finally {
+      setSavingNavMap(false);
+    }
+  };
+
+  const jumpToBookmark = useCallback((bm: Bookmark) => {
+    goToPage(bm.pageIndex + 1, bm.yPercent);
+  }, [goToPage]);
+
+  const jumpToNextSequenceIndex = () => {
+    if (!navMap || navMap.sequence.length === 0) return;
+    const nextIdx = (navSeqIndex + 1) % navMap.sequence.length;
+    setNavSeqIndex(nextIdx);
+    const bmId = navMap.sequence[nextIdx];
+    const bm = navMap.bookmarks.find(b => b.id === bmId);
+    if (bm) jumpToBookmark(bm);
+  };
+
+  const jumpToPrevSequenceIndex = () => {
+    if (!navMap || navMap.sequence.length === 0) return;
+    const nextIdx = navSeqIndex - 1 < 0 ? navMap.sequence.length - 1 : navSeqIndex - 1;
+    setNavSeqIndex(nextIdx);
+    const bmId = navMap.sequence[nextIdx];
+    const bm = navMap.bookmarks.find(b => b.id === bmId);
+    if (bm) jumpToBookmark(bm);
+  };
   // Check if a page's top is aligned with the scroll container (within tolerance)
   const isPageAligned = useCallback((pageNum: number) => {
     const el = scrollRef.current;
@@ -1002,7 +1059,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
                   className={`p-1.5 rounded-md transition-colors ${bookmarkedPages.has(currentPage) ? "text-amber-400 bg-amber-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
                   title={t("bookmark")}
                 >
-                  {bookmarkedPages.has(currentPage) ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                  {bookmarkedPages.has(currentPage) ? <BookmarkCheck className="w-4 h-4" /> : <BookmarkIcon className="w-4 h-4" />}
                 </button>
                 {bookmarkedPages.size > 0 && (
                   <PopoverTrigger asChild>
@@ -1151,6 +1208,49 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             </Popover>
           </div>
         </div>
+      )}
+
+      {/* Nav Map Panel & Sequence Follow UI */}
+      <div className="absolute top-16 right-4 z-50 flex flex-col gap-4 items-end pointer-events-none">
+        {showNavMapPanel && (
+          <div className="pointer-events-auto h-[70vh] max-h-[600px]">
+            <PdfNavMapPanel
+              sheetMusicId={sheetMusicId}
+              initialNavMap={navMap}
+              currentPage={currentPage}
+              currentYPercent={(() => {
+                if (!scrollRef.current) return 0;
+                const pageEl = scrollRef.current.querySelector(`[data-page-number="${currentPage}"]`) as HTMLElement;
+                if (!pageEl) return 0;
+                const rect = pageEl.getBoundingClientRect();
+                const scrollY = scrollRef.current.getBoundingClientRect().top;
+                const offset = scrollY - rect.top;
+                return Math.max(0, Math.min(1, offset / rect.height));
+              })()}
+              onSave={handleSaveNavMap}
+              onJumpToBookmark={jumpToBookmark}
+              onClose={() => setShowNavMapPanel(false)}
+              isSaving={savingNavMap}
+            />
+          </div>
+        )}
+      </div>
+
+      {navMap && navMap.sequence.length > 0 && !showNavMapPanel && !performanceMode && !isFullscreen && (
+         <div className="absolute bottom-16 sm:bottom-6 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-40 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-2 flex items-center gap-3 w-80 backdrop-blur-md bg-opacity-95">
+            <button onClick={jumpToPrevSequenceIndex} className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+               <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0 text-center">
+               <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-0.5">Reading Sequence</div>
+               <div className="text-sm font-medium text-white truncate px-1">
+                  {navSeqIndex >= 0 ? navMap.bookmarks.find(b => b.id === navMap.sequence[navSeqIndex])?.name || `Step ${navSeqIndex + 1}` : "Follow Mode"}
+               </div>
+            </div>
+            <button onClick={jumpToNextSequenceIndex} className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/20 transition-all active:scale-95">
+               <ChevronRight className="w-5 h-5" />
+            </button>
+         </div>
       )}
     </div>
   );

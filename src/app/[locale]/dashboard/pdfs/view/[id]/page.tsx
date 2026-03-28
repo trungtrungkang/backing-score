@@ -7,6 +7,7 @@ import { Link } from "@/i18n/routing";
 import {
   getSheetMusic,
   touchSheetLastOpened,
+  getNavMap,
   type SheetMusicDocument,
 } from "@/lib/appwrite";
 import { Loader2, ChevronLeft, Maximize, Minimize, Play, Pause, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Bookmark } from "lucide-react";
@@ -39,14 +40,17 @@ export default function PdfViewPage() {
         let doc: SheetMusicDocument;
 
         if (isShared) {
-          // Shared mode: use server API proxy (no client-side Appwrite permissions needed)
+          // Shared mode: use server API proxy
           const res = await fetch(`/api/sheet-music/${id}`);
           if (!res.ok) throw new Error("not_found");
           doc = await res.json() as SheetMusicDocument;
         } else {
           // Owner mode: direct Appwrite client call
           doc = await getSheetMusic(id);
-          // Update lastOpenedAt only for owner
+          try {
+            const nav = await getNavMap(id);
+            if (nav) doc.navMap = nav;
+          } catch { /* best-effort */ }
           touchSheetLastOpened(id).catch(() => {});
         }
 
@@ -103,7 +107,13 @@ export default function PdfViewPage() {
 
       {/* Viewer */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <PdfViewerCore pdfUrl={pdfUrl} pageCount={sheet.pageCount} title={sheet.title} />
+        <PdfViewerCore
+          sheetMusicId={sheet.$id}
+          pdfUrl={pdfUrl}
+          pageCount={sheet.pageCount}
+          title={sheet.title}
+          initialNavMap={sheet.navMap || null}
+        />
       </div>
     </div>
   );

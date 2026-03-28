@@ -411,20 +411,38 @@ Lộ trình đọc (Navigation Sequence):
 
 ### 6.3 Data Model
 
+Để đảm bảo đồng bộ cross-device và cho phép teacher share cho student trong Classroom, Navigation Map được lưu trên server (Appwrite) ở một collection riêng. Vị trí bookmark được lưu bằng **tỉ lệ % (`yPercent`)** thay vì pixel tuyệt đối để không bị ảnh hưởng bởi kích thước màn hình hay độ zoom.
+
+**Collection: `sheet_nav_maps` (Mới)**
+
+| Field | Type | Required | Mô tả |
+|---|---|---|---|
+| `sheetMusicId` | string | ✅ | ID của bản nhạc |
+| `userId` | string | ✅ | Người tạo Nav Map |
+| `bookmarks` | string | ✅ | JSON string chứa danh sách báo trang/đoạn |
+| `sequence` | string | ✅ | JSON string chứa thứ tự đọc |
+
+**Cấu trúc JSON bên trong:**
+
 ```typescript
-interface NavigationStep {
-  page: number;        // Trang PDF (0-based)
-  sectionName?: string; // "Verse", "Chorus", "Coda"...
-  startY?: number;     // Vị trí bắt đầu trên trang (% từ trên)
-  endY?: number;       // Vị trí kết thúc (% từ trên)
+// Parsed from `bookmarks` string
+interface Bookmark {
+  id: string;          // UUID, ví dụ: "bm-1"
+  name: string;        // Tên section: "Intro", "Verse 1", "To Coda"
+  pageIndex: number;   // Trang chứa bookmark (0-based)
+  yPercent: number;    // Vị trí y tương đối (0.0 đến 1.0) để scroll chính xác
 }
 
-// Lưu trong sheet_music document
-interface SheetMusicDocument {
-  // ... existing fields ...
-  navigationMap?: string; // JSON.stringify(NavigationStep[])
-}
+// Parsed from `sequence` string
+type NavigationSequence = string[]; // Mảng chứa bookmark ID theo thứ tự đọc
+// Ví dụ: ["bm-1", "bm-2", "bm-3", "bm-2", "bm-4"]
 ```
+
+**Flow hoạt động:**
+1. Trình xem tải PDF.
+2. Gọi API lấy `sheet_nav_maps` (query bằng `sheetMusicId`).
+3. Render thanh bên hoặc panel nhỏ hiện danh sách Bookmark và Sequence.
+4. Nút "Next Bookmark" nhảy theo thứ tự đã định nghĩa (kết hợp `pageIndex` và cuộn đến `yPercent`).
 
 ---
 
