@@ -96,7 +96,7 @@ function FolderTreeNode({
   const canCreateChild = depth < MAX_DEPTH;
 
   return (
-    <div>
+    <div className={depth === 1 ? "ml-3" : ""}>
       <div className="flex items-center group">
         {/* Expand/collapse toggle */}
         {hasChildren ? (
@@ -295,7 +295,7 @@ function TreeSection({
             const NodeIcon = node.icon;
             const isNodeActive = typeof window !== "undefined" && window.location.search.includes(node.href.split("?")[1] || "__none__");
             return (
-              <div key={node.key} className="flex items-center">
+              <div key={node.key} className="flex items-center ml-3">
                 <span className="w-3.5 flex-shrink-0" />
                 <Link
                   href={node.href}
