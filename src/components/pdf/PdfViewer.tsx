@@ -24,7 +24,9 @@ import {
   Moon,
   Sun,
   Map as MapIcon,
+  X,
 } from "lucide-react";
+import Draggable from 'react-draggable';
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import PdfNavMapPanel from "./PdfNavMapPanel";
@@ -36,12 +38,14 @@ interface PdfViewerProps {
   pageCount: number;
   title: string;
   initialNavMap?: ParsedSheetNavMap | null;
+  readOnlyMap?: boolean;
 }
 
-export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, initialNavMap }: PdfViewerProps) {
+export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, initialNavMap, readOnlyMap = false }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navMapDragRef = useRef<HTMLDivElement>(null);
   const autoScrollRAF = useRef<number>(0);
   const pdfDocRef = useRef<PdfDocument | null>(null);
 
@@ -69,6 +73,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
   const [showNavMapPanel, setShowNavMapPanel] = useState(false);
   const [navSeqIndex, setNavSeqIndex] = useState(-1);
   const [savingNavMap, setSavingNavMap] = useState(false);
+  const [followModeActive, setFollowModeActive] = useState(true);
 
   // Auto-scroll
   const [autoScrolling, setAutoScrolling] = useState(false);
@@ -465,13 +470,13 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
            const containerTop = scrollRef.current.getBoundingClientRect().top;
            const pageTop = el.getBoundingClientRect().top;
            const targetScrollY = scrollRef.current.scrollTop + (pageTop - containerTop) + (el.offsetHeight * yPercent);
-           scrollRef.current.scrollTo({ top: targetScrollY, behavior: "smooth" });
+           scrollRef.current.scrollTo({ top: targetScrollY, behavior: autoScrolling ? "auto" : "smooth" });
          } else {
-           el.scrollIntoView({ behavior: "smooth", block: "start" });
+           el.scrollIntoView({ behavior: autoScrolling ? "auto" : "smooth", block: "start" });
          }
       }
     },
-    [numPages, title]
+    [numPages, title, autoScrolling]
   );
 
   // ─── Nav Map Actions ───
@@ -526,7 +531,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     } else if (scrollRef.current) {
       if (halfPageTurn) {
         if (scrollRef.current.scrollTop <= 0) return; // already at top
-        scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: "smooth" });
+        scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: autoScrolling ? "auto" : "smooth" });
         return;
       }
       // Find the previous page to scroll to
@@ -537,14 +542,14 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         if (pageEl) {
           const pageTop = pageEl.getBoundingClientRect().top;
           if (pageTop < containerTop - 10) {
-            pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            pageEl.scrollIntoView({ behavior: autoScrolling ? "auto" : "smooth", block: "start" });
             return;
           }
         }
       }
-      el.scrollTo({ top: 0, behavior: "smooth" });
+      el.scrollTo({ top: 0, behavior: autoScrolling ? "auto" : "smooth" });
     }
-  }, [halfPageTurn, effectiveSpread, numPages]);
+  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling]);
 
   const nextPage = useCallback(() => {
     if (effectiveSpread) {
@@ -559,7 +564,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           const containerBottom = el.getBoundingClientRect().bottom;
           if (lastPageBottom <= containerBottom) return; // already showing all content
         }
-        el.scrollBy({ top: el.clientHeight / 2, behavior: "smooth" });
+        el.scrollBy({ top: el.clientHeight / 2, behavior: autoScrolling ? "auto" : "smooth" });
         return;
       }
       // Find the next page to scroll to
@@ -570,14 +575,14 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         if (pageEl) {
           const pageTop = pageEl.getBoundingClientRect().top;
           if (pageTop > containerTop + 10) {
-            pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            pageEl.scrollIntoView({ behavior: autoScrolling ? "auto" : "smooth", block: "start" });
             return;
           }
         }
       }
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      el.scrollTo({ top: el.scrollHeight, behavior: autoScrolling ? "auto" : "smooth" });
     }
-  }, [halfPageTurn, effectiveSpread, numPages]);
+  }, [halfPageTurn, effectiveSpread, numPages, autoScrolling]);
 
   // Zoom
   const zoomIn = () => { if (viewMode === 'fitWidth') setScale((s) => Math.min(s + 0.25, 3)); };
@@ -649,6 +654,8 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     }
   };
 
+  const [currentYPercent, setCurrentYPercent] = useState(0);
+
   // Track current page from scroll position
   useEffect(() => {
     const el = scrollRef.current;
@@ -671,6 +678,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
           }
         }
       }
+      
       setCurrentPage((prev) => {
         if (prev !== newPage) {
           localStorage.setItem(`pdf-lastpage-${title}`, String(newPage));
@@ -678,10 +686,23 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         }
         return prev;
       });
+
+      // Update Y percent if NavMap panel is open to avoid unnecessary rendering loops when closed
+      if (showNavMapPanel) {
+        const pageEl = document.getElementById(`pdf-page-${newPage}`);
+        if (pageEl) {
+          const rect = pageEl.getBoundingClientRect();
+          const scrollY = el.getBoundingClientRect().top;
+          const offset = scrollY - rect.top;
+          setCurrentYPercent(Math.max(0, Math.min(1, offset / rect.height)));
+        }
+      }
     };
-    el.addEventListener("scroll", handleScroll);
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    // Also trigger once on mount/open to initialize
+    handleScroll();
     return () => el.removeEventListener("scroll", handleScroll);
-  }, [numPages, title]);
+  }, [numPages, title, showNavMapPanel]);
 
   // Keyboard shortcuts + pedal
   useEffect(() => {
@@ -705,16 +726,32 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         return;
       }
 
-      // Pedal flash indicator
+      // Pedal flash indicator and Navigation
       if (pedalEnabled) {
         if (pedalNextKeys.includes(e.key)) {
+          e.preventDefault();
           setPedalFlash('next');
           if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
           pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
+
+          if (navMap && navMap.sequence.length > 0 && followModeActive) {
+            jumpToNextSequenceIndex();
+          } else {
+            nextPage();
+          }
+          return;
         } else if (pedalPrevKeys.includes(e.key)) {
+          e.preventDefault();
           setPedalFlash('prev');
           if (pedalFlashTimer.current) clearTimeout(pedalFlashTimer.current);
           pedalFlashTimer.current = setTimeout(() => setPedalFlash(null), 400);
+
+          if (navMap && navMap.sequence.length > 0 && followModeActive) {
+            jumpToPrevSequenceIndex();
+          } else {
+            prevPage();
+          }
+          return;
         }
       }
 
@@ -722,12 +759,12 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
         case "ArrowLeft":
         case "PageUp":
           e.preventDefault();
-          prevPage();
+          if (navMap && navMap.sequence.length > 0 && followModeActive) { jumpToPrevSequenceIndex(); } else { prevPage(); }
           break;
         case "ArrowRight":
         case "PageDown":
           e.preventDefault();
-          nextPage();
+          if (navMap && navMap.sequence.length > 0 && followModeActive) { jumpToNextSequenceIndex(); } else { nextPage(); }
           break;
         case " ":
           e.preventDefault();
@@ -764,7 +801,7 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey]);
+  }, [prevPage, nextPage, performanceMode, currentPage, toggleBookmark, pedalEnabled, pedalNextKeys, pedalPrevKeys, isListeningKey, pedalStorageKey, navMap, followModeActive, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
 
   // Swipe gesture for page navigation on touch devices
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -783,8 +820,11 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
       touchStartRef.current = null;
       // Only trigger if horizontal swipe > 50px and more horizontal than vertical
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx < 0) nextPage();  // swipe left → next
-        else prevPage();         // swipe right → prev
+        if (dx < 0) {
+           if (navMap && navMap.sequence.length > 0 && followModeActive) jumpToNextSequenceIndex(); else nextPage();
+        } else {
+           if (navMap && navMap.sequence.length > 0 && followModeActive) jumpToPrevSequenceIndex(); else prevPage();
+        }
       }
     };
     el.addEventListener("touchstart", handleTouchStart, { passive: true });
@@ -793,12 +833,16 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
       el.removeEventListener("touchstart", handleTouchStart);
       el.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [nextPage, prevPage]);
+  }, [nextPage, prevPage, navMap, followModeActive, jumpToNextSequenceIndex, jumpToPrevSequenceIndex]);
 
   // Performance mode tap
   const handlePerformanceTap = () => {
     if (!performanceMode) return;
-    nextPage();
+    if (navMap && navMap.sequence.length > 0 && followModeActive) {
+      jumpToNextSequenceIndex();
+    } else {
+      nextPage();
+    }
   };
 
   return (
@@ -1082,6 +1126,17 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
               </PopoverContent>
             </Popover>
 
+            <button
+              onClick={() => {
+                setShowNavMapPanel(!showNavMapPanel);
+                if (!showNavMapPanel) setFollowModeActive(true); // Re-enable follow mode if opening map
+              }}
+              className={`p-1.5 rounded-md transition-colors ${showNavMapPanel || (navMap?.sequence.length ? true : false) ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+              title="Navigation Map"
+            >
+              <MapIcon className="w-4 h-4" />
+            </button>
+
             {/* Screen mode (desktop only) */}
             <div className="hidden sm:block">
               <Popover open={showScreenMenu} onOpenChange={setShowScreenMenu}>
@@ -1211,44 +1266,46 @@ export default function PdfViewer({ sheetMusicId, pdfUrl, pageCount, title, init
       )}
 
       {/* Nav Map Panel & Sequence Follow UI */}
-      <div className="absolute top-16 right-4 z-50 flex flex-col gap-4 items-end pointer-events-none">
+      <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
         {showNavMapPanel && (
-          <div className="pointer-events-auto h-[70vh] max-h-[600px]">
-            <PdfNavMapPanel
-              sheetMusicId={sheetMusicId}
-              initialNavMap={navMap}
-              currentPage={currentPage}
-              currentYPercent={(() => {
-                if (!scrollRef.current) return 0;
-                const pageEl = scrollRef.current.querySelector(`[data-page-number="${currentPage}"]`) as HTMLElement;
-                if (!pageEl) return 0;
-                const rect = pageEl.getBoundingClientRect();
-                const scrollY = scrollRef.current.getBoundingClientRect().top;
-                const offset = scrollY - rect.top;
-                return Math.max(0, Math.min(1, offset / rect.height));
-              })()}
-              onSave={handleSaveNavMap}
-              onJumpToBookmark={jumpToBookmark}
-              onClose={() => setShowNavMapPanel(false)}
-              isSaving={savingNavMap}
-            />
-          </div>
+          <Draggable nodeRef={navMapDragRef} handle=".navmap-drag-handle" cancel="button" bounds="parent" defaultPosition={{ x: typeof window !== 'undefined' && window.innerWidth < 640 ? window.innerWidth - 276 : typeof window !== 'undefined' ? window.innerWidth - 336 : 0, y: 64 }}>
+             <div ref={navMapDragRef} className="pointer-events-auto h-[600px] max-h-[70vh] absolute">
+               <PdfNavMapPanel
+                 sheetMusicId={sheetMusicId}
+                 initialNavMap={navMap}
+                 currentPage={currentPage}
+                 currentYPercent={currentYPercent}
+                 onSave={handleSaveNavMap}
+                 onJumpToBookmark={jumpToBookmark}
+                 onClose={() => setShowNavMapPanel(false)}
+                 isSaving={savingNavMap}
+                 readOnly={readOnlyMap}
+               />
+             </div>
+          </Draggable>
         )}
       </div>
 
-      {navMap && navMap.sequence.length > 0 && !showNavMapPanel && !performanceMode && !isFullscreen && (
-         <div className="absolute bottom-16 sm:bottom-6 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-40 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-2 flex items-center gap-3 w-80 backdrop-blur-md bg-opacity-95">
-            <button onClick={jumpToPrevSequenceIndex} className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
-               <ChevronLeft className="w-5 h-5" />
+      {navMap && navMap.sequence.length > 0 && followModeActive && !showNavMapPanel && !performanceMode && !isFullscreen && (
+         <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-3 w-[calc(100%-32px)] sm:w-[340px] max-w-[340px] backdrop-blur-md bg-opacity-95">
+            <button
+               onClick={() => setFollowModeActive(false)}
+               className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all"
+               title="Dismiss"
+            >
+               <X className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
-            <div className="flex-1 min-w-0 text-center">
-               <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-0.5">Reading Sequence</div>
-               <div className="text-sm font-medium text-white truncate px-1">
+            <button onClick={jumpToPrevSequenceIndex} className="p-1.5 sm:p-2 ml-0.5 sm:ml-1 rounded-md sm:rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors stretch-0 shrink-0">
+               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div className="flex-1 min-w-0 text-center px-1">
+               <div className="text-[9px] sm:text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-0.5">Reading Sequence</div>
+               <div className="text-xs sm:text-sm font-medium text-white truncate px-1">
                   {navSeqIndex >= 0 ? navMap.bookmarks.find(b => b.id === navMap.sequence[navSeqIndex])?.name || `Step ${navSeqIndex + 1}` : "Follow Mode"}
                </div>
             </div>
-            <button onClick={jumpToNextSequenceIndex} className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/20 transition-all active:scale-95">
-               <ChevronRight className="w-5 h-5" />
+            <button onClick={jumpToNextSequenceIndex} className="p-1.5 sm:p-2 mr-1 sm:mr-1.5 rounded-md sm:rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-500/20 transition-all active:scale-95">
+               <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
          </div>
       )}

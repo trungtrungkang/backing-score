@@ -113,6 +113,7 @@ export default function PdfViewPage() {
           pageCount={sheet.pageCount}
           title={sheet.title}
           initialNavMap={sheet.navMap || null}
+          readOnlyMap={isShared}
         />
       </div>
     </div>
