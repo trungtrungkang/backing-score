@@ -75,10 +75,23 @@ export default function PdfViewer({
   // State
   const [numPages, setNumPages] = useState(pageCount);
   const [currentPage, setCurrentPage] = useState(1);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const s = localStorage.getItem("pdf-pref-scale");
+    return s && !isNaN(parseFloat(s)) ? parseFloat(s) : 1;
+  });
   const [containerWidth, setContainerWidth] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [halfPageTurn, setHalfPageTurn] = useState(false);
+  
+  const [halfPageTurn, setHalfPageTurn] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pdf-pref-halfpageturn") === 'true';
+  });
+
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pdf-pref-darkmode") === 'true';
+  });
   const [performanceMode, setPerformanceMode] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState("");
@@ -86,7 +99,7 @@ export default function PdfViewer({
   // Nav Map State
   const [navMap, setNavMap] = useState<ParsedSheetNavMap | null>(initialNavMap || null);
   const [showNavMapPanel, setShowNavMapPanel] = useState(false);
-  const [navSeqIndex, setNavSeqIndex] = useState(-1);
+  const [navSeqIndex, setNavSeqIndex] = useState(() => initialNavMap && initialNavMap.sequence.length > 0 ? 0 : -1);
   const [savingNavMap, setSavingNavMap] = useState(false);
 
   type BottomBarMode = 'sequence' | 'bookmarks' | 'hidden';
@@ -116,10 +129,6 @@ export default function PdfViewer({
     }
     // Note: Do not reset preferences like viewMode or scale, users prefer those to stick between songs
   }, [pdfUrl, pageCount]);
-
-  // Dark mode (invert PDF colors)
-  const [darkMode, setDarkMode] = useState(false);
-
   // Wake Lock — prevent screen sleep during performance/auto-scroll
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
@@ -145,7 +154,19 @@ export default function PdfViewer({
 
   // View mode: fitWidth (default), fitHeight, twoPages
   type ViewMode = 'fitWidth' | 'fitHeight' | 'twoPages';
-  const [viewMode, setViewMode] = useState<ViewMode>('fitWidth');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return 'fitWidth';
+    const vm = localStorage.getItem("pdf-pref-viewmode");
+    return (vm === 'fitHeight' || vm === 'twoPages' || vm === 'fitWidth') ? vm as ViewMode : 'fitWidth';
+  });
+
+  // Sync user display preferences automatically
+  useEffect(() => {
+    localStorage.setItem("pdf-pref-scale", String(scale));
+    localStorage.setItem("pdf-pref-halfpageturn", String(halfPageTurn));
+    localStorage.setItem("pdf-pref-darkmode", String(darkMode));
+    localStorage.setItem("pdf-pref-viewmode", viewMode);
+  }, [scale, halfPageTurn, darkMode, viewMode]);
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showScreenMenu, setShowScreenMenu] = useState(false);
   const isNarrow = containerWidth > 0 && containerWidth < 900;
@@ -402,18 +423,23 @@ export default function PdfViewer({
 
         const baseViewport = page.getViewport({ scale: 1 });
         let renderScale: number;
+        
+        // Calculate true unoccluded height to avoid hiding behind absolute top/bottom toolbars
+        const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+        const topOcclusion = 10; // No absolute top toolbar
+        const bottomOcclusion = (!performanceMode) ? (isMobile ? 112 : 56) : 20;
+        const safeScrollH = (scrollRef.current?.clientHeight || 600) - topOcclusion - bottomOcclusion;
+
         if (effectiveSpread) {
-          // Fit to half-width AND scroll-area height, pick smaller
-          const scrollH = scrollRef.current?.clientHeight || 600;
+          // Fit to half-width AND scroll-area safe height, pick smaller
           const availWidth = containerWidth / 2 - 20;
-          const availHeight = scrollH - 24;
+          const availHeight = safeScrollH - 24;
           const scaleW = availWidth / baseViewport.width;
           const scaleH = availHeight / baseViewport.height;
           renderScale = Math.min(scaleW, scaleH);
         } else if (viewMode === 'fitHeight') {
-          // Fit page height to scroll container height
-          const scrollH = scrollRef.current?.clientHeight || 600;
-          const availHeight = scrollH - 24;
+          // Fit page height to structurally safe container height
+          const availHeight = safeScrollH - 24;
           renderScale = availHeight / baseViewport.height;
         } else {
           // fitWidth (default)
@@ -570,15 +596,18 @@ export default function PdfViewer({
         scrollRef.current.scrollBy({ top: -scrollRef.current.clientHeight / 2, behavior: autoScrolling ? "auto" : "smooth" });
         return;
       }
-      // Find the previous page to scroll to
       const el = scrollRef.current;
       const containerTop = el.getBoundingClientRect().top;
+      const occludedTop = 10; // Safe general padding margin
+      
       for (let i = numPages; i >= 1; i--) {
         const pageEl = document.getElementById(`pdf-page-${i}`);
         if (pageEl) {
           const pageTop = pageEl.getBoundingClientRect().top;
-          if (pageTop < containerTop - 10) {
-            pageEl.scrollIntoView({ behavior: autoScrolling ? "auto" : "smooth", block: "start" });
+          // Generous 50px tolerance to ignore any ghost margins when the page is already docked at the top
+          if (pageTop < containerTop + occludedTop - 50) {
+            const targetScrollTop = Math.max(0, el.scrollTop + (pageTop - containerTop) - occludedTop);
+            el.scrollTo({ top: targetScrollTop, behavior: autoScrolling ? "auto" : "smooth" });
             return;
           }
         }
@@ -588,7 +617,7 @@ export default function PdfViewer({
         onPrevSong();
         return;
       }
-
+      
       el.scrollTo({ top: 0, behavior: autoScrolling ? "auto" : "smooth" });
     }
   }, [halfPageTurn, effectiveSpread, numPages, autoScrolling, onPrevSong]);
@@ -609,15 +638,18 @@ export default function PdfViewer({
         el.scrollBy({ top: el.clientHeight / 2, behavior: autoScrolling ? "auto" : "smooth" });
         return;
       }
-      // Find the next page to scroll to
       const el = scrollRef.current;
       const containerTop = el.getBoundingClientRect().top;
+      const occludedTop = 10; // Safe general padding margin
+      
       for (let i = 1; i <= numPages; i++) {
         const pageEl = document.getElementById(`pdf-page-${i}`);
         if (pageEl) {
           const pageTop = pageEl.getBoundingClientRect().top;
-          if (pageTop > containerTop + 10) {
-            pageEl.scrollIntoView({ behavior: autoScrolling ? "auto" : "smooth", block: "start" });
+          // Generous 50px tolerance skips the current docked page even if flex gaps shift it during lazy load
+          if (pageTop > containerTop + occludedTop + 50) {
+            const targetScrollTop = el.scrollTop + (pageTop - containerTop) - occludedTop;
+            el.scrollTo({ top: targetScrollTop, behavior: autoScrolling ? "auto" : "smooth" });
             return;
           }
         }
@@ -810,12 +842,12 @@ export default function PdfViewer({
         case "ArrowLeft":
         case "PageUp":
           e.preventDefault();
-          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') { jumpToPrevSequenceIndex(); } else { prevPage(); }
+          prevPage();
           break;
         case "ArrowRight":
         case "PageDown":
           e.preventDefault();
-          if (navMap && navMap.sequence.length > 0 && bottomBarMode === 'sequence') { jumpToNextSequenceIndex(); } else { nextPage(); }
+          nextPage();
           break;
         case " ":
           e.preventDefault();
@@ -927,7 +959,9 @@ export default function PdfViewer({
           {!pdfLoading && !pdfError && (
             effectiveSpread ? (
               /* Two-page spread — paginated, fit to viewport */
-              <div className="flex items-center justify-center gap-4 w-full h-full">
+              <div 
+                className="flex items-center justify-center gap-4 w-full h-full"
+              >
                 {[0, 1].map((idx) => {
                   const pageNum = spreadPairStart + idx;
                   if (pageNum > numPages) return null;
@@ -952,7 +986,8 @@ export default function PdfViewer({
               </div>
             ) : (
               /* Single page — continuous scroll */
-              Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
+              <>
+                {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
                 <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2 relative">
                   {bookmarkedPages.has(pageNum) && (
                     <div className="absolute top-2 right-2 z-10">
@@ -965,7 +1000,8 @@ export default function PdfViewer({
                     style={{ maxWidth: "100%" }}
                   />
                 </div>
-              ))
+              ))}
+              </>
             )
           )}
         </div>
