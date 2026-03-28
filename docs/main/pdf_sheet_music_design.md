@@ -12,7 +12,7 @@
 
 1. [Tổng Quan](#1-tổng-quan)
 2. [Thiết Kế Cơ Sở Dữ Liệu](#2-thiết-kế-cơ-sở-dữ-liệu)
-3. [Sheet Music Library — Thư Viện PDF](#3-sheet-music-library--thư-viện-pdf)
+3. [PDF Library — Thư Viện PDF](#3-pdf-library--thư-viện-pdf)
 4. [PDF Viewer — Thiết Kế Trình Xem](#4-pdf-viewer--thiết-kế-trình-xem)
 5. [Tối Ưu Cho Người Chơi Nhạc](#5-tối-ưu-cho-người-chơi-nhạc)
 6. [Navigation Map — Xử Lý Bản Nhạc Có Lặp Lại](#6-navigation-map--xử-lý-bản-nhạc-có-lặp-lại)
@@ -38,10 +38,10 @@ PDF Sheet Music là **module độc lập** trong Backing & Score, tồn tại s
 │                    Backing & Score Platform                    │
 │                                                                │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
-│  │ Projects │  │ Academy  │  │ Social   │  │ Sheet Music  │  │
-│  │ (Audio + │  │ (Courses │  │ (Feed,   │  │ Library      │  │
-│  │  MusicXML│  │  Lessons)│  │  Follow) │  │ (PDF viewer) │  │
-│  │  Editor) │  │          │  │          │  │              │  │
+│  │ Projects │  │ Academy  │  │ Social   │  │     PDFs     │  │
+│  │ (Audio + │  │ (Courses │  │ (Feed,   │  │ (Upload,     │  │
+│  │  MusicXML│  │  Lessons)│  │  Follow) │  │  Library,    │  │
+│  │  Editor) │  │          │  │          │  │  Viewer)     │  │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────────┘  │
 │                                                                │
 │  Các module KHÔNG phụ thuộc nhau.                             │
@@ -147,7 +147,7 @@ interface SheetMusicFolderDocument {
 
 ---
 
-## 3. Sheet Music Library — Thư Viện PDF
+## 3. PDF Library — Thư Viện PDF
 
 ### 3.1 Route Structure
 
@@ -206,7 +206,7 @@ Dashboard Sidebar:
 │  │ 12 files│ │ 5 files │ │ 3 files │ │ Folder  │            │
 │  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
 │                                                               │
-│  All Sheets (unfiled):                                Grid|List│
+│  All PDFs (unfiled):                                  Grid|List│
 │  ┌──────────────────────────────────────────────────────────┐ │
 │  │ 🎵 Chopin Nocturne Op.9 No.2   │ Piano │ 4 pages │ ⋮   │ │
 │  │ 🎵 Bach Cello Suite No.1       │ Cello │ 8 pages │ ⋮   │ │
@@ -518,7 +518,7 @@ Bước 3: Fine-tune nếu cần (drag border giữa các ô)
 Teacher có thể share PDF từ thư viện cá nhân cho cả lớp:
 
 ```
-Teacher → Sheet Music Library → Chọn PDF → "Share to Classroom"
+Teacher → PDF Library → Chọn PDF → "Share to Classroom"
     ↓
 Chọn Classroom
     ↓
@@ -535,7 +535,7 @@ Khi tạo Assignment, teacher có thể attach 1 PDF sheet music:
 Create Assignment
 ├── Title, Description, Deadline
 ├── Source Project (audio backing track)
-└── 📄 Attach Sheet Music (optional)
+└── 📄 Attach PDF (optional)
     └── Chọn từ thư viện cá nhân
 ```
 
@@ -665,14 +665,14 @@ interface PurchaseDocument {
 
 ## 12. Components & Libraries
 
-### 8.1 Dependencies
+### 12.1 Dependencies
 
 | Package | Size | Vai trò |
 |---|---|---|
 | `react-pdf` v9+ | ~30KB | React wrapper cho pdf.js |
 | `pdfjs-dist` v4+ | ~500KB (worker) | Core PDF engine |
 
-### 8.2 File Structure
+### 12.2 File Structure
 
 ```
 src/
@@ -696,14 +696,14 @@ src/
 │   └── sheet-music-folders.ts      — Folder management
 ```
 
-### 8.3 Lazy Loading
+### 12.3 Lazy Loading
 
 ```typescript
 const PdfViewer = dynamic(
   () => import("@/components/pdf/PdfViewer"),
   { ssr: false, loading: () => <ViewerSkeleton /> }
 );
-// pdf.js worker chỉ load khi vào /sheets/[id], không ảnh hưởng routes khác
+// pdf.js worker chỉ load khi vào /dashboard/pdfs/view/[id], không ảnh hưởng routes khác
 ```
 
 ---
@@ -770,4 +770,4 @@ const PdfViewer = dynamic(
 
 ---
 
-*Tài liệu liên quan: [system_design.md](system_design.md) | [product_features.md](product_features.md) | [system_review_2026_03_28.md](system_review_2026_03_28.md)*
+*Tài liệu liên quan: [system_design.md](system_design.md) | [product_features.md](product_features.md) | [system_review_2026_03_28.md](system_review_2026_03_28.md) | [pdf_ui_mockups.md](pdf_ui_mockups.md)*
