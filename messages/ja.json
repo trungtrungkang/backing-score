@@ -662,6 +662,11 @@
     "openViewer": "ビューアで開く",
     "unfiled": "未分類",
     "allFolders": "すべてのフォルダ",
+    "metronome": "メトロノーム",
+    "bpm": "BPM",
+    "tapTempo": "タップテンポ",
+    "timeSignature": "拍子",
+    "spreadView": "見開き表示",
     "files": "{count}件"
   }
 }

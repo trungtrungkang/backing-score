@@ -705,6 +705,11 @@
     "openViewer": "Open Viewer",
     "unfiled": "Unfiled",
     "allFolders": "All Folders",
+    "metronome": "Metronome",
+    "bpm": "BPM",
+    "tapTempo": "Tap Tempo",
+    "timeSignature": "Time Sig.",
+    "spreadView": "Two-Page Spread",
     "files": "{count} files"
   }
 }

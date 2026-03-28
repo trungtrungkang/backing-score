@@ -662,6 +662,11 @@
     "openViewer": "Ouvrir dans le viewer",
     "unfiled": "Non classé",
     "allFolders": "Tous les dossiers",
+    "metronome": "Métronome",
+    "bpm": "BPM",
+    "tapTempo": "Tap Tempo",
+    "timeSignature": "Mesure",
+    "spreadView": "Vue double page",
     "files": "{count} fichiers"
   }
 }

@@ -15,6 +15,8 @@ import {
   Bookmark,
   BookmarkCheck,
   ChevronDown,
+  Columns2,
+  Timer,
 } from "lucide-react";
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 
@@ -70,6 +72,98 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
       return next;
     });
   };
+
+  // Spread view (two-page)
+  const [spreadView, setSpreadView] = useState(false);
+  const isNarrow = containerWidth > 0 && containerWidth < 900;
+  const effectiveSpread = spreadView && !isNarrow;
+
+  // ─── Metronome ───
+  const [metronomeOn, setMetronomeOn] = useState(false);
+  const [bpm, setBpm] = useState(120);
+  const [timeSignature, setTimeSignature] = useState<[number, number]>([4, 4]);
+  const [currentBeat, setCurrentBeat] = useState(0);
+  const [showMetronomePanel, setShowMetronomePanel] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const metronomeTimerRef = useRef<number>(0);
+  const nextBeatTimeRef = useRef(0);
+  const beatCountRef = useRef(0);
+
+  // Tap tempo
+  const tapTimesRef = useRef<number[]>([]);
+  const handleTapTempo = () => {
+    const now = performance.now();
+    const taps = tapTimesRef.current;
+    // Reset if last tap was >2s ago
+    if (taps.length > 0 && now - taps[taps.length - 1] > 2000) {
+      tapTimesRef.current = [];
+    }
+    taps.push(now);
+    if (taps.length > 1) {
+      const intervals = taps.slice(-6).reduce<number[]>((acc, t, i, arr) => {
+        if (i > 0) acc.push(t - arr[i - 1]);
+        return acc;
+      }, []);
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const newBpm = Math.round(60000 / avg);
+      setBpm(Math.max(40, Math.min(240, newBpm)));
+    }
+  };
+
+  // Metronome audio scheduling
+  useEffect(() => {
+    if (!metronomeOn) {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+      cancelAnimationFrame(metronomeTimerRef.current);
+      setCurrentBeat(0);
+      beatCountRef.current = 0;
+      return;
+    }
+
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+    nextBeatTimeRef.current = ctx.currentTime + 0.05;
+    beatCountRef.current = 0;
+
+    const beatsPerMeasure = timeSignature[0];
+    const scheduleAhead = 0.1; // seconds
+    const lookahead = 25; // ms
+
+    function scheduleBeat(time: number, isAccent: boolean) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = isAccent ? 1000 : 800;
+      gain.gain.setValueAtTime(isAccent ? 0.3 : 0.15, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+      osc.start(time);
+      osc.stop(time + 0.05);
+    }
+
+    function scheduler() {
+      while (nextBeatTimeRef.current < ctx.currentTime + scheduleAhead) {
+        const isAccent = beatCountRef.current % beatsPerMeasure === 0;
+        scheduleBeat(nextBeatTimeRef.current, isAccent);
+        setCurrentBeat(beatCountRef.current % beatsPerMeasure);
+        const secondsPerBeat = 60.0 / bpm;
+        nextBeatTimeRef.current += secondsPerBeat;
+        beatCountRef.current++;
+      }
+      metronomeTimerRef.current = window.setTimeout(scheduler, lookahead) as unknown as number;
+    }
+
+    scheduler();
+
+    return () => {
+      clearTimeout(metronomeTimerRef.current);
+      ctx.close().catch(() => {});
+      audioCtxRef.current = null;
+    };
+  }, [metronomeOn, bpm, timeSignature]);
 
   // Measure container width
   useEffect(() => {
@@ -140,7 +234,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
         const page = await pdf.getPage(pageNum);
         if (gen !== renderGeneration.current) return;
 
-        const pageWidth = containerWidth * scale;
+        const pageWidth = (effectiveSpread ? (containerWidth / 2 - 16) : containerWidth) * scale;
         const baseViewport = page.getViewport({ scale: 1 });
         const renderScale = pageWidth / baseViewport.width;
         const viewport = page.getViewport({ scale: renderScale });
@@ -193,7 +287,7 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [numPages, renderPage, containerWidth, scale, pdfLoading]);
+  }, [numPages, renderPage, containerWidth, scale, pdfLoading, effectiveSpread]);
 
   // Page navigation
   const goToPage = useCallback(
@@ -355,22 +449,43 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             <div className="text-red-400 text-center py-20">Failed to load PDF: {pdfError}</div>
           )}
 
-          {!pdfLoading &&
-            !pdfError &&
-            Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
-              <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2 relative">
-                {bookmarkedPages.has(pageNum) && (
-                  <div className="absolute top-2 right-2 z-10">
-                    <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
+          {!pdfLoading && !pdfError && (
+            effectiveSpread ? (
+              /* Two-page spread */
+              <div className="grid grid-cols-2 gap-4 px-2" style={{ maxWidth: containerWidth * scale }}>
+                {Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
+                  <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg relative">
+                    {bookmarkedPages.has(pageNum) && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
+                      </div>
+                    )}
+                    <canvas
+                      id={`pdf-canvas-${pageNum}`}
+                      className="bg-white"
+                      style={{ maxWidth: "100%" }}
+                    />
                   </div>
-                )}
-                <canvas
-                  id={`pdf-canvas-${pageNum}`}
-                  className="bg-white"
-                  style={{ maxWidth: "100%" }}
-                />
+                ))}
               </div>
-            ))}
+            ) : (
+              /* Single page view */
+              Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
+                <div key={pageNum} id={`pdf-page-${pageNum}`} className="shadow-lg mb-2 relative">
+                  {bookmarkedPages.has(pageNum) && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <BookmarkCheck className="w-5 h-5 text-amber-400 drop-shadow" />
+                    </div>
+                  )}
+                  <canvas
+                    id={`pdf-canvas-${pageNum}`}
+                    className="bg-white"
+                    style={{ maxWidth: "100%" }}
+                  />
+                </div>
+              ))
+            )
+          )}
         </div>
       </div>
 
@@ -468,6 +583,107 @@ export default function PdfViewer({ pdfUrl, pageCount, title }: PdfViewerProps) 
             >
               <ChevronsUp className="w-3.5 h-3.5" />½
             </button>
+
+            {/* Spread view toggle */}
+            <button
+              onClick={() => setSpreadView((v) => !v)}
+              className={`p-1.5 rounded-md transition-colors ${spreadView ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-400 hover:text-white hover:bg-zinc-800"} ${isNarrow ? "opacity-30 cursor-not-allowed" : ""}`}
+              title={t("spreadView")}
+              disabled={isNarrow}
+            >
+              <Columns2 className="w-4 h-4" />
+            </button>
+
+            {/* Metronome toggle + panel */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  if (!metronomeOn) setShowMetronomePanel((v) => !v);
+                  else { setMetronomeOn(false); setShowMetronomePanel(false); }
+                }}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs transition-colors ${metronomeOn ? "bg-green-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"}`}
+                title={t("metronome")}
+              >
+                <Timer className="w-3.5 h-3.5" />
+                {metronomeOn && (
+                  <span className="font-mono">{bpm}</span>
+                )}
+                {/* Visual beat dots */}
+                {metronomeOn && (
+                  <span className="flex gap-0.5 ml-1">
+                    {Array.from({ length: timeSignature[0] }, (_, i) => (
+                      <span
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentBeat ? (i === 0 ? "bg-amber-400 scale-125" : "bg-white scale-110") : "bg-zinc-600"}`}
+                      />
+                    ))}
+                  </span>
+                )}
+              </button>
+
+              {showMetronomePanel && !metronomeOn && (
+                <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-3 min-w-[200px] z-50" onClick={(e) => e.stopPropagation()}>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">{t("metronome")}</div>
+
+                  {/* BPM slider */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-zinc-400 w-8">{t("bpm")}</span>
+                    <input
+                      type="range"
+                      min={40}
+                      max={240}
+                      value={bpm}
+                      onChange={(e) => setBpm(Number(e.target.value))}
+                      className="flex-1 h-1.5 accent-indigo-500"
+                    />
+                    <input
+                      type="number"
+                      min={40}
+                      max={240}
+                      value={bpm}
+                      onChange={(e) => setBpm(Math.max(40, Math.min(240, Number(e.target.value))))}
+                      className="w-14 bg-zinc-800 text-white text-xs text-center rounded px-1 py-1 border border-zinc-700 font-mono"
+                    />
+                  </div>
+
+                  {/* Tap Tempo */}
+                  <button
+                    onClick={handleTapTempo}
+                    className="w-full mb-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-medium transition-colors"
+                  >
+                    {t("tapTempo")}
+                  </button>
+
+                  {/* Time signature */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs text-zinc-400">{t("timeSignature")}</span>
+                    <div className="flex gap-1">
+                      {([[2,4],[3,4],[4,4],[6,8]] as [number,number][]).map(([n,d]) => (
+                        <button
+                          key={`${n}/${d}`}
+                          onClick={() => setTimeSignature([n, d])}
+                          className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
+                            timeSignature[0] === n && timeSignature[1] === d
+                              ? "bg-indigo-600 text-white"
+                              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                          }`}
+                        >
+                          {n}/{d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Start button */}
+                  <button
+                    onClick={() => { setMetronomeOn(true); setShowMetronomePanel(false); }}
+                    className="w-full py-2 rounded-md bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors"
+                  >
+                    ▶ Start
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Bookmark current page */}
             <div className="relative">

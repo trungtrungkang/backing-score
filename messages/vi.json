@@ -673,6 +673,11 @@
     "openViewer": "Mở xem",
     "unfiled": "Chưa phân loại",
     "allFolders": "Tất cả thư mục",
+    "metronome": "Máy nhịp",
+    "bpm": "BPM",
+    "tapTempo": "Gõ nhịp",
+    "timeSignature": "Nhịp",
+    "spreadView": "Xem 2 trang",
     "files": "{count} tệp"
   }
 }

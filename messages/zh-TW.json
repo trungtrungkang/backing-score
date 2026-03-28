@@ -662,6 +662,11 @@
     "openViewer": "開啟檢視器",
     "unfiled": "未分類",
     "allFolders": "所有資料夾",
+    "metronome": "節拍器",
+    "bpm": "BPM",
+    "tapTempo": "敲擊設速",
+    "timeSignature": "拍號",
+    "spreadView": "雙頁檢視",
     "files": "{count}個檔案"
   }
 }

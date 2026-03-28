@@ -662,6 +662,11 @@
     "openViewer": "뷰어에서 열기",
     "unfiled": "미분류",
     "allFolders": "모든 폴더",
+    "metronome": "메트로놈",
+    "bpm": "BPM",
+    "tapTempo": "탭 템포",
+    "timeSignature": "박자",
+    "spreadView": "2페이지 보기",
     "files": "{count}개"
   }
 }
