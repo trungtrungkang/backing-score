@@ -146,6 +146,7 @@ export {
   getSheetPdfBlobUrl,
   getThumbnailUrl,
   touchSheetLastOpened,
+  backfillThumbnails,
 } from "./sheet-music";
 export {
   createSheetFolder,

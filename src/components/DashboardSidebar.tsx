@@ -19,6 +19,10 @@ import {
   Plus,
   X,
   Clock,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +31,10 @@ import {
   listSheetFolders,
   createProjectFolder,
   createSheetFolder,
+  deleteProjectFolder,
+  deleteSheetFolder,
+  updateProjectFolder,
+  updateSheetFolder,
   type ProjectFolderDocument,
   type SheetMusicFolderDocument,
 } from "@/lib/appwrite";
@@ -44,6 +52,8 @@ function FolderTreeNode({
   activeFolderId,
   sectionActive,
   onCreateFolder,
+  onDeleteFolder,
+  onRenameFolder,
 }: {
   folder: FolderNode;
   allFolders: FolderNode[];
@@ -52,6 +62,8 @@ function FolderTreeNode({
   activeFolderId: string | null;
   sectionActive: boolean;
   onCreateFolder: (name: string, parentId: string | null) => Promise<void>;
+  onDeleteFolder: (folderId: string) => Promise<void>;
+  onRenameFolder: (folderId: string, newName: string) => Promise<void>;
 }) {
   const router = useRouter();
   const children = allFolders.filter((f) => f.parentFolderId === folder.$id);
@@ -62,6 +74,9 @@ function FolderTreeNode({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameName, setRenameName] = useState(folder.name);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Auto-expand if active child
   useEffect(() => {
@@ -113,31 +128,114 @@ function FolderTreeNode({
         )}
 
         {/* Folder label */}
-        <button
-          onClick={() => router.push(`${basePath}?folder=${folder.$id}`)}
-          className={`flex-1 flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs transition-colors text-left truncate ${
-            isActive
-              ? "text-zinc-900 dark:text-white font-medium underline underline-offset-2 decoration-indigo-500"
-              : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
-          }`}
-        >
-          <Folder className="w-3 h-3 text-amber-400 flex-shrink-0" />
-          <span className="truncate">{folder.name}</span>
-        </button>
-
-        {/* Create subfolder button */}
-        {canCreateChild && (
+        {renaming ? (
+          <div className="flex-1 flex items-center gap-1 px-1">
+            <Folder className="w-3 h-3 text-amber-400 flex-shrink-0" />
+            <input
+              type="text"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter" && renameName.trim()) {
+                  await onRenameFolder(folder.$id, renameName.trim());
+                  setRenaming(false);
+                }
+                if (e.key === "Escape") {
+                  setRenaming(false);
+                  setRenameName(folder.name);
+                }
+              }}
+              className="bg-transparent text-xs text-zinc-900 dark:text-white border-b border-indigo-400 focus:outline-none flex-1 py-0.5"
+              autoFocus
+            />
+            <button
+              onClick={async () => {
+                if (renameName.trim()) {
+                  await onRenameFolder(folder.$id, renameName.trim());
+                  setRenaming(false);
+                }
+              }}
+              className="text-indigo-500 hover:text-indigo-400"
+            >
+              <Check className="w-2.5 h-2.5" />
+            </button>
+            <button
+              onClick={() => { setRenaming(false); setRenameName(folder.name); }}
+              className="text-zinc-400 hover:text-zinc-600"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCreating(true);
-              setExpanded(true);
-            }}
-            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all"
-            title="New subfolder"
+            onClick={() => router.push(`${basePath}?folder=${folder.$id}`)}
+            className={`flex-1 flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs transition-colors text-left truncate ${
+              isActive
+                ? "text-zinc-900 dark:text-white font-medium underline underline-offset-2 decoration-indigo-500"
+                : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+            }`}
           >
-            <Plus className="w-2.5 h-2.5" />
+            <Folder className="w-3 h-3 text-amber-400 flex-shrink-0" />
+            <span className="truncate">{folder.name}</span>
           </button>
+        )}
+
+        {/* Actions menu */}
+        {!renaming && (
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
+              className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all"
+            >
+              <MoreVertical className="w-2.5 h-2.5" />
+            </button>
+            {showMenu && (
+              <div
+                className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-lg py-1 z-50 min-w-[120px]"
+                onMouseLeave={() => setShowMenu(false)}
+              >
+                {canCreateChild && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      setCreating(true);
+                      setExpanded(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Plus className="w-3 h-3" />
+                    New subfolder
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    setRenameName(folder.name);
+                    setRenaming(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Rename
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    if (confirm("Delete this folder and all its contents?")) {
+                      await onDeleteFolder(folder.$id);
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -154,6 +252,8 @@ function FolderTreeNode({
               activeFolderId={activeFolderId}
               sectionActive={sectionActive}
               onCreateFolder={onCreateFolder}
+              onDeleteFolder={onDeleteFolder}
+              onRenameFolder={onRenameFolder}
             />
           ))}
 
@@ -211,6 +311,8 @@ function TreeSection({
   folders,
   activeFolderId,
   onCreateFolder,
+  onDeleteFolder,
+  onRenameFolder,
   isActive,
   specialNodes,
 }: {
@@ -222,6 +324,8 @@ function TreeSection({
   folders: FolderNode[];
   activeFolderId: string | null;
   onCreateFolder: (name: string, parentId: string | null) => Promise<void>;
+  onDeleteFolder: (folderId: string) => Promise<void>;
+  onRenameFolder: (folderId: string, newName: string) => Promise<void>;
   isActive: boolean;
   specialNodes?: { key: string; label: string; icon: React.ComponentType<{ className?: string }>; href: string }[];
 }) {
@@ -322,6 +426,8 @@ function TreeSection({
               activeFolderId={activeFolderId}
               sectionActive={isActive}
               onCreateFolder={onCreateFolder}
+              onDeleteFolder={onDeleteFolder}
+              onRenameFolder={onRenameFolder}
             />
           ))}
 
@@ -417,6 +523,26 @@ export function DashboardSidebar() {
     loadFolders();
   };
 
+  const handleDeleteProjectFolder = async (folderId: string) => {
+    await deleteProjectFolder(folderId);
+    loadFolders();
+  };
+
+  const handleDeleteSheetFolder = async (folderId: string) => {
+    await deleteSheetFolder(folderId);
+    loadFolders();
+  };
+
+  const handleRenameProjectFolder = async (folderId: string, newName: string) => {
+    await updateProjectFolder(folderId, newName);
+    loadFolders();
+  };
+
+  const handleRenameSheetFolder = async (folderId: string, newName: string) => {
+    await updateSheetFolder(folderId, newName);
+    loadFolders();
+  };
+
   const staticItems = [
     { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
     { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
@@ -456,6 +582,8 @@ export function DashboardSidebar() {
                 : null
             }
             onCreateFolder={handleCreateProjectFolder}
+            onDeleteFolder={handleDeleteProjectFolder}
+            onRenameFolder={handleRenameProjectFolder}
             isActive={
               isActive("/dashboard") &&
               !isActive("/dashboard/pdfs") &&
@@ -477,6 +605,8 @@ export function DashboardSidebar() {
             folders={sheetFolders}
             activeFolderId={isActive("/dashboard/pdfs") ? folderParam : null}
             onCreateFolder={handleCreateSheetFolder}
+            onDeleteFolder={handleDeleteSheetFolder}
+            onRenameFolder={handleRenameSheetFolder}
             isActive={isActive("/dashboard/pdfs")}
             specialNodes={[
               { key: "favorites", label: tPdfs("favorites"), icon: Bookmark, href: "/dashboard/pdfs?filter=favorites" },

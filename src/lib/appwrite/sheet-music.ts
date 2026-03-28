@@ -230,9 +230,59 @@ export function getThumbnailUrl(thumbnailId: string): string {
   return `/api/files/${thumbnailId}?bucket=sheet_pdfs`;
 }
 
-/** Update lastOpenedAt to now. */
 export async function touchSheetLastOpened(id: string): Promise<void> {
   await databases.updateDocument(dbId, collId, id, {
     lastOpenedAt: new Date().toISOString(),
   });
+}
+
+/**
+ * Backfill thumbnails for all PDFs that don't have one.
+ * Runs client-side (needs canvas for rendering).
+ * @param onProgress - callback with (current, total) for UI updates
+ * @returns number of thumbnails generated
+ */
+export async function backfillThumbnails(
+  onProgress?: (current: number, total: number) => void
+): Promise<number> {
+  const { extractPdfMetadata } = await import("@/lib/pdf-utils");
+
+  // Find all PDFs without thumbnails
+  const queries = [Query.isNull("thumbnailId"), Query.limit(100)];
+  const result = await databases.listDocuments(dbId, collId, queries);
+  const docs = result.documents as unknown as SheetMusicDocument[];
+
+  if (docs.length === 0) return 0;
+
+  let processed = 0;
+  for (const doc of docs) {
+    onProgress?.(processed + 1, docs.length);
+    try {
+      // Download the PDF file
+      const fileUrl = storage.getFileView(bucketId, doc.fileId);
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `${doc.title}.pdf`, { type: "application/pdf" });
+
+      // Generate thumbnail
+      const { thumbnailBlob } = await extractPdfMetadata(file);
+
+      // Upload thumbnail
+      const thumbId = ID.unique();
+      const thumbFile = new File([thumbnailBlob], `thumb_${doc.fileId}.jpg`, { type: "image/jpeg" });
+      await storage.createFile(bucketId, thumbId, thumbFile, [
+        Permission.read(Role.user(doc.userId)),
+        Permission.update(Role.user(doc.userId)),
+        Permission.delete(Role.user(doc.userId)),
+      ]);
+
+      // Update document
+      await databases.updateDocument(dbId, collId, doc.$id, { thumbnailId: thumbId });
+      processed++;
+    } catch (err) {
+      console.warn(`Failed to backfill thumbnail for ${doc.title}:`, err);
+    }
+  }
+
+  return processed;
 }

@@ -29,6 +29,7 @@ import {
   moveSheetToFolder,
   uploadSheetPdf,
   getThumbnailUrl,
+  backfillThumbnails,
   type SheetMusicDocument,
   type SheetMusicFolderDocument,
 } from "@/lib/appwrite";
@@ -48,6 +49,7 @@ import {
   FileText,
   Loader2,
   LayoutGrid,
+  ImageIcon,
   List,
   Menu,
   X,
@@ -169,6 +171,8 @@ export default function PdfsLibraryPage() {
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editFolderName, setEditFolderName] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState("");
 
   // Load data
   const loadData = useCallback(async () => {
@@ -294,6 +298,26 @@ export default function PdfsLibraryPage() {
     }
   };
 
+  // Thumbnail backfill
+  const handleBackfillThumbnails = async () => {
+    setBackfilling(true);
+    setBackfillProgress("Starting...");
+    try {
+      const count = await backfillThumbnails((current, total) => {
+        setBackfillProgress(`${current}/${total}`);
+      });
+      setBackfillProgress(count > 0 ? `Done! ${count} generated.` : "All have thumbnails.");
+      if (count > 0) loadData();
+    } catch {
+      setBackfillProgress("Error.");
+    } finally {
+      setBackfilling(false);
+      setTimeout(() => setBackfillProgress(""), 3000);
+    }
+  };
+
+  const hasMissingThumbnails = sheets.some(s => !s.thumbnailId);
+
   // Sheet actions
   const handleDeleteSheet = async (id: string) => {
     const ok = await confirm({
@@ -402,6 +426,22 @@ export default function PdfsLibraryPage() {
               )}
               {uploading ? t("uploading") : t("upload")}
             </Button>
+            {hasMissingThumbnails && (
+              <Button
+                onClick={handleBackfillThumbnails}
+                disabled={backfilling}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                {backfilling ? (
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                ) : (
+                  <ImageIcon className="w-3 h-3 mr-1" />
+                )}
+                {backfillProgress || "Gen Thumbnails"}
+              </Button>
+            )}
           </div>
         </div>
 
