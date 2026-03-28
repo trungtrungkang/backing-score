@@ -484,7 +484,7 @@ function TreeSection({
 }
 
 // ─── Main Sidebar ───
-export function DashboardSidebar() {
+export function DashboardSidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void } = {}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations("Dashboard");
@@ -564,8 +564,8 @@ export function DashboardSidebar() {
     { href: "/pricing", icon: Crown, label: "Premium", iconColor: "text-[#C8A856]" },
   ];
 
-  return (
-    <aside className="w-64 border-r border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-5 hidden md:flex flex-col gap-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+  const sidebarContent = (
+    <>
       <div>
         <h2 className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3">
           {t("yourLibrary")}
@@ -630,6 +630,7 @@ export function DashboardSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onMobileClose}
                 className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors text-sm ml-4 ${
                   active
                     ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
@@ -654,6 +655,7 @@ export function DashboardSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onMobileClose}
               className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors text-sm ${
                 active
                   ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
@@ -666,6 +668,30 @@ export function DashboardSidebar() {
           );
         })}
       </nav>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="w-64 border-r border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 p-5 hidden md:flex flex-col gap-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onMobileClose}
+          />
+          {/* Slide-in panel */}
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-zinc-950 p-5 flex flex-col gap-6 overflow-y-auto shadow-xl animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

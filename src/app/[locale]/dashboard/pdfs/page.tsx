@@ -372,11 +372,11 @@ export default function PdfsLibraryPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      <DashboardSidebar />
+      <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       {/* Mobile menu toggle */}
       <button
-        className="md:hidden fixed bottom-4 left-4 z-50 bg-zinc-800 text-white p-3 rounded-full shadow-lg"
+        className="md:hidden fixed bottom-20 left-4 z-50 bg-zinc-800 text-white p-3 rounded-full shadow-lg"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
