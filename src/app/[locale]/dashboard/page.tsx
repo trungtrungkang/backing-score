@@ -73,13 +73,19 @@ export default function DashboardPage() {
   const { confirm } = useDialogs();
 
   // Folder state
+  const searchParams = useSearchParams();
+  const folderParam = searchParams.get("folder");
   const [folders, setFolders] = useState<ProjectFolderDocument[]>([]);
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(folderParam);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [moveModalProject, setMoveModalProject] = useState<string | null>(null);
-  const searchParams = useSearchParams();
+
+  // Sync with URL ?folder param (e.g., from sidebar clicks)
+  useEffect(() => {
+    setCurrentFolderId(folderParam);
+  }, [folderParam]);
 
   // Load playlists + folders once
   useEffect(() => {
