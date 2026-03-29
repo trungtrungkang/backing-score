@@ -234,9 +234,8 @@ flowchart LR
 |-----------|-------|-------------|
 | `teacher_profiles` | Hồ sơ dạy học | userId, bio, instruments[], languages[], hourlyRate, currency, videoIntroUrl, isListed, timezone |
 | `availability` | Lịch trống | teacherId, dayOfWeek, startTime, endTime, recurring |
-| `bookings` | Buổi học đã đặt | teacherId, studentId, datetime, durationMin, price, commission, status (pending/confirmed/completed/cancelled), livekitRoomId |
+| `bookings` | Buổi học đã đặt | teacherId, studentId, datetime, durationMin, price, commission, status (pending/confirmed/completed/cancelled), livekitRoomId, lemonSqueezyOrderId |
 | `reviews` | Đánh giá sau buổi học | bookingId, studentId, teacherId, rating (1-5), content, createdAt |
-| `payouts` | Lịch sử rút tiền | teacherId, amount, stripeTransferId, status, createdAt |
 
 ## 6. Giao diện (UI Pages)
 
@@ -406,7 +405,8 @@ flowchart LR
 - [ ] Teacher Profile & Listing (`/teachers/[id]`)
 - [ ] Teacher Discovery page (`/teachers`) — tìm kiếm, lọc nhạc cụ/ngôn ngữ/giá
 - [ ] Booking & Scheduling (calendar, time slots, timezone)
-- [ ] Per-session payment (B&S giữ 15%)
+- [ ] Mua khóa học / Đặt lịch trả tiền qua **Lemon Squeezy** (truyền ID buổi học qua `custom_data`)
+- [ ] Chia tiền hoa hồng tự động qua hệ thống **Lemon Squeezy Affiliate API**
 - [ ] Trial lesson (30 phút giá rẻ)
 - [ ] Reviews & Ratings sau mỗi buổi
-- [ ] Teacher Earnings Dashboard + payout (Stripe Connect)
+- [ ] Dashboard Thống Kê Thu Nhập (Đọc API từ Lemon Squeezy Affiliate về)

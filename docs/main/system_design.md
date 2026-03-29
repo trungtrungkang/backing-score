@@ -1207,3 +1207,17 @@ Do quy mô thiết kế lớn, tính năng PDF Sheet Music được tách thành
 
 📊 **Đánh giá tổng thể hệ thống:** [system_review_2026_03_28.md](system_review_2026_03_28.md)
 
+---
+
+## 25. Monetization & Marketplace — Thiết Kế Phân Hệ Thanh Toán Giao Dịch Lẻ
+
+> **Trạng thái:** Thiết kế kiến trúc Lớp Sản Phẩm (Product Layer) — Chuẩn bị triển khai Backend.
+
+Do bảng thanh toán liên quan mật thiết đến dòng tiền, bảo mật Webhook và cơ cấu dữ liệu chung (Product Abstraction Layer), tính năng Monetization & Marketplace (bao gồm bán Khóa học, PDF, Đặt lịch LiveKit) được xuất bản trong một tài liệu chuyên dụng.
+
+📄 **Xem chi tiết:** [monetization_design.md](monetization_design.md)
+
+**Tóm tắt:**
+- **Product Layer** — Bảng `products` quản lý mọi mặt hàng được phép giao dịch (course, pdf, booking).
+- **Entitlements** — Bảng `entitlements` quản lý việc cấp quyền sở hữu chéo hệ thống. 
+- **Lemon Squeezy x Affiliate Hack** — Tự động hóa chia tiền xâu (Payout) cho Creator mà nền tảng không cần đóng vai trò MoR đóng thuế.

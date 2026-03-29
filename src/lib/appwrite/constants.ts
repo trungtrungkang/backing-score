@@ -44,6 +44,11 @@ export const APPWRITE_SHEET_MUSIC_FOLDERS_COLLECTION_ID = "sheet_music_folders";
 export const APPWRITE_SHEET_PDFS_BUCKET_ID = "sheet_pdfs";
 export const APPWRITE_SETLISTS_COLLECTION_ID = "setlists";
 
+// Monetization & Marketplace collections
+export const APPWRITE_PRODUCTS_COLLECTION_ID = "products";
+export const APPWRITE_PURCHASES_COLLECTION_ID = "purchases";
+export const APPWRITE_ENTITLEMENTS_COLLECTION_ID = "entitlements";
+
 export function isAppwriteConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT &&

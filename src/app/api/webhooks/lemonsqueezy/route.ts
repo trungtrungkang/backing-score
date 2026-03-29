@@ -17,6 +17,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { upsertSubscription } from "@/lib/appwrite/subscriptions";
+import { getProductByVariantId } from "@/lib/appwrite/products";
+import { logPurchase, grantEntitlement } from "@/lib/appwrite/purchases";
 
 const WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "";
 
@@ -75,6 +77,32 @@ export async function POST(req: NextRequest) {
     const userEmail: string = attrs.user_email || "";
 
     console.log(`[Webhook] Sub: ${subscriptionId} | Status: ${status} | User: ${userId} | Email: ${userEmail}`);
+
+    // Handle One-time Purchases (Orders)
+    if (eventName === "order_created") {
+      const orderId = String(payload.data?.id || "");
+      // Lemon Squeezy puts variant_id in first_order_item for orders
+      const orderVariantId = String(attrs.first_order_item?.variant_id || variantId || "");
+      const amountCents = Number(attrs.total || 0);
+      const currency = String(attrs.currency || "USD");
+      
+      console.log(`[Webhook] Processing Order: ${orderId} | Variant: ${orderVariantId} | User: ${userId}`);
+
+      if (orderVariantId && userId) {
+        // Fetch product mapping from our unified DB
+        const product = await getProductByVariantId(orderVariantId);
+        if (product) {
+          await logPurchase(orderId, userId, product.$id, amountCents, currency);
+          await grantEntitlement(userId, product.$id);
+          console.log(`[Webhook] ✅ Entitlement granted for User ${userId} on Product ${product.$id}`);
+        } else {
+          console.warn(`[Webhook] ❌ Variant ${orderVariantId} not found in products table! Is it synced?`);
+        }
+      } else {
+        console.warn(`[Webhook] ❌ Missing variantId or userId in payload.`);
+      }
+      return NextResponse.json({ received: true });
+    }
 
     // For non-subscription events, just acknowledge
     if (!eventName.startsWith("subscription_")) {
