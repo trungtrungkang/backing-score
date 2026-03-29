@@ -12,7 +12,7 @@ const AUDIO_WINDOW_LENGTH_SECONDS = 2;
 const FFT_HOP = 256;
 const AUDIO_N_SAMPLES = AUDIO_SAMPLE_RATE * AUDIO_WINDOW_LENGTH_SECONDS - FFT_HOP; // 43844
 
-const CONFIRM_PROBABILITY_THRESHOLD = 0.35; // Threshold for MIDI notes (0.0 to 1.0)
+const CONFIRM_PROBABILITY_THRESHOLD = 0.35; // Standard threshold (reduced noise)
 
 export function useMicInput() {
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
@@ -56,7 +56,14 @@ export function useMicInput() {
       // 1. Initialize TensorFlow Backend and Model if not already done
       if (!basicPitchRef.current) {
         setMlLoadingProgress(0.1);
-        await tf.setBackend('webgl').catch(() => tf.setBackend('wasm')).catch(() => tf.setBackend('cpu'));
+        // Safely set backend avoiding NextJS HMR duplicate registration warnings
+        if (!tf.getBackend()) {
+          try {
+            await tf.setBackend('webgl');
+          } catch {
+            try { await tf.setBackend('wasm'); } catch { await tf.setBackend('cpu'); }
+          }
+        }
         await tf.ready();
         
         // Start downloading/loading cached model weights
@@ -139,14 +146,28 @@ export function useMicInput() {
       await bp.evaluateModel(
         unrolledBuffer,
         (frames, onsets, contours) => {
-          // frames represents chronological slices. We want the most recent slice!
+          // frames represents chronological slices.
           if (frames.length > 0) {
-             const latestFrame = frames[frames.length - 1]; // Array of 88 probabilities
+             // Lookback at the last ~4 frames (45ms) to catch transients without making the UI "sticky" or noisy.
+             const numContextFrames = Math.min(4, frames.length);
+             const aggregatedFrame = new Float32Array(88);
+             
+             for (let i = frames.length - numContextFrames; i < frames.length; i++) {
+               if (i < 0) continue;
+               const frame = frames[i];
+               for (let pIdx = 0; pIdx < 88; pIdx++) {
+                 // Pure max-pooling without artificial onsets boost to prevent noise splatter
+                 aggregatedFrame[pIdx] = Math.max(aggregatedFrame[pIdx], frame[pIdx]);
+               }
+             }
+
              const newActiveNotes = new Set<number>();
              
              const activePitches: { pitch: number, prob: number }[] = [];
-             latestFrame.forEach((prob, pitchIdx) => {
-               if (prob > CONFIRM_PROBABILITY_THRESHOLD) {
+             aggregatedFrame.forEach((prob, pitchIdx) => {
+               // Only lower threshold slightly for highest notes (C6 -> C8/E7)
+               const dynamicThreshold = pitchIdx > 72 ? 0.25 : CONFIRM_PROBABILITY_THRESHOLD;
+               if (prob > dynamicThreshold) {
                  activePitches.push({ pitch: pitchIdx + 21, prob });
                }
              });

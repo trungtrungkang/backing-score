@@ -19,13 +19,15 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { toggleFavorite, checkIsFavorited } from "@/lib/appwrite";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { ShareButton } from "@/components/ShareButton";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import { useAuth } from "@/contexts/AuthContext";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite/projects";
+import { GamificationCelebration } from "@/components/gamification/GamificationCelebration";
+import { toast } from "sonner";
 
 // Mobile-only consolidated actions menu for Play page header
 function MobileActionsMenu({ projectId, projectName }: { projectId: string; projectName: string }) {
@@ -146,11 +148,83 @@ export function PlayShell({
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
-  const { isPremium } = useAuth();
+  const { isPremium, user } = useAuth();
   const tc = useTranslations("Classroom");
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
 
-  const { state, refs, actions } = useScoreEngine({ payload, autoplayOnLoad, onNext });
+  // --- Gamification Tracking ---
+  const [sessionMaxSpeed, setSessionMaxSpeed] = useState(1.0);
+  const sessionStartTimeRef = useRef<number | null>(null);
+  const accumulatedTimeMsRef = useRef<number>(0);
+  const userRef = useRef(user);
+  const maxSpeedRef = useRef(1.0);
+
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { maxSpeedRef.current = sessionMaxSpeed; }, [sessionMaxSpeed]);
+
+  const submitPracticeSession = useCallback(async (waitModeScore?: number) => {
+    if (!userRef.current?.$id) return;
+    
+    let finalDuration = accumulatedTimeMsRef.current;
+    if (sessionStartTimeRef.current !== null) {
+      finalDuration += performance.now() - sessionStartTimeRef.current;
+      sessionStartTimeRef.current = performance.now(); // reset timer
+    }
+    
+    if (finalDuration < 10000) return; // avoid submitting spam
+    
+    // Lock the time so we don't double count if we submit midway
+    accumulatedTimeMsRef.current = 0;
+    
+    try {
+      const res = await fetch("/api/gamification/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userRef.current.$id,
+          projectId,
+          durationMs: Math.round(finalDuration),
+          maxSpeed: maxSpeedRef.current,
+          waitModeScore
+        })
+      });
+      const data = await res.json();
+      if (data.addedXP) {
+        // Dispatch global event for header to animate
+        window.dispatchEvent(new CustomEvent("gamification-xp-earned", { detail: data }));
+      }
+    } catch { }
+  }, [projectId]);
+
+  // Unmount tracker
+  useEffect(() => {
+    return () => {
+      let finalDuration = accumulatedTimeMsRef.current;
+      if (sessionStartTimeRef.current !== null) {
+        finalDuration += performance.now() - sessionStartTimeRef.current;
+      }
+      if (finalDuration >= 10000 && userRef.current?.$id) {
+        fetch("/api/gamification/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({
+            userId: userRef.current.$id,
+            projectId,
+            durationMs: Math.round(finalDuration),
+            maxSpeed: maxSpeedRef.current,
+          })
+        }).catch(() => {});
+      }
+    };
+  }, [projectId]);
+
+  const { state, refs, actions } = useScoreEngine({ 
+    payload, 
+    autoplayOnLoad, 
+    onNext,
+    onWaitModeComplete: (score) => submitPracticeSession(score)
+  });
   const recorder = useAudioRecorder();
 
   // Auto-enable Wait Mode when forced by assignment
@@ -159,6 +233,40 @@ export function PlayShell({
       actions.setIsWaitMode(true);
     }
   }, [forceWaitMode]);
+
+  // Warn Apple users about Voice Isolation when Mic activates
+  useEffect(() => {
+    if (state.isMicInitialized) {
+      // Basic check for macOS/iOS. Since navigator.platform is deprecated, using userAgent
+      const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isApple) {
+        toast.info("Apple Users: Please turn off 'Voice Isolation' Mic Mode in your Control Center if you lose high notes (E7+).", {
+          duration: 8000,
+          position: "top-center"
+        });
+      }
+    }
+  }, [state.isMicInitialized, tc]);
+
+  // Track playback time
+  useEffect(() => {
+    if (state.isPlaying) {
+      if (sessionStartTimeRef.current === null) {
+        sessionStartTimeRef.current = performance.now();
+      }
+    } else {
+      if (sessionStartTimeRef.current !== null) {
+        accumulatedTimeMsRef.current += performance.now() - sessionStartTimeRef.current;
+        sessionStartTimeRef.current = null;
+      }
+    }
+  }, [state.isPlaying]);
+
+  useEffect(() => {
+    if (state.playbackRate > sessionMaxSpeed) {
+      setSessionMaxSpeed(state.playbackRate);
+    }
+  }, [state.playbackRate, sessionMaxSpeed]);
 
   const handleRecordToggle = useCallback((shouldRecord: boolean) => {
     if (shouldRecord) {
@@ -393,10 +501,12 @@ export function PlayShell({
         </div>
       )}
 
-      {/* Upgrade Prompt */}
       {showUpgrade && (
         <UpgradePrompt feature={showUpgrade} onClose={() => setShowUpgrade(null)} />
       )}
+
+      {/* Gamification Celebration Overlay */}
+      <GamificationCelebration />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { WikiSearchDialog } from "@/components/WikiSearchDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { NotificationBell } from "@/components/NotificationBell";
+import { GamificationBadge } from "@/components/gamification/GamificationBadge";
 import { useTranslations } from "next-intl";
 import { canAccessAdmin } from "@/lib/auth/roles";
 import {
@@ -176,6 +177,7 @@ export function Header() {
             </Tooltip>
             <LanguageSwitcher />
             <ThemeToggle hideBg className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400" />
+            {user && <GamificationBadge />}
             {user && <NotificationBell />}
 
             {user ? (

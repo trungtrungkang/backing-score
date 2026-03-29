@@ -49,6 +49,11 @@ export const APPWRITE_PRODUCTS_COLLECTION_ID = "products";
 export const APPWRITE_PURCHASES_COLLECTION_ID = "purchases";
 export const APPWRITE_ENTITLEMENTS_COLLECTION_ID = "entitlements";
 
+// Gamification
+export const APPWRITE_PRACTICE_SESSIONS_COLLECTION_ID = "practice_sessions";
+export const APPWRITE_USER_STATS_COLLECTION_ID = "user_stats";
+export const APPWRITE_PLATFORM_CONFIG_COLLECTION_ID = "platform_config";
+
 export function isAppwriteConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT &&

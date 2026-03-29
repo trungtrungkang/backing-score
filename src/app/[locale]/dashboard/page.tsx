@@ -37,6 +37,7 @@ import { useSearchParams } from "next/navigation";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { canCreate } from "@/lib/auth/roles";
 import { QuickEditModal } from "@/components/QuickEditModal";
+import { DailyChallengeCard } from "@/components/gamification/DailyChallengeCard";
 
 function formatDate(iso: string) {
   try {
@@ -320,6 +321,9 @@ export default function DashboardPage() {
 
           {/* Subscription Status */}
           <SubscriptionCard />
+
+          {/* Daily Challenge Banner */}
+          <DailyChallengeCard />
 
           {/* Header Row */}
           <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
