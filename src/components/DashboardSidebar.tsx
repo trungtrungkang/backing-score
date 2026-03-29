@@ -150,10 +150,10 @@ function FolderTreeNode({
         {hasChildren ? (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            className="p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
           >
             <ChevronRight
-              className={`w-2.5 h-2.5 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
+              className={`w-3.5 h-3.5 transition-transform duration-150 ${expanded ? "rotate-90" : ""}`}
             />
           </button>
         ) : (
@@ -162,8 +162,8 @@ function FolderTreeNode({
 
         {/* Folder label */}
         {renaming ? (
-          <div className="flex-1 flex items-center gap-1 px-1">
-            <Folder className="w-3 h-3 text-amber-400 flex-shrink-0" />
+          <div className="flex-1 flex items-center gap-1.5 px-1 py-0.5">
+            <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <input
               type="text"
               value={renameName}
@@ -178,7 +178,7 @@ function FolderTreeNode({
                   setRenameName(folder.name);
                 }
               }}
-              className="bg-transparent text-xs text-zinc-900 dark:text-white border-b border-indigo-400 focus:outline-none flex-1 py-0.5"
+              className="bg-transparent text-[13px] text-zinc-900 dark:text-white border-b border-indigo-400 focus:outline-none flex-1 py-0.5"
               autoFocus
             />
             <button
@@ -202,13 +202,13 @@ function FolderTreeNode({
         ) : (
           <button
             onClick={() => router.push(`${basePath}?folder=${folder.$id}`)}
-            className={`flex-1 flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs transition-colors text-left truncate ${
+            className={`flex-1 flex items-center gap-2 px-2 py-1 rounded transition-colors text-left truncate text-[13px] ${
               isActive
                 ? "text-zinc-900 dark:text-white font-medium underline underline-offset-2 decoration-indigo-500"
-                : "text-zinc-500 dark:text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
             }`}
           >
-            <Folder className="w-3 h-3 text-amber-400 flex-shrink-0" />
+            <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <span className="truncate">{folder.name}</span>
           </button>
         )}
@@ -218,9 +218,9 @@ function FolderTreeNode({
           <div className="relative">
             <button
               onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
-              className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all"
+              className="opacity-0 group-hover:opacity-100 p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-all"
             >
-              <MoreVertical className="w-2.5 h-2.5" />
+              <MoreVertical className="w-3.5 h-3.5" />
             </button>
             {showMenu && (
               <div
@@ -291,8 +291,8 @@ function FolderTreeNode({
 
           {/* Inline create */}
           {creating && (
-            <div className="flex items-center gap-1 px-1 py-0.5">
-              <FolderPlus className="w-2.5 h-2.5 text-zinc-400 flex-shrink-0" />
+            <div className="flex items-center gap-1.5 px-2 py-1">
+              <FolderPlus className="w-4 h-4 text-zinc-400 flex-shrink-0" />
               <input
                 type="text"
                 value={newName}
@@ -305,7 +305,7 @@ function FolderTreeNode({
                   }
                 }}
                 placeholder="Name"
-                className="bg-transparent text-[11px] text-zinc-900 dark:text-white border-b border-indigo-400 focus:outline-none w-16 py-0.5"
+                className="bg-transparent text-[13px] text-zinc-900 dark:text-white border-b border-indigo-400 focus:outline-none w-20 py-0.5"
                 autoFocus
                 disabled={saving}
               />
@@ -439,12 +439,12 @@ function TreeSection({
                 <span className="w-3.5 flex-shrink-0" />
                 <Link
                   href={node.href}
-                  className={`flex-1 flex items-center gap-1.5 px-1.5 py-0.5 rounded text-xs transition-colors ${isNodeActive
+                  className={`flex-1 flex items-center gap-2 px-2 py-1 rounded text-[13px] transition-colors ${isNodeActive
                     ? "text-zinc-900 dark:text-white font-medium underline underline-offset-2 decoration-indigo-500"
-                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/30"
                   }`}
                 >
-                  <NodeIcon className="w-3 h-3 flex-shrink-0" />
+                  <NodeIcon className="w-4 h-4 flex-shrink-0" />
                   {node.label}
                 </Link>
               </div>
@@ -581,24 +581,48 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
     loadFolders();
   };
 
-  const staticItems = [
+  const libraryItems = [
     { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
     { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
-    { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },
   ];
 
-  const extraItems = [
+  const teachItems = [
     { href: "/classroom", labelKey: "classroom", iconColor: "text-indigo-400", icon: GraduationCap },
     { href: "/dashboard/courses", icon: GraduationCap, labelKey: "creatorCourses", iconColor: "text-[#C8A856]" },
+  ];
+
+  const otherItems = [
+    { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },
     { href: "/guide", icon: Globe, labelKey: "userGuide", iconColor: "" },
     { href: "/pricing", icon: Crown, label: "Premium", iconColor: "text-[#C8A856]" },
   ];
 
+  const renderNavItems = (items: Array<{href: string, icon: any, labelKey?: string, label?: string, iconColor?: string}>, paddingLeft: string = "px-2") => items.map((item) => {
+    const active = isActive(item.href);
+    const ItemIcon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onMobileClose}
+        className={`flex items-center gap-2.5 py-1.5 rounded-md transition-colors text-sm ${paddingLeft} ${
+          active
+            ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
+            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
+        }`}
+      >
+        <ItemIcon className={`w-4 h-4 ${active && item.iconColor ? item.iconColor : ""}`} />
+        {item.label || t(item.labelKey || "")}
+      </Link>
+    );
+  });
+
   const sidebarContent = (
     <>
-      <div>
-        <h2 className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3">
-          {t("yourLibrary")}
+      {/* GROUP 1: LIBRARY */}
+      <div className="mb-2">
+        <h2 className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold mb-3 px-1">
+          LIBRARY
         </h2>
         <nav className="flex flex-col gap-0.5">
           {/* Projects tree */}
@@ -656,52 +680,34 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
             t={t}
           />
 
-          {/* Static items */}
-          {staticItems.map((item) => {
-            const active = isActive(item.href);
-            const ItemIcon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onMobileClose}
-                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors text-sm ml-4 ${
-                  active
-                    ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                <ItemIcon className={`w-4 h-4 ${active && item.iconColor ? item.iconColor : ""}`} />
-                {item.label || t(item.labelKey || "")}
-              </Link>
-            );
-          })}
+          {/* Static items - Collections, Favorites */}
+          {renderNavItems(libraryItems, "px-2 ml-4")}
         </nav>
       </div>
 
-      <div className="border-t border-zinc-200 dark:border-zinc-800" />
+      <div className="border-t border-zinc-200 dark:border-zinc-800/50 my-4" />
 
-      <nav className="flex flex-col gap-0.5">
-        {extraItems.map((item) => {
-          const active = isActive(item.href);
-          const ItemIcon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onMobileClose}
-              className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors text-sm ${
-                active
-                  ? "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-900 dark:text-white font-medium"
-                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-            >
-              <ItemIcon className={`w-4 h-4 ${item.iconColor || ""}`} />
-              {item.label || t(item.labelKey || "")}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* GROUP 2: TEACH & LEARN */}
+      <div className="mb-2">
+        <h2 className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold mb-3 px-1">
+          TEACH & LEARN
+        </h2>
+        <nav className="flex flex-col gap-0.5">
+          {renderNavItems(teachItems)}
+        </nav>
+      </div>
+
+      <div className="border-t border-zinc-200 dark:border-zinc-800/50 my-4" />
+
+      {/* GROUP 3: OTHER */}
+      <div>
+        <h2 className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold mb-3 px-1">
+          OTHER
+        </h2>
+        <nav className="flex flex-col gap-0.5">
+          {renderNavItems(otherItems)}
+        </nav>
+      </div>
     </>
   );
 
