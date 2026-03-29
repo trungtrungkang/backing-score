@@ -370,6 +370,9 @@ function TreeSection({
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const searchParams = useSearchParams();
+  const currentPath = usePathname();
+
   useEffect(() => {
     if (isActive) setExpanded(true);
   }, [isActive]);
@@ -433,7 +436,18 @@ function TreeSection({
           {/* Special nodes (Favorites, Recent) — same indent as header */}
           {specialNodes?.map((node) => {
             const NodeIcon = node.icon;
-            const isNodeActive = typeof window !== "undefined" && window.location.search.includes(node.href.split("?")[1] || "__none__");
+            
+            // Replaces window.location with safe Next.js hydration-friendly checks
+            const url = new URL(node.href, "http://localhost");
+            const filterParam = new URLSearchParams(url.search).get("filter");
+            
+            let isNodeActive = false;
+            if (filterParam) {
+              isNodeActive = currentPath === url.pathname && searchParams.get("filter") === filterParam;
+            } else {
+              isNodeActive = currentPath === url.pathname && !searchParams.has("filter");
+            }
+            
             return (
               <div key={node.key} className="flex items-center ml-3">
                 <span className="w-3.5 flex-shrink-0" />

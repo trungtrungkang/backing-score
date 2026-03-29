@@ -17,6 +17,7 @@ import {
   APPWRITE_SHEET_MUSIC_FOLDERS_COLLECTION_ID,
   APPWRITE_SHEET_MUSIC_COLLECTION_ID,
 } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 import type { SheetMusicFolderDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -39,11 +40,7 @@ export async function createSheetFolder(
       parentFolderId: parentFolderId || null,
       order: 0,
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
   return doc as unknown as SheetMusicFolderDocument;
 }

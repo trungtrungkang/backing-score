@@ -17,6 +17,7 @@ import {
 import type { AssignmentDocument, SubmissionDocument } from "./types";
 import { createNotification } from "./notifications";
 import { listClassroomMembers, getClassroom } from "./classrooms";
+import { buildClassroomPermissions } from "./permissions";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_ASSIGNMENTS_COLLECTION_ID;
@@ -53,12 +54,7 @@ export async function createAssignment(params: {
       waitModeRequired: params.waitModeRequired ?? false,
       sheetMusicId: params.sheetMusicId || null,
     },
-    [
-      // Any authenticated user can read (we check membership in UI)
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildClassroomPermissions(user.$id)
   );
 
   // Fire-and-forget: notify all students in class

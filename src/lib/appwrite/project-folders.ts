@@ -16,6 +16,7 @@ import {
   APPWRITE_PROJECT_FOLDERS_COLLECTION_ID,
   APPWRITE_PROJECTS_COLLECTION_ID,
 } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 import type { ProjectFolderDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -38,11 +39,7 @@ export async function createProjectFolder(
       parentFolderId: parentFolderId || null,
       order: 0,
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
   return doc as unknown as ProjectFolderDocument;
 }

@@ -1,5 +1,6 @@
-import { databases, ID, Query, Models } from "./client";
+import { databases, ID, Query, Models, account } from "./client";
 import { APPWRITE_DATABASE_ID as DATABASE_ID } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 
 export const LESSONS_COLLECTION = "lessons";
 export const PROGRESS_COLLECTION = "progress";
@@ -31,6 +32,7 @@ export async function createLesson(
   contentRaw: string,
   orderIndex: number = 0
 ): Promise<LessonDoc> {
+  const user = await account.get();
   const doc = await databases.createDocument(
     DATABASE_ID,
     LESSONS_COLLECTION,
@@ -41,7 +43,8 @@ export async function createLesson(
       contentRaw,
       orderIndex,
       published: true,
-    }
+    },
+    buildStandardPermissions(user.$id)
   );
   return doc as unknown as LessonDoc;
 }

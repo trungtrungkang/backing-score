@@ -15,6 +15,7 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_PROJECTS_COLLECTION_ID,
 } from "./constants";
+import { buildStandardPermissions, buildPublishedPermissions } from "./permissions";
 import type { ProjectDocument, ProjectPayload } from "./types";
 import { getArtistNamesByIds } from "./artists";
 
@@ -93,11 +94,7 @@ export async function createProject(params: {
       ...(params.wikiCompositionId && { wikiCompositionId: params.wikiCompositionId }),
       ...(params.wikiComposerIds?.length && { wikiComposerIds: params.wikiComposerIds }),
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
   return doc as unknown as ProjectDocument;
 }
@@ -280,17 +277,8 @@ export async function publishMyProject(projectId: string, publish: boolean): Pro
   }
 
   const permissions = publish
-    ? [
-        Permission.read(Role.any()),
-        Permission.read(Role.user(me.$id)),
-        Permission.update(Role.user(me.$id)),
-        Permission.delete(Role.user(me.$id)),
-      ]
-    : [
-        Permission.read(Role.user(me.$id)),
-        Permission.update(Role.user(me.$id)),
-        Permission.delete(Role.user(me.$id)),
-      ];
+    ? buildPublishedPermissions(me.$id)
+    : buildStandardPermissions(me.$id);
 
   const doc = await databases.updateDocument(dbId, collId, projectId, body, permissions);
   return doc as unknown as ProjectDocument;

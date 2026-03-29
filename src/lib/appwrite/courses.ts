@@ -1,5 +1,6 @@
 import { databases, ID, Query, Models } from "./client";
 import { APPWRITE_DATABASE_ID as DATABASE_ID } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 
 export const COURSES_COLLECTION = "courses";
 export const ENROLLMENTS_COLLECTION = "enrollments";
@@ -66,7 +67,7 @@ export async function createCourse(creatorId: string, title: string, priceCents:
     priceCents,
     published: false,
     createdAt: new Date().toISOString(),
-  });
+  }, buildStandardPermissions(creatorId));
   return doc as unknown as CourseDoc;
 }
 

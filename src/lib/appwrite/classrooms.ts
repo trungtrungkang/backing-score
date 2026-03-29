@@ -16,6 +16,7 @@ import {
   APPWRITE_CLASSROOMS_COLLECTION_ID,
   APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID,
 } from "./constants";
+import { buildClassroomPermissions } from "./permissions";
 import type { ClassroomDocument, ClassroomMemberDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -55,12 +56,7 @@ export async function createClassroom(params: {
       classCode,
       status: "active",
     },
-    [
-      // Any logged-in user can read (needed for join-by-code query)
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildClassroomPermissions(user.$id)
   );
 
   // Also add teacher as a member
@@ -76,11 +72,7 @@ export async function createClassroom(params: {
       joinedAt: new Date().toISOString(),
       status: "active",
     },
-    [
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildClassroomPermissions(user.$id)
   );
 
   return doc as unknown as ClassroomDocument;

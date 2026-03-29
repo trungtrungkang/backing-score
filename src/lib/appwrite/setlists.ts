@@ -10,6 +10,7 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_SETLISTS_COLLECTION_ID,
 } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 import type { SetlistDocument, SetlistItem } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -28,11 +29,7 @@ export async function createSetlist(name: string, items: SetlistItem[] = []): Pr
       userId: user.$id,
       items: JSON.stringify(items),
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
 
   return doc as unknown as SetlistDocument;

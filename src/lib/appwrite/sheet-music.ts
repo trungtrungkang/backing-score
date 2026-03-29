@@ -17,6 +17,7 @@ import {
   APPWRITE_SHEET_MUSIC_COLLECTION_ID,
   APPWRITE_SHEET_PDFS_BUCKET_ID,
 } from "./constants";
+import { buildStandardPermissions } from "./permissions";
 import type { SheetMusicDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -49,11 +50,7 @@ export async function uploadSheetPdf(
   const fileId = ID.unique();
 
   // Upload to storage
-  await storage.createFile(bucketId, fileId, file, [
-    Permission.read(Role.user(user.$id)),
-    Permission.update(Role.user(user.$id)),
-    Permission.delete(Role.user(user.$id)),
-  ]);
+  await storage.createFile(bucketId, fileId, file, buildStandardPermissions(user.$id));
 
   // Create document
   const title = meta.title || file.name.replace(/\.pdf$/i, "");
@@ -74,11 +71,7 @@ export async function uploadSheetPdf(
       thumbnailId: null as string | null,
       favorite: false,
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
 
   // Upload thumbnail if provided
@@ -88,11 +81,7 @@ export async function uploadSheetPdf(
       const thumbFile = new File([meta.thumbnailBlob], `thumb_${fileId}.jpg`, {
         type: "image/jpeg",
       });
-      await storage.createFile(bucketId, thumbId, thumbFile, [
-        Permission.read(Role.user(user.$id)),
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
-      ]);
+      await storage.createFile(bucketId, thumbId, thumbFile, buildStandardPermissions(user.$id));
       // Update document with thumbnailId
       await databases.updateDocument(dbId, collId, doc.$id, {
         thumbnailId: thumbId,

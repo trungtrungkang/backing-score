@@ -15,6 +15,7 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_PLAYLISTS_COLLECTION_ID,
 } from "./constants";
+import { buildStandardPermissions, buildPublishedPermissions } from "./permissions";
 import type { PlaylistDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -40,11 +41,7 @@ export async function createPlaylist(params: {
       coverImageId: params.coverImageId || null,
       projectIds: [],
     },
-    [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
+    buildStandardPermissions(user.$id)
   );
   return doc as unknown as PlaylistDocument;
 }
@@ -69,21 +66,12 @@ export async function updatePlaylist(
   if (updates.projectIds !== undefined) body.projectIds = updates.projectIds;
 
   let permissions;
-  // If explicitly marking as published, inject the Role.any() read permit
   if (publishOverride || updates.isPublished) {
       const user = await account.get();
-      permissions = [
-        Permission.read(Role.any()), // Public visibility over-ride
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
-      ];
+      permissions = buildPublishedPermissions(user.$id);
   } else if (updates.isPublished === false) {
       const user = await account.get();
-      permissions = [
-        Permission.read(Role.user(user.$id)), // Re-secure back to strictly private
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
-      ];
+      permissions = buildStandardPermissions(user.$id);
   }
 
   const doc = await databases.updateDocument(dbId, collId, playlistId, body, permissions);
