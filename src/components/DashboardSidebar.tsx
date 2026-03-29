@@ -24,10 +24,12 @@ import {
   Trash2,
   Check,
   ListMusic,
+  Mic,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialogs } from "@/components/ui/dialog-provider";
+import { MicCalibrationWizard } from "@/components/player/MicCalibrationWizard";
 import {
   listProjectFolders,
   listSheetFolders,
@@ -607,17 +609,35 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
 
   const otherItems = [
     { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics", iconColor: "text-purple-400" },
+    { action: "calibrate_mic", icon: Mic, label: "Mic Calibration", iconColor: "text-blue-400" },
     { href: "/guide", icon: Globe, labelKey: "userGuide", iconColor: "" },
     { href: "/pricing", icon: Crown, label: "Premium", iconColor: "text-[#C8A856]" },
   ];
 
-  const renderNavItems = (items: Array<{href: string, icon: any, labelKey?: string, label?: string, iconColor?: string}>, paddingLeft: string = "px-2") => items.map((item) => {
-    const active = isActive(item.href);
+  const [showMicWizard, setShowMicWizard] = useState(false);
+
+  const renderNavItems = (items: Array<{href?: string, action?: string, icon: any, labelKey?: string, label?: string, iconColor?: string}>, paddingLeft: string = "px-2") => items.map((item, i) => {
+    if (item.action === "calibrate_mic") {
+      return (
+        <button
+          key={`action-${i}`}
+          onClick={() => {
+            if (onMobileClose) onMobileClose();
+            setShowMicWizard(true);
+          }}
+          className={`w-full flex items-center gap-2.5 py-1.5 rounded-md transition-colors text-sm ${paddingLeft} text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white`}
+        >
+          <item.icon className={`w-4 h-4 ${item.iconColor}`} />
+          {item.label}
+        </button>
+      );
+    }
+    const active = item.href ? isActive(item.href) : false;
     const ItemIcon = item.icon;
     return (
       <Link
-        key={item.href}
-        href={item.href}
+        key={item.href || i}
+        href={item.href || "#"}
         onClick={onMobileClose}
         className={`flex items-center gap-2.5 py-1.5 rounded-md transition-colors text-sm ${paddingLeft} ${
           active
@@ -751,6 +771,12 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
           </aside>
         </div>
       )}
+
+      {/* Settings / Calibration Modal globally mounted for sidebar context */}
+      <MicCalibrationWizard 
+        isOpen={showMicWizard}
+        onClose={() => setShowMicWizard(false)}
+      />
     </>
   );
 }

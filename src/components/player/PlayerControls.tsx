@@ -68,6 +68,7 @@ interface PlayerControlsProps {
   isMicInitialized?: boolean;
   onInitializeMic?: () => Promise<boolean>;
   onDisconnectMic?: () => void;
+  onMicCalibrate?: () => void;
   isPremium?: boolean;
   // Recording
   isRecording?: boolean;
@@ -132,6 +133,7 @@ export function PlayerControls({
   isMicInitialized = false,
   onInitializeMic,
   onDisconnectMic,
+  onMicCalibrate,
   isPremium = false,
   isRecording = false,
   onRecordToggle,
@@ -182,7 +184,10 @@ export function PlayerControls({
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[120] w-full max-w-4xl px-2 sm:px-4 pointer-events-none mt-6 pb-[env(safe-area-inset-bottom)] md:pb-0">
+    <div className={cn(
+      "absolute left-1/2 -translate-x-1/2 z-[120] w-full max-w-4xl px-2 sm:px-4 pointer-events-none mt-6 pb-[env(safe-area-inset-bottom)] md:pb-0 transition-all duration-300",
+      isWaitMode ? "bottom-[105px]" : "bottom-6"
+    )}>
       <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 pointer-events-auto relative">
         <button
           onClick={() => onCollapseToggle?.(true)}
@@ -407,7 +412,14 @@ export function PlayerControls({
                         {isMicInitialized && (
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">🎙️ Mic</span>
+                              <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">
+                                🎙️ Mic
+                                {onMicCalibrate && (
+                                  <button onClick={onMicCalibrate} className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors" title="Calibrate Mic Profile">
+                                    <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                  </button>
+                                )}
+                              </span>
                               <button onClick={() => {
                                 localStorage.removeItem("bs_preferred_instrument");
                                 onDisconnectMic?.();
@@ -703,7 +715,7 @@ export function PlayerControls({
               Practice Mode pauses playback and waits for you to play the correct notes on your instrument.
               Do you want to connect a Digital Piano via MIDI, or use your Microphone for acoustic instruments?
               <br /><br />
-              <span className="text-amber-500 dark:text-amber-400 italic">⚠️ Mic detection works best for notes C3–C6. For accurate chord detection, a MIDI keyboard is strongly recommended.</span>
+              <span className="text-zinc-400 dark:text-zinc-500 italic text-sm">💡 Tip: For playing fast passages or complex chords, a direct MIDI cable connection is strongly recommended.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-between w-full">

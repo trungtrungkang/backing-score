@@ -12,9 +12,24 @@ const AUDIO_WINDOW_LENGTH_SECONDS = 2;
 const FFT_HOP = 256;
 const AUDIO_N_SAMPLES = AUDIO_SAMPLE_RATE * AUDIO_WINDOW_LENGTH_SECONDS - FFT_HOP; // 43844
 
-const CONFIRM_PROBABILITY_THRESHOLD = 0.35; // Standard threshold (reduced noise)
+const CONFIRM_PROBABILITY_THRESHOLD = 0.38; // Standard threshold (reduced noise)
 
-export function useMicInput() {
+export interface MicProfile {
+  noiseFloor: number;
+  lowRangeOffset: number;
+  highRangeOffset: number;
+}
+
+export interface UseMicInputOptions {
+  profile?: MicProfile;
+  /**
+   * Callback to receive raw probability frames (88 array)
+   * used mostly for Calibration UI to listen to ML confidence.
+   */
+  onFrameAnalyzed?: (aggregatedFrame: Float32Array) => void;
+}
+
+export function useMicInput(options: UseMicInputOptions = {}) {
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
   const [isMicInitialized, setIsMicInitialized] = useState(false);
   const [mlLoadingProgress, setMlLoadingProgress] = useState<number>(0);
@@ -38,13 +53,13 @@ export function useMicInput() {
     }
     if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
     if (audioCtxRef.current) audioCtxRef.current.close().catch(console.error);
-    
+
     audioCtxRef.current = null;
     processorRef.current = null;
     streamRef.current = null;
     isEvaluatingRef.current = false;
     writeIdxRef.current = 0;
-    
+
     setActiveNotes(new Set());
     setIsMicInitialized(false);
   }, []);
@@ -65,7 +80,7 @@ export function useMicInput() {
           }
         }
         await tf.ready();
-        
+
         // Start downloading/loading cached model weights
         const model = new BasicPitch(BASIC_PITCH_MODEL_URL);
         await model.model; // Ensure Promise<tf.GraphModel> resolves
@@ -104,7 +119,7 @@ export function useMicInput() {
 
       processor.onaudioprocess = (e: AudioProcessingEvent) => {
         const inputData = e.inputBuffer.getChannelData(0);
-        
+
         // Push incoming samples into the sliding window ring buffer
         for (let i = 0; i < inputData.length; i++) {
           ringBufferRef.current[writeIdxRef.current] = inputData[i];
@@ -135,7 +150,7 @@ export function useMicInput() {
     // Unroll the ring buffer so the most recent sample is at the end
     const unrolledBuffer = new Float32Array(AUDIO_N_SAMPLES);
     const split = writeIdxRef.current;
-    
+
     // Copy the oldest part from split to end
     unrolledBuffer.set(ringBufferRef.current.subarray(split, AUDIO_N_SAMPLES), 0);
     // Copy the newest part from 0 to split
@@ -148,50 +163,72 @@ export function useMicInput() {
         (frames, onsets, contours) => {
           // frames represents chronological slices.
           if (frames.length > 0) {
-             // Lookback at the last ~4 frames (45ms) to catch transients without making the UI "sticky" or noisy.
-             const numContextFrames = Math.min(4, frames.length);
-             const aggregatedFrame = new Float32Array(88);
-             
-             for (let i = frames.length - numContextFrames; i < frames.length; i++) {
-               if (i < 0) continue;
-               const frame = frames[i];
-               for (let pIdx = 0; pIdx < 88; pIdx++) {
-                 // Pure max-pooling without artificial onsets boost to prevent noise splatter
-                 aggregatedFrame[pIdx] = Math.max(aggregatedFrame[pIdx], frame[pIdx]);
-               }
-             }
+            // Lookback at the last ~4 frames (45ms) to catch transients without making the UI "sticky" or noisy.
+            const numContextFrames = Math.min(4, frames.length);
+            const aggregatedFrame = new Float32Array(88);
 
-             const newActiveNotes = new Set<number>();
-             
-             const activePitches: { pitch: number, prob: number }[] = [];
-             aggregatedFrame.forEach((prob, pitchIdx) => {
-               // Only lower threshold slightly for highest notes (C6 -> C8/E7)
-               const dynamicThreshold = pitchIdx > 72 ? 0.25 : CONFIRM_PROBABILITY_THRESHOLD;
-               if (prob > dynamicThreshold) {
-                 activePitches.push({ pitch: pitchIdx + 21, prob });
-               }
-             });
+            for (let i = frames.length - numContextFrames; i < frames.length; i++) {
+              if (i < 0) continue;
+              const frame = frames[i];
+              for (let pIdx = 0; pIdx < 88; pIdx++) {
+                // Pure max-pooling without artificial onsets boost to prevent noise splatter
+                aggregatedFrame[pIdx] = Math.max(aggregatedFrame[pIdx], frame[pIdx]);
+              }
+            }
 
-             // Sort by confidence descending, take maximum 6 simultaneous pitches (prevents acoustic splatter)
-             const topPitches = activePitches
-                .sort((a, b) => b.prob - a.prob)
-                .slice(0, 6)
-                .map(p => p.pitch);
+            const newActiveNotes = new Set<number>();
 
-             topPitches.forEach(p => newActiveNotes.add(p));
+            // Emit raw frame if user needs to read it
+            if (options.onFrameAnalyzed) {
+              options.onFrameAnalyzed(aggregatedFrame);
+            }
 
-             // Simple shallow comparison to prevent unnecessary renders
-             let diff = newActiveNotes.size !== activeNotesRef.current.size;
-             if (!diff) { 
-               for (const n of newActiveNotes) {
-                 if (!activeNotesRef.current.has(n)) { diff = true; break; } 
-               } 
-             }
+            // Apply personal user Mic Profile calibration logic
+            const p = options.profile;
+            // Baseline limit set by room noise floor + 0.15 headroom (clamped inside sensible boundaries)
+            const baseline = p ? Math.max(0.2, Math.min(0.6, p.noiseFloor + 0.15)) : CONFIRM_PROBABILITY_THRESHOLD;
 
-             if (diff) {
-               activeNotesRef.current = newActiveNotes;
-               setActiveNotes(new Set(newActiveNotes));
-             }
+            const activePitches: { pitch: number, prob: number }[] = [];
+            aggregatedFrame.forEach((prob, pitchIdx) => {
+              // Base threshold
+              let dynamicThreshold = baseline;
+              // Adjust based on pitch index (bass vs treble ranges)
+              if (p) {
+                if (pitchIdx < 36) dynamicThreshold += p.lowRangeOffset;
+                else if (pitchIdx > 72) dynamicThreshold += p.highRangeOffset;
+              } else {
+                // Fallback default scaling
+                dynamicThreshold = pitchIdx > 72 ? 0.25 : CONFIRM_PROBABILITY_THRESHOLD;
+              }
+
+              // Ensure threshold never drops below 0.1 to prevent constant false-positives
+              dynamicThreshold = Math.max(0.1, dynamicThreshold);
+
+              if (prob > dynamicThreshold) {
+                activePitches.push({ pitch: pitchIdx + 21, prob });
+              }
+            });
+
+            // Sort by confidence descending, take maximum 6 simultaneous pitches (prevents acoustic splatter)
+            const topPitches = activePitches
+              .sort((a, b) => b.prob - a.prob)
+              .slice(0, 6)
+              .map(p => p.pitch);
+
+            topPitches.forEach(p => newActiveNotes.add(p));
+
+            // Simple shallow comparison to prevent unnecessary renders
+            let diff = newActiveNotes.size !== activeNotesRef.current.size;
+            if (!diff) {
+              for (const n of newActiveNotes) {
+                if (!activeNotesRef.current.has(n)) { diff = true; break; }
+              }
+            }
+
+            if (diff) {
+              activeNotesRef.current = newActiveNotes;
+              setActiveNotes(new Set(newActiveNotes));
+            }
           }
         },
         (percent) => { /* Optional loading progress for large static audio buffers */ }

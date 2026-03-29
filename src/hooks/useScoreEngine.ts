@@ -6,6 +6,7 @@ import { AudioManager, type TrackParams } from "@/lib/audio/AudioManager";
 import { MidiPlayerSingleton } from "@/lib/audio/MidiPlayerSingleton";
 import { useMidiInput } from "@/hooks/useMidiInput";
 import { useMicInput } from "@/hooks/useMicInput";
+import { useMicProfile } from "@/hooks/useMicProfile";
 import { getPhysicalMeasure, evaluateWaitModeMatch } from "@/lib/score/math";
 
 export interface ScoreEngineParams {
@@ -34,7 +35,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
 
   // --- Wait Mode Hardware Integration ---
   const { activeNotes: midiNotes, hasMidiDevice, initializeMidi, isMidiInitialized, disconnectMidi } = useMidiInput();
-  const { activeNotes: micNotes, initializeMic, isMicInitialized: isMicInitializedState, disconnectMic } = useMicInput();
+  const { profile } = useMicProfile();
+  const { activeNotes: micNotes, initializeMic, isMicInitialized: isMicInitializedState, disconnectMic } = useMicInput({ profile: profile || undefined });
 
   const activeNotes = useMemo(() => {
     const combined = new Set(midiNotes);

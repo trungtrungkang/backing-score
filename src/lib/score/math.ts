@@ -104,39 +104,18 @@ export function evaluateWaitModeMatch(
   
   let allMatched = pressedPitches.size > 0 && targetPitches.size > 0;
 
-  /**
-   * Check if a pressed pitch matches a target pitch with ±1 octave tolerance.
-   * This compensates for mic-based pitch detection which often detects the wrong octave
-   * (e.g. A2 instead of A3) due to missing fundamentals through laptop microphones.
-   */
-  const pitchMatchesWithOctaveTolerance = (pressed: number, target: number): boolean => {
-    if (pressed === target) return true;
-    // Same pitch class (e.g. A2 matches A3, A4 matches A3) — within ±1 octave
-    if (pressed % 12 === target % 12 && Math.abs(pressed - target) <= 12) return true;
-    return false;
-  };
-
-  // Helper to check if any pressed pitch matches a target (with octave tolerance)
-  const hasPitchMatch = (pressedPitches: Set<number>, target: number): boolean => {
-    if (pressedPitches.has(target)) return true;
-    for (const p of pressedPitches) {
-      if (pitchMatchesWithOctaveTolerance(p, target)) return true;
-    }
-    return false;
-  };
-
   // Primary Boolean Intersection
   if (isLenient) {
     allMatched = false;
     for (const n of targetPitches) {
-      if (hasPitchMatch(pressedPitches, n)) {
+      if (pressedPitches.has(n)) {
         allMatched = true;
         break;
       }
     }
   } else {
     for (const n of targetPitches) {
-      if (!hasPitchMatch(pressedPitches, n)) {
+      if (!pressedPitches.has(n)) {
         allMatched = false;
         break;
       }

@@ -9,6 +9,9 @@ import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import type { DAWPayload } from "@/lib/daw/types";
 import { cn } from "@/lib/utils";
 import { PlayerControls } from "./PlayerControls";
+import { MicCalibrationWizard } from "./MicCalibrationWizard";
+import { VirtualKeyboard } from "./VirtualKeyboard";
+import { useMicProfile } from "@/hooks/useMicProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "next-themes";
 import {
@@ -226,6 +229,9 @@ export function PlayShell({
     onWaitModeComplete: (score) => submitPracticeSession(score)
   });
   const recorder = useAudioRecorder();
+  
+  const { profile, loading: profileLoading } = useMicProfile();
+  const [showMicWizard, setShowMicWizard] = useState(false);
 
   // Auto-enable Wait Mode when forced by assignment
   useEffect(() => {
@@ -449,13 +455,33 @@ export function PlayShell({
         onInitializeMidi={actions.initializeMidi}
         onDisconnectMidi={actions.disconnectMidi}
         isMicInitialized={state.isMicInitialized}
-        onInitializeMic={actions.initializeMic}
+        onInitializeMic={async () => {
+          const success = await actions.initializeMic();
+          if (success && !profile && !profileLoading) {
+            setShowMicWizard(true);
+          }
+          return success;
+        }}
         onDisconnectMic={actions.disconnectMic}
+        onMicCalibrate={() => setShowMicWizard(true)}
         {...(enableRecording ? {
           isRecording: recorder.isRecording,
           onRecordToggle: handleRecordToggle,
         } : {})}
       />
+
+      {state.isWaitMode && (
+        <div className="fixed bottom-0 left-0 w-full h-[95px] z-[110] bg-zinc-950 border-t border-zinc-900 pointer-events-auto shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex flex-col">
+          <div className="w-full py-1 bg-zinc-900 border-b border-zinc-800 flex justify-center items-center gap-2 relative shadow-sm">
+            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Real-time Wait Mode Monitor</p>
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+          </div>
+          <VirtualKeyboard 
+            activeNotes={state.activeNotes} 
+            className="flex-1 rounded-none border-none bg-transparent" 
+          />
+        </div>
+      )}
 
       {/* Recording Preview Overlay */}
       {enableRecording && recorder.recordingUrl && (
@@ -507,6 +533,12 @@ export function PlayShell({
 
       {/* Gamification Celebration Overlay */}
       <GamificationCelebration />
+
+      {/* Mic Calibration Wizard Overlay */}
+      <MicCalibrationWizard 
+        isOpen={showMicWizard}
+        onClose={() => setShowMicWizard(false)}
+      />
     </div>
   );
 }
