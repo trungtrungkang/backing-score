@@ -325,7 +325,6 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                               actions.initializeMic().then(success => {
                                 setIsInitializingMidi(false);
                                 if (success) {
-                                  actions.setIsWaitModeLenient(true);
                                   actions.setIsWaitMode(true);
                                 }
                               });
@@ -638,7 +637,6 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                   if (success) {
                     localStorage.setItem("bs_preferred_instrument", "mic");
                     setShowMidiDialog(false);
-                    actions.setIsWaitModeLenient(true);
                     actions.setIsWaitMode(true);
                   } else {
                     setShowMidiDialog(false);

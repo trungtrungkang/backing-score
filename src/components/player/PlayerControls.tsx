@@ -327,7 +327,6 @@ export function PlayerControls({
                                 onInitializeMic().then(success => {
                                   setIsInitializingMidi(false);
                                   if (success) {
-                                    onWaitModeLenientToggle?.(true);
                                     onWaitModeToggle(true);
                                   }
                                 });
@@ -723,7 +722,6 @@ export function PlayerControls({
                   if (success) {
                     localStorage.setItem("bs_preferred_instrument", "mic");
                     setShowMidiDialog(false);
-                    onWaitModeLenientToggle?.(true); // Force Lenient for acoustic pitches
                     onWaitModeToggle?.(true);
                   } else {
                     setShowMidiDialog(false);
