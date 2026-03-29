@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import * as tf from "@tensorflow/tfjs";
-import { BasicPitch } from "@spotify/basic-pitch";
+import type { BasicPitch } from "@spotify/basic-pitch";
 
 // URL to Spotify's pre-trained Basic Pitch model hosted publicly via UNPKG
 // TFJS will fetch this once and cache it heavily in the browser's IndexedDB.
@@ -71,6 +70,11 @@ export function useMicInput(options: UseMicInputOptions = {}) {
       // 1. Initialize TensorFlow Backend and Model if not already done
       if (!basicPitchRef.current) {
         setMlLoadingProgress(0.1);
+        
+        // Dynamically import heavy ML dependencies ONLY when Mic is activated
+        const tf = await import("@tensorflow/tfjs");
+        const { BasicPitch } = await import("@spotify/basic-pitch");
+
         // Safely set backend avoiding NextJS HMR duplicate registration warnings
         if (!tf.getBackend()) {
           try {

@@ -5,7 +5,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { listAllUsers, toggleUserLabel } from "@/app/actions/admin";
 import { toast } from "sonner";
-import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight, ClipboardList, Sparkles, Star } from "lucide-react";
+import { ShieldAlert, Loader2, Users, BookOpen, ChevronRight, ClipboardList, Sparkles, Star, CloudUpload } from "lucide-react";
 import { canAccessAdmin } from "@/lib/auth/roles";
 
 interface UserInfo {
@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -68,6 +69,28 @@ export default function AdminDashboardPage() {
     } catch (err: any) {
       toast.error("Failed to toggle label: " + err.message);
       loadUsers(); // Revert
+    }
+  }
+
+  async function handleMigrateToR2() {
+    if (!window.confirm("Bắt đầu di chuyển toàn bộ File từ Appwrite sang Cloudflare R2? Quá trình này có thể mất vài phút.")) return;
+    try {
+      setIsMigrating(true);
+      const jwt = await getJWT();
+      
+      const res = await fetch("/api/r2/migrate", { 
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${jwt}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Migration failed");
+      toast.success(`Đã migrate thành công ${data.successCount}/${data.total} files sang R2!`);
+    } catch (err: any) {
+      toast.error("Migration Error: " + err.message);
+    } finally {
+      setIsMigrating(false);
     }
   }
 
@@ -148,6 +171,28 @@ export default function AdminDashboardPage() {
           </div>
           <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-amber-500 transition-colors" />
         </Link>
+
+        {/* Cụm công cụ Migration hệ thống */}
+        <button 
+          onClick={handleMigrateToR2}
+          disabled={isMigrating}
+          className="group text-left bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-500/10 dark:to-zinc-900/60 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-5 flex items-center gap-4 hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+            {isMigrating ? (
+              <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+            ) : (
+              <CloudUpload className="w-6 h-6 text-indigo-500 group-hover:scale-110 transition-transform" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-indigo-900 dark:text-indigo-300 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              {isMigrating ? "Đang đồng bộ..." : "Migrate Media to R2"}
+            </h2>
+            <p className="text-xs text-indigo-500/70 dark:text-indigo-400/60 mt-0.5 leading-tight">Sync Appwrite Storage to Cloudflare R2 bucket</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-indigo-300 dark:text-indigo-600/50 group-hover:text-indigo-500 transition-colors" />
+        </button>
       </div>
 
       {error && (

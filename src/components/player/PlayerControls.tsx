@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Settings2, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic, Check, Piano, X, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
@@ -143,6 +145,7 @@ export function PlayerControls({
   const [isDragging, setIsDragging] = useState(false);
   const [showMidiDialog, setShowMidiDialog] = useState(false);
   const [isInitializingMidi, setIsInitializingMidi] = useState(false);
+  const t = useTranslations("PlayerControls");
 
   // Sync local position unless user is actively dragging
   useEffect(() => {
@@ -163,8 +166,8 @@ export function PlayerControls({
   };
 
   return (
-    <div className="absolute top-0 left-0 z-[120] w-full pointer-events-none transition-all duration-300">
-      <div className="w-full bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col pointer-events-auto">
+    <>
+      <div className="w-full bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col pointer-events-auto transition-all duration-300 pb-1 sm:pb-2">
 
         {/* ROW 1: Header / Top Bar */}
         <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 w-full h-12 sm:h-14">
@@ -256,7 +259,7 @@ export function PlayerControls({
 
             {/* Speed Option */}
             <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">Speed</span>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("speed")}</span>
               <select
                 value={playbackRate}
                 onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
@@ -275,7 +278,7 @@ export function PlayerControls({
 
             {/* Pitch Option */}
             <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">Pitch</span>
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("pitch")}</span>
               <select
                 value={pitchShift}
                 onChange={(e) => onPitchShiftChange(parseInt(e.target.value))}
@@ -384,7 +387,7 @@ export function PlayerControls({
                     type="button"
                   >
                     <Keyboard className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline"> Practice</span>
+                    <span className="hidden sm:inline"> {t("practiceMode")}</span>
                     {!isPremium && <span className="text-[10px] ml-0.5">👑</span>}
                   </button>
                 </PopoverTrigger>
@@ -392,7 +395,7 @@ export function PlayerControls({
                   <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Keyboard className="w-4 h-4 text-blue-500" />
-                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Practice Mode</h4>
+                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white">{t("practiceMode")}</h4>
                     </div>
                     <button
                       type="button"
@@ -424,31 +427,30 @@ export function PlayerControls({
                     {isWaitMode && !isPremium && (
                       <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-500/20 rounded-lg p-2.5">
                         <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          <span className="font-bold">Free Daily Limit:</span> 3 uses/day.
-                          <br />Upgrade to Premium for unlimited Practice Mode.
+                          <span className="font-bold">{t("freeDailyLimitTitle")}</span>{t("freeDailyLimitDesc")}
                         </p>
                       </div>
                     )}
 
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Strict Sync</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t("strictSync")}</span>
                         <button
                           onClick={() => onWaitModeLenientToggle?.(!isWaitModeLenient)}
                           className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", !isWaitModeLenient ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
-                          title={!isWaitModeLenient ? "Strict Mode: Requires exact note matches" : "Lenient Mode: Allows continuing with any note"}
+                          title={!isWaitModeLenient ? t("strictSyncDesc") : t("lenientSyncDesc")}
                         >
-                          {!isWaitModeLenient ? "On" : "Off"}
+                          {!isWaitModeLenient ? t("on") : t("off")}
                         </button>
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Monitor</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t("monitor")}</span>
                         <button
                           onClick={() => onWaitModeMonitorToggle?.(!showWaitModeMonitor)}
                           className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", showWaitModeMonitor ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
                         >
-                          {showWaitModeMonitor ? "On" : "Off"}
+                          {showWaitModeMonitor ? t("on") : t("off")}
                         </button>
                       </div>
                     </div>
@@ -583,14 +585,14 @@ export function PlayerControls({
                   type="button"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Mixer</span>
+                  <span className="hidden sm:inline">{t("mixer")}</span>
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-[320px] sm:w-[380px] bg-white dark:bg-[#1e1e24] border-zinc-200 dark:border-zinc-700 shadow-xl rounded-xl p-0 overflow-hidden z-[200]">
                 <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <SlidersHorizontal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Mixer</h4>
+                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white">{t("mixer")}</h4>
                   </div>
                 </div>
 
@@ -687,39 +689,50 @@ export function PlayerControls({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
               <Keyboard className="w-5 h-5 text-blue-500" />
-              Connect Instrument
+              {t("connectInstrument")}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 font-medium">
-              Practice Mode pauses playback and waits for you to play the correct notes on your instrument.
-              Do you want to connect a Digital Piano via MIDI, or use your Microphone for acoustic instruments?
+              {t("practiceModeDesc")}
               <br /><br />
-              <span className="text-zinc-400 dark:text-zinc-500 italic text-sm">💡 Tip: For playing fast passages or complex chords, a direct MIDI cable connection is strongly recommended.</span>
+              <span className="text-zinc-400 dark:text-zinc-500 italic text-sm">{t("practiceMidiTip")}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-between w-full">
             <AlertDialogCancel disabled={isInitializingMidi} className="border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-              Cancel
+              {t("cancel")}
             </AlertDialogCancel>
             <div className="flex flex-col sm:flex-row gap-2">
               <AlertDialogAction
                 disabled={isInitializingMidi}
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.preventDefault();
                   if (!onInitializeMic) return;
-                  setIsInitializingMidi(true);
-                  const success = await onInitializeMic();
-                  setIsInitializingMidi(false);
-                  if (success) {
+                  
+                  const initPromise = (async () => {
+                    setIsInitializingMidi(true);
+                    const success = await onInitializeMic();
+                    setIsInitializingMidi(false);
+                    if (!success) throw new Error("Init failed");
+                    return success;
+                  })();
+
+                  toast.promise(initPromise, {
+                    loading: t("loadingAIPitch"),
+                    success: t("micAndAIReady"),
+                    error: t("micAIError")
+                  });
+
+                  initPromise.then(() => {
                     localStorage.setItem("bs_preferred_instrument", "mic");
                     setShowMidiDialog(false);
                     onWaitModeToggle?.(true);
-                  } else {
+                  }).catch(() => {
                     setShowMidiDialog(false);
-                  }
+                  });
                 }}
                 className="bg-purple-600 hover:bg-purple-500 text-white"
               >
-                {isInitializingMidi ? "Connecting..." : "Use Microphone"}
+                {isInitializingMidi ? t("connecting") : t("useMicrophone")}
               </AlertDialogAction>
               <AlertDialogAction
                 disabled={isInitializingMidi}
@@ -739,13 +752,12 @@ export function PlayerControls({
                 }}
                 className="bg-blue-600 hover:bg-blue-500 text-white"
               >
-                {isInitializingMidi ? "Connecting..." : "Connect MIDI"}
+                {isInitializingMidi ? t("connecting") : t("connectMidi")}
               </AlertDialogAction>
             </div>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-    </div>
+    </>
   );
 }

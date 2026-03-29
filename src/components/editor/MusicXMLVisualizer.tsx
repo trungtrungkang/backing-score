@@ -966,7 +966,7 @@ export function MusicXMLVisualizer({
       {/* Container for SVG — rendered imperatively via ref to avoid React wiping DOM mutations */}
       <div
         ref={containerRef}
-        className={cn("flex-1 overflow-auto w-full relative transition-colors scroll-smooth pb-32", isDarkMode ? "bg-[#181a1f]" : "bg-[#f0f2f5]", isWaitMode && "wait-mode-active")}
+        className={cn("flex-1 overflow-auto w-full relative transition-colors scroll-smooth pb-32", isDarkMode ? "bg-[#181a1f]" : "bg-[#fdfdfc]", isWaitMode && "wait-mode-active")}
         id="musicxml-container"
       >
         {/* Absolute Floating Playhead Overlay */}

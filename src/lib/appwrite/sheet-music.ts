@@ -47,13 +47,31 @@ export async function uploadSheetPdf(
   }
 
   const user = await account.get();
-  const fileId = ID.unique();
 
-  // Upload to storage
-  await storage.createFile(bucketId, fileId, file, buildStandardPermissions(user.$id));
+  // Create document metadata first (without fileIds yet)
+  const title = meta.title || file.name.replace(/\.pdf$/i, "");
+  
+  // 1. Upload PDF to Cloudflare R2
+  const resPdf = await fetch("/api/r2/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: "application/pdf",
+      fileSize: file.size,
+    }),
+  });
+  if (!resPdf.ok) throw new Error("Failed to get PDF upload URL");
+  const { fileId, uploadUrl: pdfUploadUrl } = await resPdf.json();
+
+  const pdfUploadRes = await fetch(pdfUploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "application/pdf" },
+    body: file,
+  });
+  if (!pdfUploadRes.ok) throw new Error("Failed to upload PDF to R2.");
 
   // Create document
-  const title = meta.title || file.name.replace(/\.pdf$/i, "");
   const doc = await databases.createDocument(
     dbId,
     collId,
@@ -77,11 +95,28 @@ export async function uploadSheetPdf(
   // Upload thumbnail if provided
   if (meta.thumbnailBlob) {
     try {
-      const thumbId = ID.unique();
       const thumbFile = new File([meta.thumbnailBlob], `thumb_${fileId}.jpg`, {
         type: "image/jpeg",
       });
-      await storage.createFile(bucketId, thumbId, thumbFile, buildStandardPermissions(user.$id));
+      
+      const resThumb = await fetch("/api/r2/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: thumbFile.name,
+          contentType: "image/jpeg",
+          fileSize: thumbFile.size,
+        }),
+      });
+      if (!resThumb.ok) throw new Error("Failed to get Thumb upload URL");
+      const { fileId: thumbId, uploadUrl: thumbUploadUrl } = await resThumb.json();
+
+      await fetch(thumbUploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/jpeg" },
+        body: thumbFile,
+      });
+
       // Update document with thumbnailId
       await databases.updateDocument(dbId, collId, doc.$id, {
         thumbnailId: thumbId,
@@ -172,11 +207,13 @@ export async function deleteSheetMusic(id: string): Promise<void> {
   const doc = await databases.getDocument(dbId, collId, id);
   const sheet = doc as unknown as SheetMusicDocument;
 
-  // Delete storage file
+  // In the R2 setup, storage cleanup might require an Admin API Route
+  // For now, removing the Appwrite Client SDl storage call since they are in R2
+  // We just rely on orphan state, or call an Admin route to delete R2 objects
   try {
-    await storage.deleteFile(bucketId, sheet.fileId);
+    // await fetch(`/api/r2/delete/${sheet.fileId}`, { method: 'DELETE' }); // Optional future R2 cleanup
   } catch {
-    /* best-effort — file may already be gone */
+    /* best-effort */
   }
 
   // Delete document
@@ -201,22 +238,24 @@ export async function toggleSheetFavorite(
   });
 }
 
-/** Download a PDF file from storage and return a blob URL. */
+/** Download a PDF file from R2 and return a blob URL. */
 export async function getSheetPdfBlobUrl(fileId: string): Promise<string> {
-  const result = await storage.getFileDownload(bucketId, fileId);
-  // result is an ArrayBuffer from Appwrite SDK
-  const blob = new Blob([result], { type: "application/pdf" });
+  const downloadUrl = `/api/r2/download/${fileId}`;
+  const response = await fetch(downloadUrl);
+  if (!response.ok) throw new Error("Failed to fetch PDF from R2: " + response.statusText);
+  // Response is redirected to S3/R2 presigned URL and returns Blob
+  const blob = await response.blob();
   return URL.createObjectURL(blob);
 }
 
-/** Get the raw Appwrite URL (for reference only, requires auth). */
+/** Get the R2 download API URL. */
 export function getSheetPdfUrl(fileId: string): string {
-  return storage.getFileView(bucketId, fileId);
+  return `/api/r2/download/${fileId}`;
 }
 
-/** Get a thumbnail URL via API proxy (cacheable). */
+/** Get a thumbnail URL via R2 download API proxy. */
 export function getThumbnailUrl(thumbnailId: string): string {
-  return `/api/files/${thumbnailId}?bucket=sheet_pdfs`;
+  return `/api/r2/download/${thumbnailId}`;
 }
 
 export async function touchSheetLastOpened(id: string): Promise<void> {

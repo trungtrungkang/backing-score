@@ -38,10 +38,11 @@ function MobileActionsMenu({ projectId, projectName }: { projectId: string; proj
   const { resolvedTheme, setTheme } = useTheme();
   const [isFavorited, setIsFavorited] = useState(false);
   const [copied, setCopied] = useState(false);
+  const tPlay = useTranslations("PlayShell");
 
   useEffect(() => {
     if (!user) return;
-    checkIsFavorited("project", projectId).then(setIsFavorited).catch(() => {});
+    checkIsFavorited("project", projectId).then(setIsFavorited).catch(() => { });
   }, [user, projectId]);
 
   const handleShare = async () => {
@@ -71,12 +72,12 @@ function MobileActionsMenu({ projectId, projectName }: { projectId: string; proj
       <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 shadow-2xl z-[200]">
         <DropdownMenuItem onClick={handleShare} className="flex items-center gap-3 text-sm font-medium cursor-pointer">
           {copied ? <Check className="w-4 h-4 text-green-500" /> : <Share2 className="w-4 h-4" />}
-          {copied ? "Copied!" : "Share Link"}
+          {copied ? tPlay("copied") : tPlay("shareLink")}
         </DropdownMenuItem>
         {user && (
           <DropdownMenuItem onClick={handleFavorite} className="flex items-center gap-3 text-sm font-medium cursor-pointer">
             <Bookmark className={`w-4 h-4 ${isFavorited ? "fill-amber-500 text-amber-500" : ""}`} />
-            {isFavorited ? "Remove Favorite" : "Add to Favorites"}
+            {isFavorited ? tPlay("removeFavorite") : tPlay("addFavorite")}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -85,14 +86,14 @@ function MobileActionsMenu({ projectId, projectName }: { projectId: string; proj
           className="flex items-center gap-3 text-sm font-medium cursor-pointer"
         >
           {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
+          {resolvedTheme === "dark" ? tPlay("lightMode") : tPlay("darkMode")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-const FREE_DAILY_WAIT_MODE_LIMIT = 5;
+const FREE_DAILY_WAIT_MODE_LIMIT = 10;
 
 function getWaitModeCount(): { count: number; date: string } {
   try {
@@ -167,18 +168,18 @@ export function PlayShell({
 
   const submitPracticeSession = useCallback(async (waitModeScore?: number) => {
     if (!userRef.current?.$id) return;
-    
+
     let finalDuration = accumulatedTimeMsRef.current;
     if (sessionStartTimeRef.current !== null) {
       finalDuration += performance.now() - sessionStartTimeRef.current;
       sessionStartTimeRef.current = performance.now(); // reset timer
     }
-    
+
     if (finalDuration < 10000) return; // avoid submitting spam
-    
+
     // Lock the time so we don't double count if we submit midway
     accumulatedTimeMsRef.current = 0;
-    
+
     try {
       const res = await fetch("/api/gamification/session", {
         method: "POST",
@@ -217,19 +218,19 @@ export function PlayShell({
             durationMs: Math.round(finalDuration),
             maxSpeed: maxSpeedRef.current,
           })
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
   }, [projectId]);
 
-  const { state, refs, actions } = useScoreEngine({ 
-    payload, 
-    autoplayOnLoad, 
+  const { state, refs, actions } = useScoreEngine({
+    payload,
+    autoplayOnLoad,
     onNext,
     onWaitModeComplete: (score) => submitPracticeSession(score)
   });
   const recorder = useAudioRecorder();
-  
+
   const { profile, loading: profileLoading } = useMicProfile();
   const [showMicWizard, setShowMicWizard] = useState(false);
 
@@ -288,7 +289,7 @@ export function PlayShell({
     incrementServerPlayCount(projectId); // fire-and-forget
   }, [actions, projectId]);
 
-  // Gated Wait Mode toggle — 3/day for free users, unlimited for premium
+  // Gated Wait Mode toggle — 10/day for free users, unlimited for premium
   // If forceWaitMode, prevent turning off
   const gatedWaitModeToggle = useCallback((enabled: boolean) => {
     if (forceWaitMode && !enabled) return; // can't disable when forced
@@ -329,9 +330,7 @@ export function PlayShell({
     <div className="relative flex flex-col h-full w-full bg-[#fdfdfc] dark:bg-[#1A1A1E] text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans">
 
       {/* 2. Full Screen Sheet Music Area */}
-      <div className={cn("flex-1 min-h-0 w-full h-full pt-16 overflow-hidden relative transition-all duration-300", state.isControlsCollapsed ? "pb-0" : "pb-[120px]")}>
-        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#fdfdfc] dark:from-[#1A1A1E] to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#fdfdfc] dark:from-[#1A1A1E] to-transparent z-10 pointer-events-none" />
+      <div className="flex-1 min-h-0 w-full h-full overflow-hidden relative transition-all duration-300">
 
         {/* Headless MIDI Player for Fallback SoundFont engine */}
         {state.stretchedMidiBase64 && (
@@ -376,100 +375,102 @@ export function PlayShell({
         </div>
       )}
 
-      {/* 3. Floating Control Bar (Dock) */}
-      <PlayerControls
-        bpm={payload.metadata?.tempo || 120}
-        positionMs={state.positionMs}
-        durationMs={state.totalSongDurationMs}
-        isPlaying={state.isPlaying}
-        loadingAudio={state.loadingAudio}
-        onPlay={gatedHandlePlay}
-        onPause={actions.handlePause}
-        onStop={actions.handleStop}
-        onSeek={actions.handleSeek}
-        playbackRate={state.playbackRate}
-        onPlaybackRateChange={actions.handlePlaybackRateChange}
-        pitchShift={state.pitchShift}
-        onPitchShiftChange={actions.handlePitchShiftChange}
-        isMetronomeEnabled={state.isMetronomeEnabled}
-        onMetronomeToggle={actions.handleMetronomeToggle}
-        loopState={state.loopState}
-        onLoopStateChange={actions.handleLoopStateChange}
-        tracks={displayTracks}
-        volumes={state.volumes}
-        muteByTrackId={state.muteByTrackId}
-        soloByTrackId={state.soloByTrackId}
-        onMuteToggle={actions.handleMuteToggle}
-        onSoloToggle={actions.handleSoloToggle}
-        onVolumeChange={actions.handleVolumeChange}
-        isCollapsed={state.isControlsCollapsed}
-        onCollapseToggle={actions.handleCollapseToggle}
-        playlistId={playlistId}
-        hasNext={!!nextProjectId}
-        hasPrev={!!prevProjectId}
-        onNext={onNext}
-        onPrev={onPrev}
-        isAutoplayEnabled={state.isAutoplayEnabled}
-        onAutoplayToggle={actions.setIsAutoplayEnabled}
-        isWaitMode={state.isWaitMode}
-        onWaitModeToggle={gatedWaitModeToggle}
-        isPremium={isPremium}
-        isWaitModeLenient={state.isWaitModeLenient}
-        onWaitModeLenientToggle={actions.setIsWaitModeLenient}
-        isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
-        onSynthMuteToggle={() => { }}
-        midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: state.partNames?.[i] || t.name || `Instrument ${i + 1}` })) : []}
-        practiceTrackIds={state.practiceTrackIds}
-        onPracticeTrackChange={actions.setPracticeTrackIds}
-        showWaitModeMonitor={state.showWaitModeMonitor}
-        onWaitModeMonitorToggle={actions.setShowWaitModeMonitor}
-        isMidiInitialized={state.isMidiInitialized}
-        onInitializeMidi={actions.initializeMidi}
-        onDisconnectMidi={actions.disconnectMidi}
-        isMicInitialized={state.isMicInitialized}
-        onInitializeMic={async () => {
-          const success = await actions.initializeMic();
-          if (success && !profile && !profileLoading) {
-            setShowMicWizard(true);
+      {/* 3. Top Control Bar (Dock) */}
+      <div className="order-first flex-none w-full z-[120] relative">
+        <PlayerControls
+          bpm={payload.metadata?.tempo || 120}
+          positionMs={state.positionMs}
+          durationMs={state.totalSongDurationMs}
+          isPlaying={state.isPlaying}
+          loadingAudio={state.loadingAudio}
+          onPlay={gatedHandlePlay}
+          onPause={actions.handlePause}
+          onStop={actions.handleStop}
+          onSeek={actions.handleSeek}
+          playbackRate={state.playbackRate}
+          onPlaybackRateChange={actions.handlePlaybackRateChange}
+          pitchShift={state.pitchShift}
+          onPitchShiftChange={actions.handlePitchShiftChange}
+          isMetronomeEnabled={state.isMetronomeEnabled}
+          onMetronomeToggle={actions.handleMetronomeToggle}
+          loopState={state.loopState}
+          onLoopStateChange={actions.handleLoopStateChange}
+          tracks={displayTracks}
+          volumes={state.volumes}
+          muteByTrackId={state.muteByTrackId}
+          soloByTrackId={state.soloByTrackId}
+          onMuteToggle={actions.handleMuteToggle}
+          onSoloToggle={actions.handleSoloToggle}
+          onVolumeChange={actions.handleVolumeChange}
+          isCollapsed={state.isControlsCollapsed}
+          onCollapseToggle={actions.handleCollapseToggle}
+          playlistId={playlistId}
+          hasNext={!!nextProjectId}
+          hasPrev={!!prevProjectId}
+          onNext={onNext}
+          onPrev={onPrev}
+          isAutoplayEnabled={state.isAutoplayEnabled}
+          onAutoplayToggle={actions.setIsAutoplayEnabled}
+          isWaitMode={state.isWaitMode}
+          onWaitModeToggle={gatedWaitModeToggle}
+          isPremium={isPremium}
+          isWaitModeLenient={state.isWaitModeLenient}
+          onWaitModeLenientToggle={actions.setIsWaitModeLenient}
+          isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}
+          onSynthMuteToggle={() => { }}
+          midiTracks={state.parsedMidi ? state.parsedMidi.tracks.map((t: any, i: number) => ({ id: i, name: state.partNames?.[i] || t.name || `Instrument ${i + 1}` })) : []}
+          practiceTrackIds={state.practiceTrackIds}
+          onPracticeTrackChange={actions.setPracticeTrackIds}
+          showWaitModeMonitor={state.showWaitModeMonitor}
+          onWaitModeMonitorToggle={actions.setShowWaitModeMonitor}
+          isMidiInitialized={state.isMidiInitialized}
+          onInitializeMidi={actions.initializeMidi}
+          onDisconnectMidi={actions.disconnectMidi}
+          isMicInitialized={state.isMicInitialized}
+          onInitializeMic={async () => {
+            const success = await actions.initializeMic();
+            if (success && !profile && !profileLoading) {
+              setShowMicWizard(true);
+            }
+            return success;
+          }}
+          onDisconnectMic={actions.disconnectMic}
+          onMicCalibrate={() => setShowMicWizard(true)}
+          {...(enableRecording ? {
+            isRecording: recorder.isRecording,
+            onRecordToggle: handleRecordToggle,
+          } : {})}
+          leftSlot={
+            <>
+              <button onClick={() => window.history.back()} className="p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all">
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <div className="flex flex-col min-w-0">
+                <h1 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  {projectName}
+                </h1>
+                {composer && (
+                  <span className="hidden sm:block text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate">
+                    {composer}
+                  </span>
+                )}
+              </div>
+            </>
           }
-          return success;
-        }}
-        onDisconnectMic={actions.disconnectMic}
-        onMicCalibrate={() => setShowMicWizard(true)}
-        {...(enableRecording ? {
-          isRecording: recorder.isRecording,
-          onRecordToggle: handleRecordToggle,
-        } : {})}
-        leftSlot={
-          <>
-            <button onClick={() => window.history.back()} className="p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all">
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <div className="flex flex-col min-w-0">
-              <h1 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                {projectName}
-              </h1>
-              {composer && (
-                <span className="hidden sm:block text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                  {composer}
-                </span>
-              )}
+          rightSlot={
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="hidden sm:flex items-center gap-1 sm:gap-2">
+                <ShareButton title={projectName} />
+                <ProjectActionsMenu projectId={projectId} />
+                <ThemeToggle hideBg className="p-2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:hover:text-white transition-all border-none" />
+              </div>
+              <div className="sm:hidden">
+                <MobileActionsMenu projectId={projectId} projectName={projectName} />
+              </div>
             </div>
-          </>
-        }
-        rightSlot={
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="hidden sm:flex items-center gap-1 sm:gap-2">
-              <ShareButton title={projectName} />
-              <ProjectActionsMenu projectId={projectId} />
-              <ThemeToggle hideBg className="p-2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:hover:text-white transition-all border-none" />
-            </div>
-            <div className="sm:hidden">
-              <MobileActionsMenu projectId={projectId} projectName={projectName} />
-            </div>
-          </div>
-        }
-      />
+          }
+        />
+      </div>
 
       {state.isWaitMode && (
         <div className="fixed bottom-0 left-0 w-full h-[95px] z-[110] bg-zinc-950 border-t border-zinc-900 pointer-events-auto shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex flex-col">
@@ -477,9 +478,9 @@ export function PlayShell({
             <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Real-time Wait Mode Monitor</p>
             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           </div>
-          <VirtualKeyboard 
-            activeNotes={state.activeNotes} 
-            className="flex-1 rounded-none border-none bg-transparent" 
+          <VirtualKeyboard
+            activeNotes={state.activeNotes}
+            className="flex-1 rounded-none border-none bg-transparent"
           />
         </div>
       )}
@@ -536,7 +537,7 @@ export function PlayShell({
       <GamificationCelebration />
 
       {/* Mic Calibration Wizard Overlay */}
-      <MicCalibrationWizard 
+      <MicCalibrationWizard
         isOpen={showMicWizard}
         onClose={() => setShowMicWizard(false)}
       />

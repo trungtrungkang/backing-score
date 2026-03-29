@@ -4,10 +4,8 @@
  * Store returned fileId in project payload (track.scoreFileId, midiFileId, or storageFileId).
  */
 
-import { account, storage, ID, Permission, Role } from "./client";
-import { APPWRITE_UPLOADS_BUCKET_ID } from "./constants";
-
-const BUCKET_ID = APPWRITE_UPLOADS_BUCKET_ID;
+// Appwrite client imports removed since we now use Cloudflare R2 via Next.js BFF API.
+// export { ALLOWED_EXTENSIONS } if needed elsewhere.
 
 /** Music/score: Instrument track. Audio: Audio track. */
 const ALLOWED_EXTENSIONS = [
@@ -48,21 +46,38 @@ export async function uploadProjectFile(
     );
   }
 
-  const user = await account.get();
-  const fileId = ID.unique();
+  // Request signed URL from our Next.js API
+  const res = await fetch("/api/r2/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type,
+      fileSize: file.size,
+    }),
+  });
 
-  await storage.createFile(
-    BUCKET_ID,
-    fileId,
-    file,
-    [
-      Permission.read(Role.any()), // Allow direct CDN playback (relies on UUID unguessability)
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
-  );
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to get upload URL");
+  }
 
-  const viewUrl = storage.getFileView(BUCKET_ID, fileId);
+  const { fileId, uploadUrl } = await res.json();
+
+  // Upload file directly to Cloudflare R2
+  const uploadRes = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error("Failed to upload file to storage.");
+  }
+
+  const viewUrl = `/api/r2/download/${fileId}`;
   return { fileId, viewUrl };
 }
 
@@ -72,7 +87,8 @@ export async function uploadProjectFile(
  * request might not send the Appwrite session. Use openFileInNewTab instead.
  */
 export function getFileViewUrl(fileId: string): string {
-  return storage.getFileView(BUCKET_ID, fileId);
+  if (!fileId) return "";
+  return `/api/r2/download/${fileId}`;
 }
 
 /**
@@ -80,7 +96,7 @@ export function getFileViewUrl(fileId: string): string {
  * lets the browser use the response Content-Disposition filename when the user saves.
  */
 export function openFileInNewTab(fileId: string): void {
-  const url = storage.getFileView(BUCKET_ID, fileId);
+  const url = `/api/r2/download/${fileId}`;
   const w = window.open(url, "_blank", "noopener");
   if (!w) {
     throw new Error("Popup blocked. Allow popups for this site to open the file.");

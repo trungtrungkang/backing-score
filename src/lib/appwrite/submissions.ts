@@ -15,7 +15,6 @@ import {
 import {
   APPWRITE_DATABASE_ID,
   APPWRITE_SUBMISSIONS_COLLECTION_ID,
-  APPWRITE_UPLOADS_BUCKET_ID,
 } from "./constants";
 import type { SubmissionDocument } from "./types";
 import { createNotification } from "./notifications";
@@ -23,25 +22,25 @@ import { getClassroom } from "./classrooms";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_SUBMISSIONS_COLLECTION_ID;
-const recordingsBucket = APPWRITE_UPLOADS_BUCKET_ID;
+const recordingsBucket = "uploads"; // Legacy constant
 
-/** Upload a recording file to classroom_recordings bucket. Returns fileId. */
+/** Upload a recording file to R2 bucket via Next.js Proxy. Returns fileId. */
 async function uploadRecording(blob: Blob, assignmentId: string): Promise<string> {
   const user = await account.get();
-  const fileId = ID.unique();
   const ext = blob.type.includes("mpeg") || blob.type.includes("mp3") ? "mp3" : blob.type.includes("webm") ? "webm" : blob.type.includes("mp4") ? "m4a" : "mp3";
   const file = new File([blob], `recording_${assignmentId}_${user.$id}.${ext}`, { type: blob.type });
 
-  await storage.createFile(
-    recordingsBucket,
-    fileId,
-    file,
-    [
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
-  );
+  const res = await fetch("/api/r2/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size })
+  });
+
+  if (!res.ok) throw new Error("Failed to get R2 Upload URL");
+  const { fileId, uploadUrl } = await res.json();
+  
+  const uploadRes = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+  if (!uploadRes.ok) throw new Error("Failed to upload recording to R2.");
 
   return fileId;
 }
@@ -49,20 +48,21 @@ async function uploadRecording(blob: Blob, assignmentId: string): Promise<string
 /** Delete a recording file from storage. Silently ignores errors. */
 async function deleteRecording(fileId: string): Promise<void> {
   try {
-    await storage.deleteFile(recordingsBucket, fileId);
+    // Left for future Admin API implementation
   } catch {
     // File may already be deleted or permissions changed
   }
 }
 
 /** Get the view URL for a recording file. */
-export function getRecordingUrl(fileId: string): string {
-  return storage.getFileView(recordingsBucket, fileId);
+export function getRecordingUrl(fileId: string, classroomId?: string): string {
+  if (classroomId) return `/api/r2/download/${fileId}?context=classroom_${classroomId}`;
+  return `/api/r2/download/${fileId}`;
 }
 
 /** Get the download URL for a recording file. */
-export function getRecordingDownloadUrl(fileId: string): string {
-  return storage.getFileDownload(recordingsBucket, fileId);
+export function getRecordingDownloadUrl(fileId: string, classroomId?: string): string {
+  return getRecordingUrl(fileId, classroomId);
 }
 
 /** Notify the teacher of a new submission (fire-and-forget) */

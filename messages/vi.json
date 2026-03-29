@@ -381,7 +381,7 @@
     "playLimitTitle": "Đã đạt giới hạn phát trong ngày",
     "playLimitDesc": "Tài khoản miễn phí có thể phát tối đa 3 bản mỗi ngày. Nâng cấp lên Premium để phát không giới hạn, sử dụng chế độ Luyện tập và nhiều hơn nữa.",
     "waitModeTitle": "Đã hết lượt Wait Mode trong ngày",
-    "waitModeDesc": "Bạn đã dùng hết 3 lượt Wait Mode miễn phí hôm nay. Nâng cấp lên Premium để sử dụng Wait Mode không giới hạn.",
+    "waitModeDesc": "Bạn đã dùng hết 10 lượt Wait Mode miễn phí hôm nay. Nâng cấp lên Premium để sử dụng Wait Mode không giới hạn.",
     "upgradeNow": "Nâng cấp lên Premium",
     "maybeLater": "Để sau"
   },
@@ -437,7 +437,7 @@
     "pricing": "Gói dịch vụ",
     "free": "Miễn phí",
     "freeFeature1": "Phát nhạc không giới hạn",
-    "freeFeature2": "Wait Mode — 5 lượt/ngày",
+    "freeFeature2": "Wait Mode — 10 lượt/ngày",
     "freeFeature3": "Mạng xã hội, Feed, Collections",
     "freeNo": "Xuất PDF/MusicXML",
     "premiumPrice": "/tháng",
@@ -723,5 +723,40 @@
     "shareNotePlaceholder": "VD: Luyện trang 2–3",
     "selectClassroom": "Chọn lớp học",
     "noClassrooms": "Không tìm thấy lớp"
+  },
+  "PlayerControls": {
+    "connectInstrument": "Kết nối Nhạc cụ",
+    "practiceModeDesc": "Chế độ Luyện Tự Động (Wait Mode) sẽ tạm dừng bản nhạc và đợi bạn chơi đúng các nốt kế tiếp trên nhạc cụ. Bạn muốn dùng kết nối cáp MIDI (Đàn điện) hay dùng Microphone thu âm trực tiếp?",
+    "practiceMidiTip": "💡 Mẹo: Với các đoạn nhạc nhanh hoặc đánh hợp âm phức tạp, khuyến nghị sử dụng cáp MIDI nối trực tiếp để có độ trễ cực thấp.",
+    "useMicrophone": "Dùng Microphone",
+    "connectMidi": "Kết nối Cáp MIDI",
+    "connecting": "Đang kết nối...",
+    "cancel": "Hủy bỏ",
+    "loadingAIPitch": "Đang tải mô hình AI phân tích Cao độ... Vui lòng chờ vài giây nhé!",
+    "micAndAIReady": "Microphone và AI đã sẵn sàng!",
+    "micAIError": "Lỗi tải mô hình hoặc bạn chưa cấp quyền Microphone.",
+    "mixer": "Bộ Trộn (Mixer)",
+    "speed": "Tốc độ",
+    "pitch": "Tone âm",
+    "waitMode": "Chơi cùng đàn",
+    "enablePracticeWaitMode": "Bật chế độ bắt nốt",
+    "midiKeyboard": "Đàn điện MIDI",
+    "strictSync": "Khớp Nhịp Chuẩn",
+    "strictSyncDesc": "Chế độ Chuẩn: Bắt buộc đánh đúng nốt mới qua bài",
+    "lenientSyncDesc": "Chế độ Dễ: Chỉ cần đánh đúng nhịp (bất kỳ nốt nào)",
+    "on": "Bật",
+    "off": "Tắt",
+    "monitor": "Đèn báo",
+    "freeDailyLimitTitle": "Giới hạn miễn phí:",
+    "freeDailyLimitDesc": " 10 lần/ngày. Nâng cấp Premium để tập luyện không giới hạn.",
+    "practiceMode": "Tập đàn (Practice)"
+  },
+  "PlayShell": {
+    "copied": "Đã sao chép!",
+    "shareLink": "Chia sẻ liên kết",
+    "addFavorite": "Thêm vào Yêu thích",
+    "removeFavorite": "Hủy Yêu thích",
+    "lightMode": "Chế độ Sáng",
+    "darkMode": "Chế độ Tối"
   }
 }
