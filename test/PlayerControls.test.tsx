@@ -19,7 +19,14 @@ describe('PlayerControls', () => {
     onPitchShiftChange: vi.fn(),
     isMetronomeEnabled: false,
     onMetronomeToggle: vi.fn(),
-    loopState: { enabled: false, startBar: 1, endBar: 4 },
+    loopState: {
+    enabled: false,
+    startBar: 1,
+    endBar: 4,
+    tempoRamp: false,
+    tempoRampStep: 0.1,
+    tempoRampTarget: 1.0
+  },
     onLoopStateChange: vi.fn(),
     tracks: [] as AudioTrack[],
     volumes: {},
@@ -69,15 +76,15 @@ describe('PlayerControls', () => {
     expect(screen.queryByText('P1')).not.toBeInTheDocument() // Popover is closed.
     
     // Test the physical button opening the Popover
-    const waitModeBtn = screen.getByText(/Wait Mode/i)
+    const waitModeBtn = screen.getByText(/Practice/i)
     fireEvent.click(waitModeBtn)
     
     // Now it should be inside the DOM
     expect(screen.getByText('Practice Parts')).toBeInTheDocument()
     
-    // The Wait Mode Popup maps ALL tracks plus the default "All Tracks"
-    const allTracksCheckbox = screen.getByLabelText('All Tracks (Chords)')
-    expect(allTracksCheckbox).toBeChecked() // Default "All Tracks"
+    // The Wait Mode Popup maps ALL tracks plus the default "Any Part (Auto)"
+    const allTracksCheckbox = screen.getByLabelText('Any Part (Auto)')
+    expect(allTracksCheckbox).toBeChecked() // Default "Any Part"
     
     // Click explicitly on the first explicit Track P1
     const p1Checkbox = screen.getAllByLabelText('P1')[0]

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Settings2, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic, Check, Piano, X, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -73,6 +73,8 @@ interface PlayerControlsProps {
   // Recording
   isRecording?: boolean;
   onRecordToggle?: (recording: boolean) => void;
+  leftSlot?: React.ReactNode;
+  rightSlot?: React.ReactNode;
 }
 
 export function formatTime(ms: number) {
@@ -83,15 +85,19 @@ export function formatTime(ms: number) {
 }
 
 export function PlayerControls({
+  playlistId,
+  isPlaying,
   bpm,
   positionMs,
   durationMs,
-  isPlaying,
-  loadingAudio = false,
   onPlay,
   onPause,
   onStop,
   onSeek,
+  onNext,
+  hasPrev,
+  hasNext,
+  onPrev,
   playbackRate,
   onPlaybackRateChange,
   pitchShift,
@@ -102,41 +108,35 @@ export function PlayerControls({
   onLoopStateChange,
   tracks,
   volumes,
-  muteByTrackId,
-  soloByTrackId,
+  onVolumeChange,
   onMuteToggle,
   onSoloToggle,
-  onVolumeChange,
-  isCollapsed = false,
-  onCollapseToggle,
-  playlistId,
-  hasNext,
-  hasPrev,
-  onNext,
-  onPrev,
-  isAutoplayEnabled = true,
-  onAutoplayToggle,
   isWaitMode,
   onWaitModeToggle,
-  isWaitModeLenient = false,
-  onWaitModeLenientToggle,
-  isSynthMuted,
-  onSynthMuteToggle,
-  midiTracks,
-  practiceTrackIds,
-  onPracticeTrackChange,
-  showWaitModeMonitor = false,
-  onWaitModeMonitorToggle,
-  isMidiInitialized = false,
   onInitializeMidi,
-  onDisconnectMidi,
-  isMicInitialized = false,
   onInitializeMic,
+  onPracticeTrackChange,
+  isRecording,
+  onRecordToggle,
+  leftSlot,
+  rightSlot,
+  loadingAudio,
+  isPremium,
+  isWaitModeLenient,
+  onWaitModeLenientToggle,
+  showWaitModeMonitor,
+  onWaitModeMonitorToggle,
+  isMidiInitialized,
+  isMicInitialized,
+  onDisconnectMidi,
   onDisconnectMic,
   onMicCalibrate,
-  isPremium = false,
-  isRecording = false,
-  onRecordToggle,
+  midiTracks,
+  practiceTrackIds,
+  muteByTrackId,
+  soloByTrackId,
+  isAutoplayEnabled,
+  onAutoplayToggle,
 }: PlayerControlsProps) {
 
   const [localPos, setLocalPos] = useState(positionMs);
@@ -162,548 +162,526 @@ export function PlayerControls({
     setTimeout(() => setIsDragging(false), 50);
   };
 
-  if (isCollapsed) {
-    return (
-      <div className="absolute bottom-4 md:bottom-0 left-1/2 -translate-x-1/2 z-[120] pointer-events-none pb-[env(safe-area-inset-bottom)] md:pb-0 flex flex-col items-center gap-2">
-        {isRecording && (
-          <div className="pointer-events-auto flex items-center gap-2 bg-red-500/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-white" />
-            REC
-          </div>
-        )}
-        <button
-          onClick={() => onCollapseToggle?.(false)}
-          className="w-24 h-8 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-xl md:rounded-b-none rounded-xl flex flex-col items-center justify-center gap-0.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-2xl pointer-events-auto group"
-          title="Show Player Controls"
-        >
-          <div className="w-8 h-1 rounded-full bg-zinc-400/50 group-hover:bg-zinc-500 transition-colors" />
-          <ChevronUp className="w-3 h-3" />
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn(
-      "absolute left-1/2 -translate-x-1/2 z-[120] w-full max-w-4xl px-2 sm:px-4 pointer-events-none mt-6 pb-[env(safe-area-inset-bottom)] md:pb-0 transition-all duration-300",
-      isWaitMode ? "bottom-[105px]" : "bottom-6"
-    )}>
-      <div className="bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 pointer-events-auto relative">
-        <button
-          onClick={() => onCollapseToggle?.(true)}
-          className="absolute -top-[23px] left-1/2 -translate-x-1/2 w-12 h-6 bg-white/90 dark:bg-[#18181b]/90 backdrop-blur-xl border border-zinc-300 dark:border-zinc-700/50 border-b-0 rounded-t-lg flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors z-[-1]"
-          title="Hide Player Controls"
-        >
-          <ChevronDown className="w-4 h-4" />
-        </button>
+    <div className="absolute top-0 left-0 z-[120] w-full pointer-events-none transition-all duration-300">
+      <div className="w-full bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col pointer-events-auto">
 
-        <div className="flex flex-col w-full gap-2">
-          {/* Timeline Range */}
-          <div className="flex items-center gap-3 w-full text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            <span className="w-10 text-right tabular-nums">{formatTime(positionMs)}</span>
-            <div className="flex-1 relative group py-2">
-              <Slider
-                value={[localPos]}
-                min={0}
-                max={durationMs}
-                step={100} // update granularity
-                onValueChange={handleSliderChange}
-                onValueCommit={handleSliderCommit}
-                className="cursor-pointer"
-                tooltipFormatter={(val) => formatTime(val)}
-              />
-            </div>
-            <span className="w-10 text-left tabular-nums">{formatTime(durationMs)}</span>
+        {/* ROW 1: Header / Top Bar */}
+        <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 w-full h-12 sm:h-14">
+          <div className="flex items-center shrink-0 min-w-0 mr-4">
+            {leftSlot}
           </div>
-
-          {/* A-B Loop Timeline (Removed visual ms slider, handled in left popover) */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {rightSlot}
+          </div>
         </div>
 
-        {/* Controls Row */}
-        <div className="flex flex-col w-full gap-3 mt-1">
+        {/* ROW 2: Google Docs-style Pill Toolbar */}
+        <div className="w-full px-2 sm:px-4 pb-2">
+          <div className="flex flex-nowrap overflow-x-auto no-scrollbar items-center justify-start px-1.5 py-1 w-full bg-zinc-100/80 dark:bg-zinc-800/50 rounded-lg sm:rounded-full border border-zinc-200/80 dark:border-zinc-700/60 gap-1.5 sm:gap-2">
 
-          {/* Top Row: Playback */}
-          <div className="flex items-center justify-center gap-2 sm:gap-6 w-full">
+            {/* MAIN PLAYBACK */}
+            <div className="flex items-center justify-center gap-0.5 sm:gap-1 pl-1 shrink-0 w-auto bg-transparent border-none p-0 z-[130]">
             {playlistId && (
               <button
                 onClick={onPrev}
                 disabled={!hasPrev}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-500 transition-colors disabled:opacity-30 disabled:hover:text-zinc-600 dark:disabled:hover:text-zinc-300"
+                className="w-8 h-8 rounded flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-colors disabled:opacity-30 border-none bg-transparent"
+                title="Previous Track"
               >
-                <SkipBack className="w-5 h-5 fill-current" />
+                <SkipBack className="w-4 h-4 fill-current" />
               </button>
             )}
             <button
               onClick={isPlaying ? onPause : onPlay}
               disabled={loadingAudio}
               className={cn(
-                "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)]",
+                "w-8 h-8 rounded flex items-center justify-center transition-colors border border-transparent",
                 loadingAudio
-                  ? "bg-zinc-300 dark:bg-zinc-700 text-zinc-500 cursor-not-allowed shadow-none"
-                  : "bg-blue-600 hover:bg-blue-500 text-white hover:scale-105 active:scale-95"
+                  ? "text-zinc-400 cursor-not-allowed"
+                  : isPlaying
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
               )}
               title={loadingAudio ? "Loading Audio..." : isPlaying ? "Pause" : "Play"}
             >
               {loadingAudio ? (
-                <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : isPlaying ? (
-                <Pause className="w-6 h-6 fill-current" />
+                <Pause className="w-4 h-4 fill-current" />
               ) : (
-                <Play className="w-6 h-6 fill-current translate-x-0.5" />
+                <Play className="w-4 h-4 fill-current translate-x-0.5" />
               )}
             </button>
             <button
               onClick={onStop}
-              className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              className="w-8 h-8 rounded flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-colors border-none bg-transparent"
               title="Stop and Return"
             >
-              <Square className="w-4 h-4 fill-current" />
+              <Square className="w-3.5 h-3.5 fill-current" />
             </button>
-            {/* Record Button */}
             {onRecordToggle && (
               <button
                 onClick={() => onRecordToggle(!isRecording)}
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                  "w-8 h-8 rounded flex items-center justify-center transition-colors border-none",
                   isRecording
-                    ? "bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]"
-                    : "bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-600 dark:text-zinc-300 hover:text-red-500"
+                    ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 animate-pulse"
+                    : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                 )}
                 title={isRecording ? "Stop Recording" : "Start Recording"}
               >
-                {isRecording ? <Square className="w-4 h-4 fill-current" /> : <span className="w-4 h-4 rounded-full bg-red-500 inline-block" />}
+                {isRecording ? <Square className="w-3.5 h-3.5 fill-current" /> : <span className="w-3 h-3 rounded-full bg-current inline-block" />}
               </button>
             )}
             {playlistId && (
               <button
                 onClick={onNext}
                 disabled={!hasNext}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-500 transition-colors disabled:opacity-30 disabled:hover:text-zinc-600 dark:disabled:hover:text-zinc-300"
+                className="w-8 h-8 rounded flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-colors disabled:opacity-30 border-none bg-transparent"
+                title="Next Track"
               >
-                <SkipForward className="w-5 h-5 fill-current" />
+                <SkipForward className="w-4 h-4 fill-current" />
               </button>
             )}
           </div>
 
-          <div className="flex flex-row items-center justify-between w-full pt-2 sm:pt-3 gap-1.5 sm:gap-4 border-t border-zinc-200 dark:border-zinc-800/50">
-            {/* Left */}
-            <div className="flex items-center gap-1 sm:gap-3">
+          <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
 
-              {playlistId && (
-                <button
-                  onClick={() => onAutoplayToggle?.(!isAutoplayEnabled)}
-                  className={cn("h-8 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 px-2 sm:px-3 rounded-md border text-xs font-bold transition-all", isAutoplayEnabled ? "bg-green-500/10 border-green-500/50 text-green-600 dark:text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.15)]" : "bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-                  title="Auto-Play Next Track"
-                >
-                  <PlaySquare className="w-4 h-4" />
-                  <span className="hidden sm:inline">Auto-Next</span>
-                </button>
+          {/* RIGHT SETTINGS */}
+          <div className="flex flex-1 items-center justify-start shrink-0 min-w-0 w-auto gap-0.5 sm:gap-1 flex-nowrap pr-2">
+
+            {/* Speed Option */}
+            <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">Speed</span>
+              <select
+                value={playbackRate}
+                onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
+                className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                <option value="0.5">.5x</option>
+                <option value="0.75">.75x</option>
+                <option value="0.9">.9x</option>
+                <option value="1">1x</option>
+                <option value="1.1">1.1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2x</option>
+              </select>
+            </div>
+
+            {/* Pitch Option */}
+            <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">Pitch</span>
+              <select
+                value={pitchShift}
+                onChange={(e) => onPitchShiftChange(parseInt(e.target.value))}
+                className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
+              >
+                {Array.from({ length: 25 }, (_, i) => i - 12).map(val => (
+                  <option key={val} value={val}>{val > 0 ? `+${val}` : val}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
+
+            {/* Metronome */}
+            <button
+              onClick={() => onMetronomeToggle(!isMetronomeEnabled)}
+              className={cn(
+                "h-8 px-2 rounded flex items-center gap-1.5 text-xs font-semibold transition-colors border-none",
+                isMetronomeEnabled
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                  : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
               )}
+              title="Toggle Metronome"
+            >
+              <Bell className="w-3.5 h-3.5" />
+            </button>
 
-              {/* Wait Mode Popover */}
-              {onWaitModeToggle && (
-                <Popover>
-                  <PopoverTrigger asChild>
+            {/* A-B Loop Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "h-8 px-2 rounded flex items-center gap-1.5 text-xs font-semibold transition-colors border-none",
+                    loopState.enabled
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                      : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+                  )}
+                  title="A-B Loop"
+                >
+                  <Repeat className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline text-[10px] uppercase">Loop</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xl rounded-xl z-[200]">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">A-B Loop</span>
                     <button
-                      className={cn("h-8 px-2 sm:px-3 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-                      title="Practice Mode Settings"
+                      onClick={() => onLoopStateChange({ ...loopState, enabled: !loopState.enabled })}
+                      className={cn(
+                        "text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border",
+                        loopState.enabled
+                          ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                      )}
                     >
-                      <Keyboard className="w-4 h-4" /><span className="hidden sm:inline"> Practice</span>
-                      {!isPremium && <span className="text-[10px] ml-1">👑</span>}
+                      {loopState.enabled ? "Enabled" : "Disabled"}
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="z-[200] w-64 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-4 shadow-xl" sideOffset={8}>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Practice Mode</span>
-                        <button
-                          onClick={() => {
-                            if (!isWaitMode && !isPremium) {
-                              onWaitModeToggle?.(true);
-                              return;
-                            }
-                            if (!isWaitMode && !isMidiInitialized && !isMicInitialized && (onInitializeMidi || onInitializeMic)) {
-                              const pref = localStorage.getItem("bs_preferred_instrument");
-                              if (pref === "mic" && onInitializeMic) {
-                                setIsInitializingMidi(true);
-                                onInitializeMic().then(success => {
-                                  setIsInitializingMidi(false);
-                                  if (success) {
-                                    onWaitModeToggle(true);
-                                  }
-                                });
-                              } else if (pref === "midi" && onInitializeMidi) {
-                                setIsInitializingMidi(true);
-                                onInitializeMidi().then(success => {
-                                  setIsInitializingMidi(false);
-                                  if (success) onWaitModeToggle(true);
-                                });
-                              } else {
-                                setShowMidiDialog(true);
-                              }
-                            } else {
-                              onWaitModeToggle?.(!isWaitMode);
-                            }
-                          }}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
-                            isWaitMode
-                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                          )}
-                        >
-                          {isWaitMode ? "On" : "Off"}
-                        </button>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-[10px] font-semibold text-zinc-500 uppercase">Start Bar</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={loopState.startBar}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val >= 1) onLoopStateChange({ ...loopState, startBar: val });
+                        }}
+                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded px-2 py-1.5 text-sm outline-none"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-[10px] font-semibold text-zinc-500 uppercase">End Bar</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={loopState.endBar}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val >= 1) onLoopStateChange({ ...loopState, endBar: val });
+                        }}
+                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded px-2 py-1.5 text-sm outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
+            <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
+
+            {/* Practice Mode */}
+            {onWaitModeToggle && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "h-8 px-2 flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded text-xs font-semibold tracking-wide transition-colors border-none",
+                      isWaitMode 
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" 
+                        : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+                    )}
+                    title="Practice Mode Settings"
+                    type="button"
+                  >
+                    <Keyboard className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline"> Practice</span>
+                    {!isPremium && <span className="text-[10px] ml-0.5">👑</span>}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 bg-white dark:bg-[#1e1e24] border-zinc-200 dark:border-zinc-700 shadow-xl rounded-xl p-0 overflow-hidden z-[200]">
+                  <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Keyboard className="w-4 h-4 text-blue-500" />
+                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Practice Mode</h4>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isWaitMode}
+                      id="wait-mode-toggle"
+                      onClick={() => {
+                        const nextState = !isWaitMode;
+                        if (nextState && !isMidiInitialized && onInitializeMidi) {
+                          onInitializeMidi();
+                        }
+                        onWaitModeToggle?.(nextState);
+                      }}
+                      className={cn(
+                        "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+                        isWaitMode ? "bg-blue-500" : "bg-zinc-200 dark:bg-zinc-700"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none block h-4 w-4 rounded-full bg-white dark:bg-zinc-950 shadow-lg ring-0 transition-transform",
+                          isWaitMode ? "translate-x-4" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="px-4 py-3 flex flex-col gap-4">
+                    {isWaitMode && !isPremium && (
+                      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-500/20 rounded-lg p-2.5">
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                          <span className="font-bold">Free Daily Limit:</span> 3 uses/day.
+                          <br />Upgrade to Premium for unlimited Practice Mode.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Lenient (1+ Note)</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Strict Sync</span>
                         <button
                           onClick={() => onWaitModeLenientToggle?.(!isWaitModeLenient)}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
-                            isWaitModeLenient
-                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                          )}
+                          className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", !isWaitModeLenient ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
+                          title={!isWaitModeLenient ? "Strict Mode: Requires exact note matches" : "Lenient Mode: Allows continuing with any note"}
                         >
-                          {isWaitModeLenient ? "On" : "Off"}
+                          {!isWaitModeLenient ? "On" : "Off"}
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500/80 dark:text-blue-400/80">Diagnostic Monitor</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Monitor</span>
                         <button
                           onClick={() => onWaitModeMonitorToggle?.(!showWaitModeMonitor)}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
-                            showWaitModeMonitor
-                              ? "bg-blue-500/20 text-blue-500 border-blue-500/50"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                          )}
+                          className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", showWaitModeMonitor ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
                         >
                           {showWaitModeMonitor ? "On" : "Off"}
                         </button>
                       </div>
+                    </div>
 
-                      <div className="flex flex-col gap-2 mt-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-purple-500/80 dark:text-purple-400/80">Hardware Input</span>
-
-                        {!isMidiInitialized && !isMicInitialized && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400">None</span>
-                            <button onClick={() => setShowMidiDialog(true)} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white">Connect</button>
+                    <div className="border-t border-zinc-200 dark:border-zinc-700/50 pt-3">
+                      {!isMidiInitialized && !isMicInitialized && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Select Input Source:</div>
+                          <div className="flex gap-2">
+                            {onInitializeMidi && (
+                              <button
+                                onClick={onInitializeMidi}
+                                className="flex-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-zinc-200 dark:border-zinc-700"
+                              >
+                                <Piano className="w-4 h-4" /> MIDI
+                              </button>
+                            )}
+                            {onInitializeMic && (
+                              <button
+                                onClick={onInitializeMic}
+                                className="flex-1 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-zinc-200 dark:border-zinc-700"
+                              >
+                                <Mic className="w-4 h-4" /> MIC
+                              </button>
+                            )}
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {isMidiInitialized && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5"><Keyboard className="w-3 h-3" /> MIDI</span>
+                      {isMidiInitialized && (
+                        <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/20 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Piano className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                              MIDI Device Connected
+                            </span>
+                          </div>
+                          <button onClick={() => {
+                            onDisconnectMidi?.();
+                          }} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors" title="Disconnect MIDI">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      {isMicInitialized && (
+                        <div className="flex items-center justify-between bg-zinc-50 dark:bg-black/20 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <Mic className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                              Mic Tracking Active
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {onMicCalibrate && (
+                              <button onClick={onMicCalibrate} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors" title="Calibrate Mic Profile">
+                                <Settings2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button onClick={() => {
-                              localStorage.removeItem("bs_preferred_instrument");
-                              onDisconnectMidi?.();
-                            }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
+                              onDisconnectMic?.();
+                            }} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors" title="Disconnect MIC">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        )}
+                        </div>
+                      )}
+                    </div>
 
-                        {isMicInitialized && (
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1.5">
-                                🎙️ Mic
-                                {onMicCalibrate && (
-                                  <button onClick={onMicCalibrate} className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors" title="Calibrate Mic Profile">
-                                    <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                  </button>
-                                )}
-                              </span>
-                              <button onClick={() => {
-                                localStorage.removeItem("bs_preferred_instrument");
-                                onDisconnectMic?.();
-                              }} className="text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20">Disconnect</button>
-                            </div>
-                            <span className="text-[10px] text-amber-500/80 dark:text-amber-400/70 leading-tight">Best for C3–C6. MIDI keyboard recommended for full range.</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && practiceTrackIds && (
-                        <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                          <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Practice Parts</label>
-                          <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto">
-
-                            {/* Global Reset Option */}
-                            <label className="flex items-center gap-2 cursor-pointer">
+                    {midiTracks && midiTracks.length > 0 && onPracticeTrackChange && practiceTrackIds && (
+                      <div className="border-t border-zinc-200 dark:border-zinc-700/50 pt-3 flex flex-col gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">Practice Parts</span>
+                        <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto no-scrollbar">
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className="relative flex items-center justify-center">
                               <input
                                 type="checkbox"
+                                className="peer sr-only"
                                 checked={practiceTrackIds.includes(-1)}
                                 onChange={(e) => {
-                                  if (e.target.checked) onPracticeTrackChange([-1]);
+                                  if (e.target.checked) {
+                                    onPracticeTrackChange([-1]);
+                                  } else {
+                                    onPracticeTrackChange([]);
+                                  }
                                 }}
-                                className="cursor-pointer w-3.5 h-3.5 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10"
                               />
-                              <span className="text-xs">All Tracks (Chords)</span>
-                            </label>
+                              <div className="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center transition-all">
+                                <Check className="w-3 h-3 text-white scale-0 peer-checked:scale-100 transition-transform" strokeWidth={3} />
+                              </div>
+                            </div>
+                            <span className="text-xs text-zinc-700 dark:text-zinc-300 font-medium group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Any Part (Auto)</span>
+                          </label>
 
-                            {midiTracks.map((t, i) => (
-                              <label key={t.id} className="flex items-center gap-2 cursor-pointer">
+                          {midiTracks.map((t, i) => (
+                            <label key={t.id} className="flex items-center gap-2 cursor-pointer group">
+                              <div className="relative flex items-center justify-center">
                                 <input
                                   type="checkbox"
+                                  className="peer sr-only"
                                   checked={practiceTrackIds.includes(i)}
                                   onChange={(e) => {
                                     if (e.target.checked) {
                                       onPracticeTrackChange([...practiceTrackIds.filter(id => id !== -1), i]);
                                     } else {
                                       const next = practiceTrackIds.filter(id => id !== i);
-                                      if (next.length === 0) onPracticeTrackChange([-1]); // auto fallback
-                                      else onPracticeTrackChange(next);
+                                      onPracticeTrackChange(next.length === 0 ? [-1] : next);
                                     }
                                   }}
-                                  className="cursor-pointer w-3.5 h-3.5 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10"
                                 />
-                                <span className="text-xs">{t.name}</span>
-                              </label>
-                            ))}
-                          </div>
+                                <div className="w-4 h-4 rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center transition-all">
+                                  <Check className="w-3 h-3 text-white scale-0 peer-checked:scale-100 transition-transform" strokeWidth={3} />
+                                </div>
+                              </div>
+                              <span className="text-xs text-zinc-700 dark:text-zinc-300 font-medium group-hover:text-zinc-900 dark:group-hover:text-white transition-colors truncate">{t.name}</span>
+                            </label>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    className={cn("h-8 px-2 sm:px-3 flex shrink-0 whitespace-nowrap items-center gap-1.5 sm:gap-2 rounded-md border text-xs font-bold tracking-wider transition-all", loopState.enabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-                    title="Edit Loop Range"
-                  >
-                    <Repeat className="w-4 h-4" /> A-B
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="z-[200] w-52 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 p-3 shadow-xl" sideOffset={8}>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Loop Range</span>
-                      <button
-                        onClick={() => onLoopStateChange({ ...loopState, enabled: !loopState.enabled })}
-                        className={cn(
-                          "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
-                          loopState.enabled
-                            ? "bg-amber-500/20 text-amber-500 border-amber-500/50"
-                            : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                        )}
-                      >
-                        {loopState.enabled ? "Active" : "Off"}
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 mt-1">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Start Bar</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={loopState.startBar}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val) && val >= 1) onLoopStateChange({ ...loopState, startBar: val });
-                          }}
-                          className="w-16 bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-amber-500/50 rounded px-2 py-1 text-sm text-center font-mono outline-none"
-                        />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">End Bar</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={loopState.endBar}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val) && val >= 1) onLoopStateChange({ ...loopState, endBar: val });
-                          }}
-                          className="w-16 bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-amber-500/50 rounded px-2 py-1 text-sm text-center font-mono outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Tempo Ramp */}
-                    <div className="border-t border-zinc-200 dark:border-zinc-700/50 pt-2 mt-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                          <TrendingUp className="w-3 h-3" /> Tempo Ramp
-                        </span>
-                        <button
-                          onClick={() => onLoopStateChange({ ...loopState, tempoRamp: !loopState.tempoRamp })}
-                          className={cn(
-                            "text-[10px] px-2 py-0.5 rounded font-bold uppercase transition-colors border",
-                            loopState.tempoRamp
-                              ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/50"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-                          )}
-                        >
-                          {loopState.tempoRamp ? "On" : "Off"}
-                        </button>
-                      </div>
-                      {loopState.tempoRamp && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col gap-1 flex-1">
-                            <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Step</span>
-                            <select
-                              value={loopState.tempoRampStep}
-                              onChange={(e) => onLoopStateChange({ ...loopState, tempoRampStep: parseFloat(e.target.value) })}
-                              className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-emerald-500/50 rounded px-1.5 py-1 text-xs font-mono outline-none cursor-pointer appearance-none text-center"
-                            >
-                              <option value="0.05">+5%</option>
-                              <option value="0.1">+10%</option>
-                              <option value="0.15">+15%</option>
-                              <option value="0.2">+20%</option>
-                            </select>
-                          </div>
-                          <div className="flex flex-col gap-1 flex-1">
-                            <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Target</span>
-                            <select
-                              value={loopState.tempoRampTarget}
-                              onChange={(e) => onLoopStateChange({ ...loopState, tempoRampTarget: parseFloat(e.target.value) })}
-                              className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-700 focus:border-emerald-500/50 rounded px-1.5 py-1 text-xs font-mono outline-none cursor-pointer appearance-none text-center"
-                            >
-                              <option value="0.75">75%</option>
-                              <option value="0.8">80%</option>
-                              <option value="0.9">90%</option>
-                              <option value="1">100%</option>
-                              <option value="1.1">110%</option>
-                              <option value="1.2">120%</option>
-                            </select>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Speed Control */}
-              <div className="flex flex-row items-center gap-2 bg-zinc-100 dark:bg-zinc-800/40 rounded-md border border-zinc-300 dark:border-zinc-700/50 px-2 h-8 hidden sm:flex">
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold">Speed</span>
-                <select
-                  value={playbackRate}
-                  onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-                  className="bg-transparent font-mono text-xs focus:outline-none cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors text-right w-12 appearance-none"
-                  title="Playback Speed"
-                >
-                  <option value="0.25" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">.25x</option>
-                  <option value="0.5" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">.5x</option>
-                  <option value="0.75" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">.75x</option>
-                  <option value="0.9" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">.9x</option>
-                  <option value="1" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">1x</option>
-                  <option value="1.1" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">1.1x</option>
-                  <option value="1.25" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">1.25x</option>
-                  <option value="1.5" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">1.5x</option>
-                  <option value="2" className="bg-[#18181b] text-zinc-600 dark:text-zinc-300">2x</option>
-                </select>
-              </div>
-
-              {/* Pitch Control */}
-              <div className="flex flex-row items-center gap-2 bg-zinc-100 dark:bg-zinc-800/40 rounded-md border border-zinc-300 dark:border-zinc-700/50 px-2 h-8 hidden sm:flex">
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold">Pitch</span>
-                <div className="flex items-center">
-                  <button
-                    onClick={() => onPitchShiftChange(pitchShift - 1)}
-                    className="w-4 flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  >
-                    -
-                  </button>
-                  <span className="text-xs font-mono font-bold w-6 text-center text-zinc-600 dark:text-zinc-300">
-                    {pitchShift > 0 ? `+${pitchShift}` : pitchShift}
-                  </span>
-                  <button
-                    onClick={() => onPitchShiftChange(pitchShift + 1)}
-                    className="w-4 flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-            </div> {/* Close Left Block */}
-
-            {/* Right */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Metronome */}
-              <button
-                onClick={() => onMetronomeToggle(!isMetronomeEnabled)}
-                className={cn("h-8 flex items-center gap-2 px-3 rounded-md border text-xs font-bold transition-all", isMetronomeEnabled ? "bg-blue-100 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500/50 text-blue-600 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-              >
-                <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline">Metronome</span>
-              </button>
-
-              {/* Mixer Popover */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="h-8 px-3 rounded-md bg-transparent border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4" />
-                    <span className="hidden sm:inline text-xs font-bold tracking-wider uppercase">Mixer</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  autoFocus={false}
-                  align="end"
-                  sideOffset={16}
-                  className="z-[200] w-auto min-w-[200px] p-4 bg-[#1e1e24]/95 backdrop-blur-2xl border-zinc-300 dark:border-zinc-700/50 shadow-2xl rounded-2xl"
-                >
-                  <div className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest mb-4">Volume Mixer</div>
-                  <div className="flex gap-4 sm:gap-6 overflow-x-auto max-w-[85vw] pb-2 px-2 pr-4">
-                    {tracks.map(track => {
-                      const isMuted = muteByTrackId[track.id] ?? track.muted ?? false;
-                      const isSolo = soloByTrackId[track.id] ?? track.solo ?? false;
-                      const vol = volumes[track.id] ?? track.volume ?? 1;
-
-                      return (
-                        <div key={track.id} className="flex flex-col items-center gap-3">
-                          {/* Vertical Slider */}
-                          <div className="h-32 w-8 flex justify-center py-2 bg-zinc-100 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                            <Slider
-                              orientation="vertical"
-                              value={[vol]}
-                              min={0} max={1.5} step={0.01}
-                              onValueChange={(v) => onVolumeChange(track.id, v[0])}
-                              className={cn("h-full cursor-pointer", isMuted ? "opacity-50" : "")}
-                              tooltipFormatter={(val) => Math.round(val * 100) + '%'}
-                            />
-                          </div>
-                          {/* M/S Buttons */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => onMuteToggle(track.id)}
-                              className={cn("w-7 h-7 rounded border flex items-center justify-center text-xs font-bold transition-all", isMuted ? "bg-red-500/20 border-red-500/50 text-red-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300")}
-                            >M</button>
-                            <button
-                              onClick={() => onSoloToggle(track.id)}
-                              className={cn("w-7 h-7 rounded border flex items-center justify-center text-xs font-bold transition-all", isSolo ? "bg-green-500/20 border-green-500/50 text-green-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300")}
-                            >S</button>
-                          </div>
-                          <div className="text-[10px] uppercase font-semibold text-zinc-400 max-w-[60px] truncate text-center" title={track.name}>
-                            {track.name}
-                          </div>
-                        </div>
-                      )
-                    })}
-                    {tracks.length === 0 && (
-                      <div className="text-xs text-zinc-500 italic py-4">No audio or MIDI tracks</div>
                     )}
                   </div>
                 </PopoverContent>
               </Popover>
-            </div>
-            {/* Close Bottom Row */}
-          </div>
+            )}
 
+            {/* Mixer */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="h-8 px-2 flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded bg-transparent text-xs font-semibold tracking-wide text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-colors border-none"
+                  title="Audio Mixer"
+                  type="button"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Mixer</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[320px] sm:w-[380px] bg-white dark:bg-[#1e1e24] border-zinc-200 dark:border-zinc-700 shadow-xl rounded-xl p-0 overflow-hidden z-[200]">
+                <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Mixer</h4>
+                  </div>
+                </div>
+
+                <div className="max-h-[60vh] overflow-y-auto no-scrollbar p-2">
+                  <div className="flex flex-col gap-1">
+                    {tracks.map(track => {
+                      const isMuted = muteByTrackId[track.id] ?? track.muted ?? false;
+                      const isSolo = soloByTrackId[track.id] ?? track.solo ?? false;
+
+                      return (
+                        <div key={track.id} className="flex flex-col gap-2 p-2 hover:bg-zinc-50 dark:hover:bg-black/10 rounded-lg transition-colors group">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 truncate pr-2" title={track.name}>{track.name}</span>
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => onMuteToggle(track.id)}
+                                className={cn("w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition-colors", isMuted ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/50" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-transparent")}
+                              >
+                                M
+                              </button>
+                              <button
+                                onClick={() => onSoloToggle(track.id)}
+                                className={cn("w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition-colors", isSolo ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/50" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-transparent")}
+                              >
+                                S
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Volume2 className={cn("w-3.5 h-3.5 shrink-0 transition-colors", isMuted ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-400")} />
+                            <Slider
+                              className={cn("flex-1", isMuted && "opacity-50")}
+                              value={[isMuted ? 0 : volumes[track.id] ?? track.volume ?? 1]}
+                              min={0}
+                              max={1}
+                              step={0.01}
+                              onValueChange={(val) => {
+                                if (isMuted && val[0] > 0) onMuteToggle(track.id);
+                                onVolumeChange(track.id, val[0]);
+                              }}
+                            />
+                            <span className="w-8 text-right text-[10px] font-mono text-zinc-500">{Math.round((volumes[track.id] ?? track.volume ?? 1) * 100)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
+
+            {/* Auto-Play Next Optional (already added right slot, could add here too if missing) */}
+            {playlistId && (
+              <button
+                onClick={() => onAutoplayToggle?.(!isAutoplayEnabled)}
+                className={cn(
+                  "hidden lg:flex h-8 px-2 rounded flex items-center gap-1.5 text-xs font-semibold transition-colors border-none",
+                  isAutoplayEnabled
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+                )}
+                title="Auto-Play Next Track"
+              >
+                <PlaySquare className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+          </div>
         </div>
       </div>
 
+      {/* Timeline Row */}
+      <div className="w-full flex items-center px-4 sm:px-6 pb-2 -mt-1 gap-3 text-[10px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <span className="w-10 text-right tabular-nums">{formatTime(positionMs)}</span>
+          <div className="flex-1 relative group py-2">
+            <Slider
+              value={[localPos]}
+              min={0}
+              max={durationMs}
+              step={100}
+              onValueChange={handleSliderChange}
+              onValueCommit={handleSliderCommit}
+              className="cursor-pointer"
+              tooltipFormatter={(val) => formatTime(val)}
+            />
+          </div>
+          <span className="w-10 text-left tabular-nums">{formatTime(durationMs)}</span>
+        </div>
+      </div>
       <AlertDialog open={showMidiDialog} onOpenChange={setShowMidiDialog}>
         <AlertDialogContent className="z-[300] bg-white dark:bg-[#18181b] border-zinc-200 dark:border-zinc-800">
           <AlertDialogHeader>

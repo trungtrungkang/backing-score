@@ -327,34 +327,6 @@ export function PlayShell({
 
   return (
     <div className="relative flex flex-col h-full w-full bg-[#fdfdfc] dark:bg-[#1A1A1E] text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans">
-      {/* 1. Minimal Header */}
-      <header className="absolute top-0 left-0 w-full z-20 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-[#151518]/80 to-transparent pointer-events-none transition-opacity duration-300">
-        <div className="flex items-center gap-4 pointer-events-auto">
-          <button onClick={() => window.history.back()} className="p-2 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-white drop-shadow-md tracking-tight leading-tight line-clamp-2">
-              {projectName}
-            </h1>
-            <span className="hidden sm:block text-sm font-medium text-zinc-300 drop-shadow-sm line-clamp-1">
-              {composer}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Desktop: show all buttons */}
-          <div className="hidden sm:flex items-center gap-2">
-            <ShareButton title={projectName} />
-            <ProjectActionsMenu projectId={projectId} />
-            <ThemeToggle hideBg className="p-2 w-10 h-10 rounded-full bg-[#1e1e24]/80 text-zinc-300 hover:text-white hover:bg-[#2a2a32] backdrop-blur-md transition-all border-none" />
-          </div>
-          {/* Mobile: consolidated three-dot menu */}
-          <div className="sm:hidden">
-            <MobileActionsMenu projectId={projectId} projectName={projectName} />
-          </div>
-        </div>
-      </header>
 
       {/* 2. Full Screen Sheet Music Area */}
       <div className={cn("flex-1 min-h-0 w-full h-full pt-16 overflow-hidden relative transition-all duration-300", state.isControlsCollapsed ? "pb-0" : "pb-[120px]")}>
@@ -468,6 +440,35 @@ export function PlayShell({
           isRecording: recorder.isRecording,
           onRecordToggle: handleRecordToggle,
         } : {})}
+        leftSlot={
+          <>
+            <button onClick={() => window.history.back()} className="p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all">
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                {projectName}
+              </h1>
+              {composer && (
+                <span className="hidden sm:block text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate">
+                  {composer}
+                </span>
+              )}
+            </div>
+          </>
+        }
+        rightSlot={
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="hidden sm:flex items-center gap-1 sm:gap-2">
+              <ShareButton title={projectName} />
+              <ProjectActionsMenu projectId={projectId} />
+              <ThemeToggle hideBg className="p-2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 dark:hover:text-white transition-all border-none" />
+            </div>
+            <div className="sm:hidden">
+              <MobileActionsMenu projectId={projectId} projectName={projectName} />
+            </div>
+          </div>
+        }
       />
 
       {state.isWaitMode && (
