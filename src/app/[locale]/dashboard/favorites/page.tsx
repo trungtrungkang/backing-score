@@ -13,9 +13,11 @@ import {
   toggleFavorite,
   getProject,
   getPlaylist,
+  getSheetMusic,
   FavoriteDocument,
   ProjectDocument,
-  PlaylistDocument
+  PlaylistDocument,
+  SheetMusicDocument
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
@@ -23,6 +25,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 type EnrichedFavorite = FavoriteDocument & {
   projectDetails?: ProjectDocument;
   playlistDetails?: PlaylistDocument;
+  sheetMusicDetails?: SheetMusicDocument;
 };
 
 export default function FavoritesPage() {
@@ -60,6 +63,9 @@ export default function FavoritesPage() {
               } else if (fav.targetType === "playlist") {
                 const playlist = await getPlaylist(fav.targetId);
                 return { ...fav, playlistDetails: playlist };
+              } else if (fav.targetType === "sheet_music") {
+                const sheet = await getSheetMusic(fav.targetId);
+                return { ...fav, sheetMusicDetails: sheet };
               }
               return fav;
             } catch (err) {
@@ -155,8 +161,7 @@ export default function FavoritesPage() {
               </div>
             ) : (
               favorites.map((fav) => {
-                // If item is dead (author deleted original)
-                const isDead = !fav.projectDetails && !fav.playlistDetails;
+                const isDead = !fav.projectDetails && !fav.playlistDetails && !fav.sheetMusicDetails;
                 
                 return (
                   <div 
@@ -165,6 +170,7 @@ export default function FavoritesPage() {
                         if (isDead) return;
                         if (fav.targetType === "project") router.push(`/p/${fav.targetId}`);
                         if (fav.targetType === "playlist") router.push(`/collection/${fav.targetId}`);
+                        if (fav.targetType === "sheet_music") router.push(`/dashboard/pdfs/${fav.targetId}`);
                     }}
                     className={`group relative flex flex-col bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-lg transition-all ${isDead ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`}
                   >
@@ -172,6 +178,8 @@ export default function FavoritesPage() {
                     <div className="aspect-video bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden">
                        {fav.targetType === "project" ? (
                            <Music4 className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+                       ) : fav.targetType === "sheet_music" ? (
+                           <Bookmark className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
                        ) : (
                            <ListMusic className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
                        )}
@@ -186,7 +194,7 @@ export default function FavoritesPage() {
                     {/* Content */}
                     <div className="p-4 flex flex-col flex-1">
                       <h3 className="font-bold text-zinc-900 dark:text-white truncate mb-1">
-                        {isDead ? "Item Unavailable" : (fav.projectDetails?.name || fav.playlistDetails?.name || "Untitled")}
+                        {isDead ? "Item Unavailable" : (fav.projectDetails?.name || fav.playlistDetails?.name || fav.sheetMusicDetails?.title || "Untitled")}
                       </h3>
                       {fav.targetType === "project" && fav.projectDetails && (
                          <p className="text-xs text-zinc-500 mb-4 truncate uppercase tracking-wider font-semibold">
@@ -196,6 +204,11 @@ export default function FavoritesPage() {
                       {fav.targetType === "playlist" && fav.playlistDetails && (
                          <p className="text-xs text-zinc-500 mb-4 truncate">
                             {fav.playlistDetails.projectIds?.length || 0} Tracks
+                         </p>
+                      )}
+                      {fav.targetType === "sheet_music" && fav.sheetMusicDetails && (
+                         <p className="text-xs text-zinc-500 mb-4 truncate">
+                            PDF • {fav.sheetMusicDetails.pageCount} pages
                          </p>
                       )}
                       

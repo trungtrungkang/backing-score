@@ -4,7 +4,7 @@
  */
 
 import { account, databases, ID, Query, Permission, Role } from "./client";
-import { APPWRITE_DATABASE_ID, APPWRITE_FAVORITES_COLLECTION_ID, APPWRITE_PROJECTS_COLLECTION_ID } from "./constants";
+import { APPWRITE_DATABASE_ID, APPWRITE_FAVORITES_COLLECTION_ID, APPWRITE_PROJECTS_COLLECTION_ID, APPWRITE_SHEET_MUSIC_COLLECTION_ID } from "./constants";
 import type { FavoriteDocument } from "./types";
 
 const dbId = APPWRITE_DATABASE_ID;
@@ -15,7 +15,7 @@ const collId = APPWRITE_FAVORITES_COLLECTION_ID;
  * Returns boolean: true if it is now favorited, false if unfavorited.
  */
 export async function toggleFavorite(
-  targetType: "project" | "playlist",
+  targetType: FavoriteDocument["targetType"],
   targetId: string
 ): Promise<boolean> {
   const user = await account.get();
@@ -34,6 +34,8 @@ export async function toggleFavorite(
     // Decrement favoriteCount on target (fire-and-forget)
     if (targetType === "project") {
       syncFavoriteCount(targetId, -1);
+    } else if (targetType === "sheet_music") {
+      syncSheetFavoriteStatus(targetId, false);
     }
     return false; // Now unfavorited
   } else {
@@ -55,6 +57,8 @@ export async function toggleFavorite(
     // Increment favoriteCount on target (fire-and-forget)
     if (targetType === "project") {
       syncFavoriteCount(targetId, 1);
+    } else if (targetType === "sheet_music") {
+      syncSheetFavoriteStatus(targetId, true);
     }
     return true; // Now favorited
   }
@@ -72,9 +76,16 @@ function syncFavoriteCount(projectId: string, delta: number) {
     .catch(() => { /* non-critical */ });
 }
 
+/** Fire-and-forget helper to sync legacy favorite boolean on a sheet music document. */
+function syncSheetFavoriteStatus(sheetId: string, status: boolean) {
+  databases.updateDocument(dbId, APPWRITE_SHEET_MUSIC_COLLECTION_ID, sheetId, {
+    favorite: status,
+  }).catch(() => { /* non-critical */ });
+}
+
 /** Check if the current user has favorited a specific item. */
 export async function checkIsFavorited(
-  targetType: "project" | "playlist",
+  targetType: FavoriteDocument["targetType"],
   targetId: string
 ): Promise<boolean> {
   try {
@@ -92,7 +103,7 @@ export async function checkIsFavorited(
 }
 
 /** List private favorites owned by the authenticated user */
-export async function listMyFavorites(targetType?: "project" | "playlist"): Promise<FavoriteDocument[]> {
+export async function listMyFavorites(targetType?: FavoriteDocument["targetType"]): Promise<FavoriteDocument[]> {
   const user = await account.get();
   
   const queries = [

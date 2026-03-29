@@ -25,7 +25,7 @@ import {
   deleteSheetFolder,
   updateSheetFolder,
   deleteSheetMusic,
-  toggleSheetFavorite,
+  toggleFavorite,
   moveSheetToFolder,
   uploadSheetPdf,
   getThumbnailUrl,
@@ -349,10 +349,13 @@ export default function PdfsLibraryPage() {
   };
 
   const handleToggleFavorite = async (sheet: SheetMusicDocument) => {
+    // Optimistic update
+    setSheets(prev => prev.map(s => s.$id === sheet.$id ? { ...s, favorite: !s.favorite } : s));
     try {
-      await toggleSheetFavorite(sheet.$id, !!sheet.favorite);
-      loadData();
+      await toggleFavorite("sheet_music", sheet.$id);
     } catch (err) {
+      // Revert if failed
+      setSheets(prev => prev.map(s => s.$id === sheet.$id ? { ...s, favorite: sheet.favorite } : s));
       toast.error(String(err));
     }
   };

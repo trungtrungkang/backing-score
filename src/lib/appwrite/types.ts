@@ -62,7 +62,7 @@ export interface FavoriteDocument {
   $createdAt: string;
   $updatedAt: string;
   userId: string;
-  targetType: "project" | "playlist";
+  targetType: "project" | "playlist" | "sheet_music" | "course" | "wiki_entity";
   targetId: string;
 }
 
