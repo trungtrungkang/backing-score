@@ -396,33 +396,84 @@ function unrollMeasures(
       continue;
     }
 
-    // Calculate measure duration accounting for mid-measure tempo changes.
-    // If the measure has per-beat tempo data, compute weighted duration by summing
-    // each segment at its respective tempo. Otherwise fall back to firstTempo.
     if (m.timeSignature) currentTimeSig = m.timeSignature;
-    let measureDurationMs: number;
-    if (m.tempoAtBeat && m.tempoAtBeat.length > 1) {
-      // Weighted duration: sum each segment between tempo changes
+    let measureDurationMs = 0;
+    const tsigForCalc = currentTimeSig || "4/4";
+    const [tBeats, tType] = tsigForCalc.split("/").map(Number);
+    // Find how many quarter notes make up a single conceptual visual "beat"
+    let quartersPerBeat = 4 / tType;
+    let visualBeats = tBeats;
+    
+    // Convert compound meters (e.g., 6/8, 9/8, 12/16) to grouped primary beats
+    if (tBeats > 3 && tBeats % 3 === 0 && (tType === 8 || tType === 16)) {
+       quartersPerBeat = (4 / tType) * 3;
+       visualBeats = tBeats / 3;
+    }
+    
+    let beatTimestamps: number[] = [];
+    
+    if (m.tempoAtBeat && m.tempoAtBeat.length > 0) {
+      // Weighted duration AND exact beat timestamp rendering
       const totalQuarters = m.durationInQuarters;
       const incomingTempo = currentTempo;
       measureDurationMs = 0;
-      for (let t = 0; t < m.tempoAtBeat.length; t++) {
-        const segStart = m.tempoAtBeat[t].beatPos;
-        const segTempo = m.tempoAtBeat[t].tempo;
-        const segEnd = (t + 1 < m.tempoAtBeat.length) ? m.tempoAtBeat[t + 1].beatPos : totalQuarters;
-        const segQuarters = segEnd - segStart;
-        measureDurationMs += segQuarters * (60000 / segTempo);
-      }
-      // If the first tempo change doesn't start at beat 0, add the initial segment
-      // using the incoming tempo (from the previous measure)
-      if (m.tempoAtBeat[0].beatPos > 0) {
-        const initialQuarters = m.tempoAtBeat[0].beatPos;
-        measureDurationMs += initialQuarters * (60000 / incomingTempo);
+      
+      const tempos = m.tempoAtBeat;
+      // Start generating every single beat based on the time signature
+      let currentQuarterPos = 0;
+      
+      while (currentQuarterPos < totalQuarters - 0.001) {
+        // Find which tempo segment this beat START falls into
+        let activeBpm = tempos[0].tempo;
+        if (currentQuarterPos < tempos[0].beatPos) {
+           activeBpm = incomingTempo;
+        } else {
+           for (let idx = tempos.length - 1; idx >= 0; idx--) {
+             if (currentQuarterPos >= tempos[idx].beatPos) {
+               activeBpm = tempos[idx].tempo;
+               break;
+             }
+           }
+        }
+        
+        // Find how many quarters until the NEXT tempo change OR the end of the beat
+        let nextTempoChangeQuarter = totalQuarters;
+        for (let idx = 0; idx < tempos.length; idx++) {
+          if (tempos[idx].beatPos > currentQuarterPos + 0.001) {
+            nextTempoChangeQuarter = tempos[idx].beatPos;
+            break;
+          }
+        }
+        
+        // This segment either stops at the next tempo marker, OR at the end of the conceptual beat
+        const nextBeatBoundary = Math.floor((currentQuarterPos + 0.001) / quartersPerBeat) * quartersPerBeat + quartersPerBeat;
+        const targetQuarterPos = Math.min(nextTempoChangeQuarter, nextBeatBoundary, totalQuarters);
+        
+        const deltaQuarters = targetQuarterPos - currentQuarterPos;
+        const deltaMs = deltaQuarters * (60000 / activeBpm);
+        
+        // If this is EXACTLY the start of a conceptual beat, push the current timestamp
+        if (Math.abs(currentQuarterPos % quartersPerBeat) < 0.01) {
+           beatTimestamps.push(accumulatedTimeMs + measureDurationMs);
+        }
+        
+        measureDurationMs += deltaMs;
+        currentQuarterPos = targetQuarterPos;
       }
     } else {
       const tempoForDuration = m.firstTempo ?? currentTempo;
       const msPerQuarterNote = 60000 / tempoForDuration;
       measureDurationMs = m.durationInQuarters * msPerQuarterNote;
+      
+      // Still generate strictly linear beatTimestamps to assist visualizer
+      const msPerBeat = quartersPerBeat * msPerQuarterNote;
+      let q = 0;
+      while (q < m.durationInQuarters - 0.001) {
+        if (Math.abs(q % quartersPerBeat) < 0.01) {
+           beatTimestamps.push(accumulatedTimeMs + q * msPerQuarterNote);
+        }
+        q += Math.min(quartersPerBeat, m.durationInQuarters - q);
+      }
     }
 
     // Update currentTempo to last tempo in this measure (outgoing for next measure)
@@ -449,14 +500,12 @@ function unrollMeasures(
       entry.tempo = initialTempo;
     }
     if (m.tempo !== undefined) entry.tempo = m.tempo;
-    if (m.tempoAtBeat && m.tempoAtBeat.length > 1) entry.tempoAtBeat = m.tempoAtBeat;
+    if (m.tempoAtBeat && m.tempoAtBeat.length > 0) entry.tempoAtBeat = m.tempoAtBeat;
 
     // Detect partial measures: if this measure has fewer beats than the time signature,
     // check if the previous timemap entry was also partial. If so, this measure is a
     // continuation and starts at a beat position > 0 (not a strong beat).
-    const tsig = currentTimeSig || "4/4";
-    const [tBeats, tType] = tsig.split("/").map(Number);
-    const fullQuartersPerBar = tBeats * (4 / tType);
+    const fullQuartersPerBar = tBeats * quartersPerBeat;
     if (m.durationInQuarters < fullQuartersPerBar && timemap.length > 0) {
       const prevEntry = timemap[timemap.length - 1];
       const prevDurQ = prevEntry.durationInQuarters ?? fullQuartersPerBar;
@@ -466,6 +515,10 @@ function unrollMeasures(
         const prevBeats = Math.round(prevDurQ * (tType / 4));
         entry.startsAtBeat = prevStartBeat + prevBeats;
       }
+    }
+    
+    if (beatTimestamps.length > 0) {
+      entry.beatTimestamps = beatTimestamps;
     }
 
     timemap.push(entry);

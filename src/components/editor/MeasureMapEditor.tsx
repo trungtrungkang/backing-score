@@ -158,7 +158,8 @@ export function MeasureMapEditor({ payload, positionMs, onPayloadChange, onClose
       ...payload,
       notationData: {
         ...payload.notationData,
-        timemap: newTimemap
+        timemap: newTimemap,
+        timemapSource: "manual" as const,
       }
     });
   };

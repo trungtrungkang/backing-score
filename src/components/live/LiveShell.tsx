@@ -274,6 +274,8 @@ export function LiveShell({ projectId, projectName, payload }: LiveShellProps) {
           positionMs={positionMs}
           isPlaying={isPlaying}
           timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
+          timemapSource={payload.notationData?.timemapSource}
+          payloadTempo={payload.metadata?.tempo || 120}
           measureMap={payload.notationData?.measureMap}
           onSeek={(pos) => audioManagerRef.current?.seek(pos)}
           isDarkMode={isDarkMode}

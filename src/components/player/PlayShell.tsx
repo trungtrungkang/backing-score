@@ -421,7 +421,9 @@ export function PlayShell({
             scoreFileId={scoreFileId}
             positionMs={state.positionMs}
             isPlaying={state.isPlaying}
-            timemap={payload.notationData?.timemap || []}
+            timemap={state.correctedTimemap || payload.notationData?.timemap || []}
+            timemapSource={payload.notationData?.timemapSource}
+            payloadTempo={payload.metadata?.tempo || 120}
             measureMap={payload.notationData?.measureMap}
             onSeek={actions.handleSeek}
             onMidiExtracted={actions.handleMidiExtracted}

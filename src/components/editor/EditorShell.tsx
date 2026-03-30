@@ -811,11 +811,13 @@ export function EditorShell({
           positionMs={positionMs}
           positionMsRef={positionMsRef}
           isPlaying={isPlaying}
+          playbackRate={engineState.playbackRate}
           timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
           measureMap={payload.notationData?.measureMap}
           isDarkMode={isDarkMode}
           onSeek={handleSeek}
           onMidiExtracted={handleMidiExtracted}
+          midiBase64={midiBase64}
           onUploadScore={onUploadScore}
           uploadingScore={uploadingScore}
           payload={payload}

@@ -68,6 +68,7 @@ export interface IVerovioWorkerProxy {
   loadData(data: string): Promise<any>;
   renderToSVG(page: number, options?: any): Promise<string>;
   renderToMIDI(): Promise<string>;
+  renderToTimemap(options?: any): Promise<any>;
   getMEI(options?: any): Promise<string>;
   getPageCount(): Promise<number>;
   getElementsAtTime(time: number): Promise<any>;

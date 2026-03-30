@@ -113,19 +113,27 @@ export class MetronomeEngine {
   }
 
   public getBeatsPerBar(): number {
-    const parsed = parseInt(this.tempoParams.timeSignature.split("/")[0], 10);
-    return isNaN(parsed) ? 4 : parsed;
+    const parts = this.tempoParams.timeSignature.split("/");
+    const num = parseInt(parts[0], 10);
+    const denom = parseInt(parts[1], 10);
+    const validNum = isNaN(num) ? 4 : num;
+    if (validNum > 3 && validNum % 3 === 0 && (denom === 8 || denom === 16)) {
+        return validNum / 3;
+    }
+    return validNum;
   }
 
   private getMsPerBeat(): number {
     const msPerQuarter = 60000 / this.tempoParams.tempo;
     const denomParts = this.tempoParams.timeSignature.split("/");
+    const num = parseInt(denomParts[0], 10);
     const denominator = denomParts.length > 1 ? parseInt(denomParts[1], 10) : 4;
     const validDenom = isNaN(denominator) || denominator <= 0 ? 4 : denominator;
     
-    // In standard MIDI, the Tempo is Quarter Notes Per Minute (Denominator 4).
-    // If we're in x/8 time, a beat is an eighth note (4/8 = 0.5x the duration of a Quarter Note).
-    // If we're in x/2 time, a beat is a half note (4/2 = 2.0x the duration of a Quarter Note).
+    // In compound time, a beat comprises 3 sub-divisions (e.g. 3 eighth notes = dotted quarter)
+    if (num > 3 && num % 3 === 0 && (validDenom === 8 || validDenom === 16)) {
+        return msPerQuarter * (4 / validDenom) * 3;
+    }
     return msPerQuarter * (4 / validDenom);
   }
 
@@ -154,8 +162,14 @@ export class MetronomeEngine {
 
   private getBeatsPerBarForMeasure(measureTarget: number): number {
     const sig = this.getSignatureForMeasure(measureTarget);
-    const parsed = parseInt(sig.split("/")[0], 10);
-    return isNaN(parsed) ? 4 : parsed;
+    const parts = sig.split("/");
+    const num = parseInt(parts[0], 10);
+    const denom = parseInt(parts[1], 10);
+    const validNum = isNaN(num) ? 4 : num;
+    if (validNum > 3 && validNum % 3 === 0 && (denom === 8 || denom === 16)) {
+        return validNum / 3;
+    }
+    return validNum;
   }
 
   /**
@@ -179,8 +193,13 @@ export class MetronomeEngine {
     const msPerQuarter = 60000 / this.getTempoForMeasure(measureTarget);
     const sig = this.getSignatureForMeasure(measureTarget);
     const denomParts = sig.split("/");
+    const num = parseInt(denomParts[0], 10);
     const denominator = denomParts.length > 1 ? parseInt(denomParts[1], 10) : 4;
     const validDenom = isNaN(denominator) || denominator <= 0 ? 4 : denominator;
+    
+    if (num > 3 && num % 3 === 0 && (validDenom === 8 || validDenom === 16)) {
+        return msPerQuarter * (4 / validDenom) * 3;
+    }
     return msPerQuarter * (4 / validDenom);
   }
 
@@ -195,9 +214,15 @@ export class MetronomeEngine {
       if (entry && entry.durationInQuarters !== undefined && entry.durationInQuarters > 0) {
         const sig = this.getSignatureForMeasure(measureTarget);
         const denomParts = sig.split("/");
+        const num = parseInt(denomParts[0], 10);
         const denominator = denomParts.length > 1 ? parseInt(denomParts[1], 10) : 4;
         const validDenom = isNaN(denominator) || denominator <= 0 ? 4 : denominator;
-        return Math.round(entry.durationInQuarters * (validDenom / 4));
+        
+        let actualBeats = Math.round(entry.durationInQuarters * (validDenom / 4));
+        if (num > 3 && num % 3 === 0 && (validDenom === 8 || validDenom === 16)) {
+             actualBeats = Math.max(1, Math.round(actualBeats / 3));
+        }
+        return actualBeats;
       }
     }
     return this.getBeatsPerBarForMeasure(measureTarget);
@@ -357,7 +382,7 @@ export class MetronomeEngine {
         }
 
         // If this measure has per-beat tempo data, compute precise beat offset
-        if (mapEvent.tempoAtBeat && mapEvent.tempoAtBeat.length > 1 && beatTarget > 0) {
+        if (mapEvent.tempoAtBeat && mapEvent.tempoAtBeat.length > 0 && beatTarget > 0) {
           // Calculate the time offset from measure start to the target beat
           // Each beat occupies 1 quarter note; compute cumulative duration
           let beatOffsetMs = 0;

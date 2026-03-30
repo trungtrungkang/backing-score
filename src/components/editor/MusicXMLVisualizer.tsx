@@ -21,17 +21,28 @@ export interface MusicXMLVisualizerProps {
   isWaiting?: boolean;
   practiceTrackIds?: number[];
   onPartNamesExtracted?: (names: string[]) => void;
+  timemapSource?: "auto" | "manual";
   className?: string;
   defaultScale?: number;
+  payloadTempo?: number;
+  playbackRate?: number;
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
 import type { TimemapEntry } from "@/lib/daw/types";
 import { injectMidiInstruments } from "@/lib/score/midi-instruments";
 
+export interface VerovioTimemapEntry {
+  tstamp: number;
+  tempo?: number;
+  on?: string[];
+  off?: string[];
+}
+
+
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, onPartNamesExtracted, isDarkMode = false,
-  isWaitMode = false, isWaiting = false, practiceTrackIds, className, defaultScale
+  isWaitMode = false, isWaiting = false, practiceTrackIds, timemapSource, className, defaultScale, payloadTempo, playbackRate = 1
 }: MusicXMLVisualizerProps) {
   // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
   // If externalPositionMsRef is provided, use it directly (zero-rerender path from EditorShell)
@@ -55,6 +66,8 @@ export function MusicXMLVisualizer({
   const containerRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
   const measuresCacheRef = useRef<NodeListOf<Element> | null>(null);
+  const localTimemapRef = useRef<VerovioTimemapEntry[] | null>(null);
+  const activeNoteElementsRef = useRef<SVGElement[]>([]);
   const [scale, setScale] = useState(40);
 
   // Load saved zoom level for this score
@@ -338,6 +351,10 @@ export function MusicXMLVisualizer({
         const svg = await proxy.renderToSVG(1);
         if (canceled) return;
 
+        const rawTimemap = await proxy.renderToTimemap();
+        if (canceled) return;
+        localTimemapRef.current = rawTimemap;
+
         svgContentRef.current = svg;
         setRenderVersion(v => v + 1);
       } catch (e) {
@@ -383,7 +400,7 @@ export function MusicXMLVisualizer({
   }, [renderVersion]);
 
   // --- Magic Sync: Highlight & Auto-scroll ---
-  const activeMeasureRef = useRef<number | null>(null);
+  const activeMeasureRef = useRef<number | string | null>(null);
   const prevIsWaitModeRef = useRef<boolean>(isWaitMode);
   const scrollTargetRef = useRef<Element | null>(null);
 
@@ -462,13 +479,18 @@ export function MusicXMLVisualizer({
 
     const updatePlayhead = () => {
       const currentPosMs = positionMsRef.current;
-      // Skip if position hasn't changed enough (throttle SVG queries during playback only)
-      if (isPlaying && Math.abs(currentPosMs - lastPlayheadMsRef.current) < 8) {
-        playheadRafRef.current = requestAnimationFrame(updatePlayhead);
-        return;
-      }
       lastPlayheadMsRef.current = currentPosMs;
 
+      const container = svgContainerRef.current;
+      const playhead = playheadRef.current;
+      const rawTimemap = localTimemapRef.current;
+
+      if (!container || !playhead || !measuresCacheRef.current) {
+        console.warn("Playhead loop missing refs:", { container: !!container, playhead: !!playhead, measures: !!measuresCacheRef.current });
+        return;
+      }
+
+      // --- RESOLVE ALGEBRAIC TIMEMAP (Handles repeats and unrolls time natively) ---
       let currentEvent: typeof timemap[0] | null = null;
       let nextEvent: typeof timemap[0] | null = null;
 
@@ -481,11 +503,8 @@ export function MusicXMLVisualizer({
         }
       }
 
-      const container = svgContainerRef.current;
-      const playhead = playheadRef.current;
-
-      if (currentEvent && container && playhead && measuresCacheRef.current) {
-        let progress = 0;
+      let progress = 0;
+      if (currentEvent) {
         if (nextEvent) {
           const duration = nextEvent.timeMs - currentEvent.timeMs;
           if (duration > 0) {
@@ -500,9 +519,11 @@ export function MusicXMLVisualizer({
               const beatStart = beats[beatIdx];
               const beatEnd = beats[beatIdx + 1] ?? nextEvent.timeMs;
               const beatFraction = beatEnd > beatStart ? (currentPosMs - beatStart) / (beatEnd - beatStart) : 0;
-              // Map beat position to linear progress across measure width
-              const segmentStart = (beats[beatIdx] - currentEvent.timeMs) / duration;
-              const segmentEnd = ((beats[beatIdx + 1] ?? nextEvent.timeMs) - currentEvent.timeMs) / duration;
+              // Map beat position to non-linear spatial progress exactly across the measure width
+              const totalBeats = beats.length;
+              // Provide geometric fallback if missing nextEvent bounds: Assume equal spatial distribution
+              const segmentStart = beatIdx / totalBeats;
+              const segmentEnd = (beatIdx + 1) / totalBeats;
               progress = Math.max(0, Math.min(1, segmentStart + (segmentEnd - segmentStart) * beatFraction));
             } else {
               progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
@@ -517,6 +538,219 @@ export function MusicXMLVisualizer({
             progress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / estimatedDurationMs));
           }
         }
+      }
+
+      if (rawTimemap && rawTimemap.length > 0 && timemapSource !== "manual") {
+        const targetBPM = payloadTempo || 120;
+        let vrvBaseTempo = targetBPM;
+        for (const entry of rawTimemap) {
+          if (entry.tempo) {
+            vrvBaseTempo = entry.tempo;
+            break;
+          }
+        }
+        
+        // Translates real audio time strictly into Verovio theoretical time.
+        // Extremely critical for Manual Timemaps: manual timemaps dynamically warp `timeMs` 
+        // causing it to diverge drastically from the theoretical unrolled tstamp grid of Verovio natively.
+        let currentVrvMs = 0;
+        if (currentEvent) {
+           const currentPhysicalId = getPhysicalMeasure(currentEvent.measure, measureMap);
+           const firstOccurrence = timemap.find(t => getPhysicalMeasure(t.measure, measureMap) === currentPhysicalId);
+           
+           if (firstOccurrence) {
+              let theoreticalMs = 0;
+              for (let i = 0; i < timemap.length; i++) {
+                 const ev = timemap[i];
+                 if (ev === firstOccurrence) break;
+                 const bpm = ev.tempo || vrvBaseTempo;
+                 theoreticalMs += (ev.durationInQuarters || 4) * (60000 / bpm);
+              }
+              
+              const currentBpm = firstOccurrence.tempo || vrvBaseTempo;
+              const currentDurationMs = (firstOccurrence.durationInQuarters || 4) * (60000 / currentBpm);
+              
+              // Project relativistic `progress` onto strict theoretical geometry.
+              // Since `theoreticalMs` is computed exactly matching Verovio's tempo scale, 
+              // no further multiplication is required.
+              currentVrvMs = theoreticalMs + (progress * currentDurationMs);
+           }
+        }
+        
+        let activeIdx = 0;
+        for (let i = 0; i < rawTimemap.length; i++) {
+          if (currentVrvMs >= rawTimemap[i].tstamp) {
+            activeIdx = i;
+          } else {
+            break;
+          }
+        }
+        
+        // Find the most recent event that actually turns notes ON so we don't null-bailout on "off" ticks
+        let validActiveIdx = activeIdx;
+        while (validActiveIdx > 0 && (!rawTimemap[validActiveIdx]?.on || rawTimemap[validActiveIdx]?.on?.length === 0)) {
+           validActiveIdx--;
+        }
+        
+        // Find the next upcoming event that turns notes ON
+        let validNextIdx = activeIdx + 1;
+        while (validNextIdx < rawTimemap.length && (!rawTimemap[validNextIdx]?.on || rawTimemap[validNextIdx]?.on?.length === 0)) {
+           validNextIdx++;
+        }
+
+        const currentEntry = rawTimemap[validActiveIdx];
+        const nextEntry = validNextIdx < rawTimemap.length ? rawTimemap[validNextIdx] : undefined;
+        
+        let outMeasure = { el: null as SVGGElement | null };
+        const getLeftX = (entry: VerovioTimemapEntry, out?: { el: SVGGElement | null }): number | null => {
+          if (!entry || !entry.on || entry.on.length === 0) return null;
+          let minLeft = Infinity;
+          for (const id of entry.on) {
+            const el = document.getElementById(id);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              if (rect.width > 0 && rect.left < minLeft) {
+                 minLeft = rect.left;
+                 if (out && !out.el) out.el = el.closest('.measure') as SVGGElement;
+              }
+            }
+          }
+          return minLeft !== Infinity ? minLeft : null;
+        };
+
+        // CACHE LAYOUT QUERIES TO PREVENT 60FPS THRASHING
+        if ((playhead as any)._lastActiveIdx !== validActiveIdx || (playhead as any)._renderVersion !== renderVersion) {
+          (playhead as any)._lastActiveIdx = validActiveIdx;
+          (playhead as any)._renderVersion = renderVersion;
+          (playhead as any)._currentX = getLeftX(currentEntry, outMeasure);
+          (playhead as any)._measureEl = outMeasure.el;
+          (playhead as any)._nextX = nextEntry ? getLeftX(nextEntry) : null;
+          
+          if (outMeasure.el && containerRef.current) {
+             const measureEl = outMeasure.el;
+             const scrollContainerNode = containerRef.current;
+             const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+             const scrollLeft = scrollContainerNode.scrollLeft || 0;
+             const scrollTop = scrollContainerNode.scrollTop || 0;
+             const bbox = (measureEl as any)._bboxCache || ((measureEl as any)._bboxCache = measureEl.getBBox());
+             const ctm = measureEl.getScreenCTM();
+             if (ctm) {
+                 const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+                 const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+                 const screenHeight = bbox.height * ctm.d;
+                 const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+                 const targetXBase = -scrollContainerRect.left + scrollLeft;
+                 const measureRightX = (screenLeft + bbox.width * ctm.a - scrollContainerRect.left) + scrollLeft;
+                 (playhead as any)._vrvLayout = { screenHeight, absoluteY, targetXBase, measureRightX };
+             }
+          }
+        } else {
+          outMeasure.el = (playhead as any)._measureEl;
+        }
+
+        const currentX = (playhead as any)._currentX;
+        const measureEl = outMeasure.el;
+
+        if (currentX !== null && measureEl) {
+          // Highlight the measure directly via its DOM element natively
+          // ONLY handle scrolling in Verovio if Wait Mode is on!
+          // Normal mode hands over the wheel to the Algebraic block to prevent infinite scrolling loops.
+          if (isWaitMode) {
+             if (measureEl.id !== activeMeasureRef.current || prevIsWaitModeRef.current !== isWaitMode) {
+                activeMeasureRef.current = measureEl.id;
+                prevIsWaitModeRef.current = isWaitMode;
+                highlightMeasure(measureEl, isPlaying);
+             }
+          }
+
+          // Handle per-note exact highlighting (MuseScore style)
+          if (isPlaying && currentEntry.on && currentEntry.on.length > 0) {
+             // 1. Clear previous notes
+             for (const el of activeNoteElementsRef.current) {
+                el.classList.remove('active-verovio-note');
+             }
+             activeNoteElementsRef.current = [];
+             
+             // 2. Add class to current playing notes
+             for (const id of currentEntry.on) {
+                const el = document.getElementById(id);
+                if (el) {
+                   el.classList.add('active-verovio-note');
+                   activeNoteElementsRef.current.push(el as any);
+                }
+             }
+          } else if (!isPlaying) {
+             // Clear all if paused
+             for (const el of activeNoteElementsRef.current) {
+                el.classList.remove('active-verovio-note');
+             }
+             activeNoteElementsRef.current = [];
+          }
+
+          // Compute absolute container coordinates
+          const scrollContainerNode = containerRef.current;
+          if (scrollContainerNode) {
+             const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+             const scrollLeft = scrollContainerNode.scrollLeft || 0;
+             const scrollTop = scrollContainerNode.scrollTop || 0;
+
+             let targetX = (currentX - scrollContainerRect.left) + scrollLeft;
+
+             // Compute Vertical bounds natively from the measure SVG
+             const bbox = (measureEl as any)._bboxCache || ((measureEl as any)._bboxCache = measureEl.getBBox());
+             const ctm = measureEl.getScreenCTM();
+             if (ctm) {
+                const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+                // Add a small styling injection to color active notes dynamically
+                const screenHeight = bbox.height * ctm.d;
+                const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+
+                // Mode 1: Wait Mode -> Geometric Per-Note Playhead
+                if (isWaitMode) {
+                   const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+                   const screenWidth = bbox.width * ctm.a;
+                   const measureRightX = (screenLeft + screenWidth - scrollContainerRect.left) + scrollLeft;
+
+                   if (nextEntry) {
+                      const nextX = (playhead as any)._nextX;
+                      const duration = nextEntry.tstamp - currentEntry.tstamp;
+                      if (nextX !== null && duration > 0) {
+                         let targetNextX = (nextX - scrollContainerRect.left) + scrollLeft;
+                         if (targetNextX > targetX) {
+                            const fraction = (currentVrvMs - currentEntry.tstamp) / duration;
+                            targetX = targetX + (targetNextX - targetX) * fraction;
+                         } else {
+                            const fraction = (currentVrvMs - currentEntry.tstamp) / duration;
+                            let lerpRightX = measureRightX;
+                            if (lerpRightX < targetX) lerpRightX = targetX;
+                            targetX = targetX + (lerpRightX - targetX) * fraction;
+                         }
+                      }
+                   }
+
+                   playhead.style.transform = `translate(${targetX}px, ${absoluteY}px)`;
+                   playhead.style.height = `${screenHeight}px`;
+                   playhead.style.opacity = '1';
+                   
+                   if (isPlaying) {
+                     playheadRafRef.current = requestAnimationFrame(updatePlayhead);
+                   }
+                   return; // Ends here. We use exact note-positions for playhead!
+                }
+                
+                // Mode 2: Normal Mode -> Fall through to Algebraic for Smooth Beat Interpolation
+             }
+          }
+        } else {
+           if (isPlaying && Math.random() < 0.05) {
+             console.log("Verovio Tracking bailout! currentVrvMs:", currentVrvMs, "currentX:", currentX, "measureEl:", measureEl?.id, "currentEntry ids:", currentEntry?.on?.join(","));
+           }
+        }
+      }
+
+      // --- FALLBACK TO ALGEBRAIC TIMEMAP (If Verovio renderToTimemap hasn't finished loading yet) ---
+
+      if (currentEvent && container && playhead && measuresCacheRef.current) {
 
         const physicalIndex = getPhysicalMeasure(currentEvent.measure, measureMap);
         const measureEl = measuresCacheRef.current[physicalIndex - 1] as SVGGElement | undefined;
@@ -528,51 +762,60 @@ export function MusicXMLVisualizer({
             highlightMeasure(measureEl, isPlaying);
           }
 
-          const bbox = measureEl.getBBox();
-          const ctm = measureEl.getScreenCTM();
-          if (ctm) {
-            const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
-            const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
-            const screenWidth = bbox.width * ctm.a;
-            const screenHeight = bbox.height * ctm.d;
-
-            const scrollContainerNode = containerRef.current;
-            if (scrollContainerNode) {
-              const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
-              const scrollLeft = scrollContainerNode.scrollLeft || 0;
-              const scrollTop = scrollContainerNode.scrollTop || 0;
-
-              const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
-              const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
-
-              let trueWidth = screenWidth;
-              if (nextEvent) {
-                const nextPhysicalIndex = getPhysicalMeasure(nextEvent.measure, measureMap);
-                const nextMeasureEl = measuresCacheRef.current[nextPhysicalIndex - 1] as SVGGElement | undefined;
-                if (nextMeasureEl) {
-                  const nextBbox = nextMeasureEl.getBBox();
-                  const nextCtm = nextMeasureEl.getScreenCTM();
-                  if (nextCtm) {
-                    const nextScreenLeft = nextBbox.x * nextCtm.a + nextBbox.y * nextCtm.c + nextCtm.e;
-                    const nextScreenTop = nextBbox.x * nextCtm.b + nextBbox.y * nextCtm.d + nextCtm.f;
-                    if (Math.abs(nextScreenTop - screenTop) < 50 && nextScreenLeft > screenLeft) {
-                      trueWidth = nextScreenLeft - screenLeft;
-                    }
+          // CACHE LAYOUT QUERIES FOR ALGEBRAIC MODE
+          if ((playhead as any)._lastAlgMeasure !== currentEvent.measure || (playhead as any)._renderVersion !== renderVersion) {
+            (playhead as any)._lastAlgMeasure = currentEvent.measure;
+            (playhead as any)._renderVersion = renderVersion;
+            
+            const bbox = (measureEl as any)._bboxCache || ((measureEl as any)._bboxCache = measureEl.getBBox());
+            const ctm = measureEl.getScreenCTM();
+            if (ctm && containerRef.current) {
+               const scrollContainerNode = containerRef.current;
+               const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+               const scrollLeft = scrollContainerNode.scrollLeft || 0;
+               const scrollTop = scrollContainerNode.scrollTop || 0;
+               
+               const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+               const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+               const screenWidth = bbox.width * ctm.a;
+               const screenHeight = bbox.height * ctm.d;
+               
+               const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
+               const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+               
+               let trueWidth = screenWidth;
+               if (nextEvent) {
+                  const nextPhysicalIndex = getPhysicalMeasure(nextEvent.measure, measureMap);
+                  const nextMeasureEl = measuresCacheRef.current[nextPhysicalIndex - 1] as SVGGElement | undefined;
+                  if (nextMeasureEl) {
+                     const nextBbox = (nextMeasureEl as any)._bboxCache || ((nextMeasureEl as any)._bboxCache = nextMeasureEl.getBBox());
+                     const nextCtm = nextMeasureEl.getScreenCTM();
+                     if (nextCtm) {
+                        const nextScreenLeft = nextBbox.x * nextCtm.a + nextBbox.y * nextCtm.c + nextCtm.e;
+                        const nextScreenTop = nextBbox.x * nextCtm.b + nextBbox.y * nextCtm.d + nextCtm.f;
+                        if (Math.abs(nextScreenTop - screenTop) < 50 && nextScreenLeft > screenLeft) {
+                           trueWidth = nextScreenLeft - screenLeft;
+                        }
+                     }
                   }
-                }
-              }
-
-              const playheadX = startX + (trueWidth * progress);
-              const playheadY = absoluteY;
-
-              if (isWaitMode) {
-                playhead.style.opacity = '0';
-              } else {
-                playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
-                playhead.style.height = `${screenHeight}px`;
-                playhead.style.opacity = '1';
-              }
+               }
+               
+               (playhead as any)._algLayout = { startX, absoluteY, trueWidth, screenHeight };
             }
+          }
+          
+          const algLayout = (playhead as any)._algLayout;
+          if (algLayout) {
+             const playheadX = algLayout.startX + (algLayout.trueWidth * progress);
+             const playheadY = algLayout.absoluteY;
+
+             if (isWaitMode) {
+               playhead.style.opacity = '0';
+             } else {
+               playhead.style.transform = `translate(${playheadX}px, ${playheadY}px)`;
+               playhead.style.height = `${algLayout.screenHeight}px`;
+               playhead.style.opacity = '1';
+             }
           }
         } else {
           playhead.style.opacity = '0';
@@ -605,7 +848,8 @@ export function MusicXMLVisualizer({
 
   // Dedicated stop-reset: when playback stops and position is 0, force playhead/highlight to measure 1
   useEffect(() => {
-    if (!isPlaying && positionMs === 0 && measuresCacheRef.current && timemap.length > 0) {
+    const isActuallyAtStart = positionMsRef.current === 0;
+    if (!isPlaying && isActuallyAtStart && measuresCacheRef.current && timemap.length > 0) {
       // Clear any existing highlight
       svgContainerRef.current?.querySelectorAll('.active-measure').forEach(el => el.classList.remove('active-measure'));
       // Highlight first measure
@@ -938,18 +1182,7 @@ export function MusicXMLVisualizer({
           width: 100%;
           height: auto !important;
         }
-        /* Magic Sync Highlights */
-        #musicxml-svghost .active-measure *,
-        #musicxml-svghost .active-measure use,
-        #musicxml-svghost .active-measure path,
-        #musicxml-svghost .active-measure rect,
-        #musicxml-svghost .active-measure ellipse,
-        #musicxml-svghost .active-measure polyline,
-        #musicxml-svghost .active-measure polygon {
-          fill: #f97316 !important;
-          stroke: #f97316 !important;
-          transition: fill 0.2s, stroke 0.2s;
-        }
+        /* Active Measure is now only used as a scrolling marker, no color */
         /* Click-to-seek hover */
         #musicxml-svghost .measure { cursor: pointer; }
         #musicxml-svghost .measure:hover *,
@@ -966,16 +1199,7 @@ export function MusicXMLVisualizer({
           filter: invert(0.93) hue-rotate(180deg) brightness(1.5) contrast(1.2);
           box-shadow: none !important;
         }
-        /* Make sure active measure highlighting remains orange after inversion */
-        .dark-theme #musicxml-svghost .active-measure *,
-        .dark-theme #musicxml-svghost .active-measure use,
-        .dark-theme #musicxml-svghost .active-measure path,
-        .dark-theme #musicxml-svghost .active-measure rect {
-          /* Invert(0.93) + hue-rotate(180) preserves hue but darkens lightness.
-             Using a darker orange (#c2410c) so when multiplied by brightness(1.5) it becomes a vibrant orange! */
-          fill: #c2410c !important;
-          stroke: #c2410c !important;
-        }
+        /* (Active Measure CSS for dark mode is removed since we only highlight individual notes) */
         .dark-theme #musicxml-svghost .measure:hover *,
         .dark-theme #musicxml-svghost .measure:hover use,
         .dark-theme #musicxml-svghost .measure:hover path {
@@ -1040,6 +1264,21 @@ export function MusicXMLVisualizer({
           <ZoomIn className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Verovio Note Highlight Class */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .active-verovio-note {
+          fill: #f97316 !important;
+          stroke: #f97316 !important;
+          color: #f97316 !important;
+          transition: fill 0.05s ease-out, stroke 0.05s ease-out;
+        }
+        .active-verovio-note * {
+          fill: #f97316 !important;
+          stroke: #f97316 !important;
+          color: #f97316 !important;
+        }
+      ` }} />
     </div>
   );
 }

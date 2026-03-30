@@ -311,16 +311,21 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       }
       const midi = new Midi(bytes.buffer);
 
-      // Preserve Verovio's original MIDI tempo events (including rit/accel/partial measures)
-      // and simply scale each by playbackRate. This avoids the tick-position drift
-      // caused by the old approach of rebuilding tempos from timemap entries.
+      // Prevent Verovio's native default tempo (often 120bpm) from clashing with the user's explicit metadata tempo limit
+      // by computing a scaling ratio. This guarantees that internal tempo curves (like ritardandos) scale perfectly.
+      const tempoTarget = payload.metadata?.tempo || 120;
+      let midiBaseTempo = 120;
+      if (midi.header.tempos.length > 0) {
+          midiBaseTempo = midi.header.tempos[0].bpm;
+      }
+      const tempoRatio = tempoTarget / midiBaseTempo;
+
       if (midi.header.tempos.length > 0) {
         midi.header.tempos = midi.header.tempos.map(t => ({
           ticks: t.ticks,
-          bpm: t.bpm * playbackRate,
+          bpm: t.bpm * tempoRatio * playbackRate,
         }));
       } else {
-        const tempoTarget = payload.metadata?.tempo || 120;
         midi.header.tempos = [{ ticks: 0, bpm: tempoTarget * playbackRate }];
       }
 
@@ -328,18 +333,20 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       // Priority: 'manual' → skip (user timeMs authoritative), 'auto' → override,
       // undefined (legacy) → fallback to MIDI-only heuristic (no audio tracks).
       const tmSource = payload.notationData?.timemapSource;
-      const shouldCorrectTimemap = tmSource === 'auto' || (tmSource === undefined && payload.audioTracks.length === 0);
+      const shouldCorrectTimemap = tmSource !== 'manual';
       const timemap = payload.notationData?.timemap;
       const ppq = midi.header.ppq || 480;
       if (shouldCorrectTimemap && timemap && timemap.length > 0) {
         const scaledTempos = [...midi.header.tempos].sort((a, b) => a.ticks - b.ticks);
-        const tempoFallback = (payload.metadata?.tempo || 120) * playbackRate;
+        // We want unscaled timeMs for the timemap, so we reverse the playbackRate multiplier
+        const unscaledTempos = scaledTempos.map(t => ({ ticks: t.ticks, bpm: t.bpm / playbackRate }));
+        const unscaledTempoFallback = (payload.metadata?.tempo || 120);
 
-        const ticksToMs = (targetTick: number): number => {
+        const ticksToUnscaledMs = (targetTick: number): number => {
           let ms = 0;
           let lastTick = 0;
-          let currentBpm = scaledTempos[0]?.bpm || tempoFallback;
-          for (const t of scaledTempos) {
+          let currentBpm = unscaledTempos[0]?.bpm || unscaledTempoFallback;
+          for (const t of unscaledTempos) {
             if (t.ticks >= targetTick) break;
             const tickDelta = t.ticks - lastTick;
             ms += (tickDelta / ppq) * (60000 / currentBpm);
@@ -353,15 +360,26 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
 
         let accTicks = 0;
         correctedTimemapRef.current = timemap.map(entry => {
-          const correctedTimeMs = ticksToMs(accTicks);
+          const correctedTimeMs = ticksToUnscaledMs(accTicks);
           const durationQuarters = entry.durationInQuarters ??
             (() => {
               const ts = entry.timeSignature || payload.metadata?.timeSignature || "4/4";
               const [num, den] = ts.split("/").map(Number);
               return (num || 4) * (4 / (den || 4));
             })();
+            
+          let beatTimestamps = entry.beatTimestamps;
+          if (beatTimestamps && beatTimestamps.length > 0) {
+              const numBeats = beatTimestamps.length;
+              const quarterPerSegment = durationQuarters / numBeats;
+              beatTimestamps = beatTimestamps.map((_, b) => {
+                  const beatTick = accTicks + (b * quarterPerSegment * ppq);
+                  return ticksToUnscaledMs(beatTick);
+              });
+          }
+
           accTicks += durationQuarters * ppq;
-          return { ...entry, timeMs: correctedTimeMs };
+          return { ...entry, timeMs: correctedTimeMs, beatTimestamps };
         });
       } else {
         correctedTimemapRef.current = null;
@@ -438,10 +456,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     if (audioManagerRef.current) {
       const metronome = audioManagerRef.current.getMetronome();
       if (metronome) {
-        // Always use the ORIGINAL timemap for the metronome (in original-time coordinates).
-        // The corrected timemap is in wall-clock coordinates which don't match positionMs.
-        // The metronome's scheduler natively divides by playbackRate to get wall-clock time.
-        const timemapArr = payload.notationData?.timemap || [];
+        // Pass the compiled Unscaled Timemap to Metronome to securely preserve MIDI dynamic tempo changes
+        const timemapArr = correctedTimemapRef.current || payload.notationData?.timemap || [];
         metronome.setTimemap(timemapArr);
         metronome.setSyncToTimemap(timemapArr.length > 0);
         metronome.setPlaybackRate(playbackRate);
@@ -867,7 +883,10 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       const roundedPos = Math.round(currentPos);
       // Always update the ref for zero-lag RAF consumers (MusicXMLVisualizer, TrackList)
       positionMsRef.current = roundedPos;
-      if (Math.abs(prev - roundedPos) < 16) return prev;
+      
+      // Throttle React state updates to ~20FPS (50ms) to prevent massive DOM layout thrashing in EditorShell.
+      // RAF consumers like Visualizer read from positionMsRef directly at 60FPS, so they remain smooth.
+      if (Math.abs(prev - roundedPos) < 50) return prev;
 
       // Detect loop iteration: position wrapped back to near startBar
       if (loopState.enabled && loopState.tempoRamp && !isWaitModeRef.current) {

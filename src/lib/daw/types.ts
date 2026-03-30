@@ -17,7 +17,7 @@ export interface AudioTrack extends TrackBase {
   /** Storage file ID in Appwrite for the audio stem (e.g., Drums.wav) */
   fileId?: string;
   /** Optional blob URL during current session before upload */
-  blobUrl?: string; 
+  blobUrl?: string;
   /** Time offset in milliseconds to nudge the audio forward or backward */
   offsetMs?: number;
 }
@@ -54,7 +54,7 @@ export interface TimemapEntry {
   tempo?: number; // Optional dynamic tempo override (BPM) at this measure
   durationInQuarters?: number; // Actual duration of this measure in quarter notes (for pickups/anacrusis)
   /** Per-beat tempo changes within this measure for accurate per-beat timing */
-  tempoAtBeat?: {beatPos: number, tempo: number}[];
+  tempoAtBeat?: { beatPos: number, tempo: number }[];
   /** For partial measures: which beat position this measure starts on (0-indexed).
    *  If > 0, beat 0 of this measure is NOT a strong beat. */
   startsAtBeat?: number;
@@ -109,7 +109,7 @@ export function normalizePayload(raw: any | null): DAWPayload {
   if (!raw || typeof raw !== "object") {
     return defaultDAWPayload();
   }
-  
+
   // Clean initialization
   const payload = defaultDAWPayload();
 
@@ -118,7 +118,7 @@ export function normalizePayload(raw: any | null): DAWPayload {
   if (raw.type === "multi-stems" || raw.type === "backing-track") {
     payload.type = raw.type;
   }
-  
+
   // Metadata mapping
   if (raw.metadata && typeof raw.metadata === "object") {
     payload.metadata = raw.metadata;
@@ -146,6 +146,16 @@ export function normalizePayload(raw: any | null): DAWPayload {
   // Notation Mapping
   if (raw.notationData && typeof raw.notationData === "object") {
     payload.notationData = raw.notationData;
+
+    // Legacy Migration: If a timemap exists in the DB but lacks a `timemapSource`, 
+    // it was created using the old manual Map Audio to Score tool IF audio tracks exist.
+    // Otherwise, it was Auto-Analyzed.
+    if (payload.notationData && payload.audioTracks.length === 0) {
+      payload.notationData.timemapSource = "auto";
+    }
+    else if (payload.notationData && payload.notationData.timemap && payload.notationData.timemap.length > 0 && !payload.notationData.timemapSource) {
+      payload.notationData.timemapSource = payload.audioTracks.length > 0 ? "manual" : "auto";
+    }
   } else if (typeof (raw as any).sourceFileId === "string") {
     // Legacy migration for old MusicXML file IDs
     payload.notationData = {

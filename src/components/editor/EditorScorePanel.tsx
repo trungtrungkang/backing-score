@@ -16,11 +16,13 @@ interface EditorScorePanelProps {
   positionMs: number;
   positionMsRef: React.RefObject<number>;
   isPlaying: boolean;
+  playbackRate: number;
   timemap: { measure: number; timeMs: number }[];
   measureMap?: Record<string, any>;
   isDarkMode: boolean;
   onSeek: (ms: number) => void;
   onMidiExtracted: (base64: string) => void;
+  midiBase64?: string | null;
   // Upload
   onUploadScore?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadingScore?: boolean;
@@ -38,11 +40,13 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
   positionMs,
   positionMsRef,
   isPlaying,
+  playbackRate,
   timemap,
   measureMap,
   isDarkMode,
   onSeek,
   onMidiExtracted,
+  midiBase64,
   onUploadScore,
   uploadingScore,
   payload,
@@ -77,6 +81,71 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
       }
 
       const analysis = analyzeMusicXML(xmlText);
+      
+      // Override timemap with exact absolute timings if an audio MIDI rendering is available
+      if (midiBase64) {
+        try {
+          const { Midi } = await import('@tonejs/midi');
+          const binaryString = window.atob(midiBase64.split(",")[1] || midiBase64);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+          const midiTracker = new Midi(bytes);
+          
+          if (midiTracker.header) {
+             const ppq = midiTracker.header.ppq;
+             const tempos = midiTracker.header.tempos;
+             
+             // Utility parser to step through Verovio's hidden dynamic tempo gradients
+             const getMidiSecondsForTicks = (targetTicks: number) => {
+                let timeSecs = 0;
+                let accumulatedTicks = 0;
+                let currentBpm = tempos.length > 0 ? tempos[0].bpm : 120;
+                
+                let i = 0;
+                while (i < tempos.length - 1 && tempos[i+1].ticks <= targetTicks) {
+                   const segmentTicks = tempos[i+1].ticks - Math.max(accumulatedTicks, tempos[i].ticks);
+                   const secondsPerTick = 60 / (currentBpm * ppq);
+                   timeSecs += segmentTicks * secondsPerTick;
+                   accumulatedTicks += segmentTicks;
+                   currentBpm = tempos[i+1].bpm;
+                   i++;
+                }
+                
+                const remainingTicks = targetTicks - accumulatedTicks;
+                const secondsPerTick = 60 / (currentBpm * ppq);
+                timeSecs += remainingTicks * secondsPerTick;
+                return timeSecs;
+             };
+
+             // Retrace the algebra logic entirely using standard PPQN ticks
+             let currentTick = 0;
+             analysis.timemap.forEach(entry => {
+                const absoluteMs = getMidiSecondsForTicks(currentTick) * 1000;
+                entry.timeMs = absoluteMs;
+                
+                // Recalculate specific per-beat timestamps exactly as well!
+                if (entry.beatTimestamps) {
+                    const newBeatTimestamps: number[] = [];
+                    // We know the number of beats, we assume they are distributed evenly across the algebraic quarters
+                    const durationQ = entry.durationInQuarters || 4;
+                    const numBeats = entry.beatTimestamps.length;
+                    const quarterPerSegment = durationQ / numBeats;
+                    for (let b = 0; b < numBeats; b++) {
+                        const beatTick = currentTick + (b * quarterPerSegment * ppq);
+                        newBeatTimestamps.push(getMidiSecondsForTicks(beatTick) * 1000);
+                    }
+                    entry.beatTimestamps = newBeatTimestamps;
+                }
+                
+                currentTick += (entry.durationInQuarters || 4) * ppq;
+             });
+             toast.success("Sync override locked to Verovio MIDI Map");
+          }
+        } catch (e) {
+          console.warn("MIDI override failed, falling back to algebraic timemap", e);
+        }
+      }
 
       const lines = [
         `Tempo: ♩= ${Math.round(analysis.tempo)} BPM`,
@@ -110,6 +179,7 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
           notationData: {
             ...payload.notationData!,
             timemap: analysis.timemap,
+            timemapSource: "auto" as const,
             measureMap: Object.keys(analysis.measureMap).length > 0 ? analysis.measureMap : undefined,
           },
         });
@@ -140,10 +210,12 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
         )}
         <MusicXMLVisualizer
           scoreFileId={scoreFileId}
-          positionMs={positionMs}
+          playbackRate={playbackRate}
           externalPositionMsRef={positionMsRef}
           isPlaying={isPlaying}
+          payloadTempo={payload.metadata?.tempo}
           timemap={timemap}
+          timemapSource={payload.notationData?.timemapSource}
           measureMap={measureMap}
           onSeek={onSeek}
           onMidiExtracted={onMidiExtracted}
