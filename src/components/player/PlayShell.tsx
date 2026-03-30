@@ -154,6 +154,7 @@ export function PlayShell({
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
   const { isPremium, user } = useAuth();
   const tc = useTranslations("Classroom");
+  const tPlay = useTranslations("PlayShell");
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
 
   // --- Gamification Tracking ---
@@ -277,22 +278,38 @@ export function PlayShell({
 
   const handleRecordToggle = useCallback((shouldRecord: boolean) => {
     if (shouldRecord) {
+      if (forceWaitMode && !state.isWaitMode) {
+        toast.error(tPlay("waitModeRequiredToRecord"), { position: "top-center", duration: 5000 });
+        return;
+      }
       recorder.startRecording();
     } else {
       recorder.stopRecording();
     }
-  }, [recorder]);
+  }, [recorder, forceWaitMode, state.isWaitMode, tPlay]);
 
   // Play handler — no limit for free users, just track server play count
   const gatedHandlePlay = useCallback(() => {
+    // Prevent confusion when user hits play in Wait Mode but hasn't connected an input source
+    if (state.isWaitMode && !state.isMidiInitialized && !state.isMicInitialized) {
+      toast.error(tPlay("connectInputForWaitMode"), {
+        position: "top-center",
+        duration: 4000,
+      });
+      // Optionally, we still let it "Play" so the UI enters playing state, 
+      // but it will be paused on the very first note until input arrives.
+      // But showing the error is enough to instruct them.
+    }
+
     actions.handlePlay();
     incrementServerPlayCount(projectId); // fire-and-forget
-  }, [actions, projectId]);
+  }, [actions, projectId, state.isWaitMode, state.isMidiInitialized, state.isMicInitialized, tPlay]);
 
   // Gated Wait Mode toggle — 10/day for free users, unlimited for premium
-  // If forceWaitMode, prevent turning off
   const gatedWaitModeToggle = useCallback((enabled: boolean) => {
-    if (forceWaitMode && !enabled) return; // can't disable when forced
+    if (forceWaitMode && !enabled) {
+      toast.info(tPlay("listeningModePreview"), { position: "top-center", duration: 5000 });
+    }
     if (enabled && !isPremium) {
       const { count } = getWaitModeCount();
       if (count >= FREE_DAILY_WAIT_MODE_LIMIT) {

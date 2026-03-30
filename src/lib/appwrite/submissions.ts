@@ -16,6 +16,7 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_SUBMISSIONS_COLLECTION_ID,
 } from "./constants";
+import { createSubmissionAction } from "@/app/actions/submissions";
 import type { SubmissionDocument } from "./types";
 import { createNotification } from "./notifications";
 import { getClassroom } from "./classrooms";
@@ -137,28 +138,18 @@ export async function submitAssignment(params: {
   }
 
   // Create new submission
-  const doc = await databases.createDocument(
-    dbId,
-    collId,
-    ID.unique(),
-    {
-      assignmentId: params.assignmentId,
-      classroomId: params.classroomId,
-      studentId: user.$id,
-      studentName: user.name || user.email || "Student",
-      accuracy: params.accuracy ?? 0,
-      tempo: params.tempo ?? 0,
-      attempts: params.attempts ?? 1,
-      submittedAt: new Date().toISOString(),
-      status: "submitted",
-      ...(recordingFileId ? { recordingFileId } : {}),
-    },
-    [
-      // Client-side SDK: can only set permissions for self or users/any
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-    ]
-  );
+  const doc = await createSubmissionAction({
+    assignmentId: params.assignmentId,
+    classroomId: params.classroomId,
+    studentId: user.$id,
+    studentName: user.name || user.email || "Student",
+    accuracy: params.accuracy ?? 0,
+    tempo: params.tempo ?? 0,
+    attempts: params.attempts ?? 1,
+    submittedAt: new Date().toISOString(),
+    status: "submitted",
+    ...(recordingFileId ? { recordingFileId } : {}),
+  });
 
   notifyTeacherOfSubmission(params.classroomId, params.assignmentId, user);
   return doc as unknown as SubmissionDocument;

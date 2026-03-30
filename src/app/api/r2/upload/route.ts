@@ -16,18 +16,27 @@ export async function POST(req: NextRequest) {
     const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!;
     const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!;
     
-    // Cookie của Appwrite thường có định dạng: a_session_{projectId}
     const cookieName = `a_session_${projectId.toLowerCase()}`;
-    const sessionCookie = req.cookies.get(cookieName)?.value || req.cookies.get("fallback_a_session")?.value;
+    const authHeader = req.headers.get("authorization");
+    let sessionToken = req.cookies.get(cookieName)?.value || req.cookies.get("fallback_a_session")?.value;
 
-    if (!sessionCookie) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      sessionToken = authHeader.split(" ")[1];
+    }
+
+    if (!sessionToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const client = new Client()
       .setEndpoint(endpoint)
-      .setProject(projectId)
-      .setSession(sessionCookie);
+      .setProject(projectId);
+      
+    if (sessionToken.startsWith("eyJ")) {
+      client.setJWT(sessionToken);
+    } else {
+      client.setSession(sessionToken);
+    }
 
     const account = new Account(client);
     const user = await account.get(); // Nếu cookie hợp lệ thì lấy thông tin User

@@ -191,6 +191,7 @@ async function main() {
     { collection: "classroom_members", key: "idx_classroom_user", type: IndexType.Unique, attributes: ["classroomId", "userId"], orders: [] },
     { collection: "classroom_members", key: "idx_user_status", type: IndexType.Key, attributes: ["userId", "status"], orders: [] },
     { collection: "classroom_members", key: "idx_classroom_status", type: IndexType.Key, attributes: ["classroomId", "status"], orders: [] },
+    { collection: "classroom_members", key: "idx_classroom_status_joinedAt", type: IndexType.Key, attributes: ["classroomId", "status", "joinedAt"], orders: [OrderBy.Asc, OrderBy.Asc, OrderBy.Asc] },
 
     // Assignments
     { collection: "assignments", key: "idx_classroom", type: IndexType.Key, attributes: ["classroomId", "$createdAt"], orders: [OrderBy.Asc, OrderBy.Desc] },

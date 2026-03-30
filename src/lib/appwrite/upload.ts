@@ -5,6 +5,7 @@
  */
 
 // Appwrite client imports removed since we now use Cloudflare R2 via Next.js BFF API.
+import { getAuthToken } from "./client";
 // export { ALLOWED_EXTENSIONS } if needed elsewhere.
 
 /** Music/score: Instrument track. Audio: Audio track. */
@@ -46,13 +47,17 @@ export async function uploadProjectFile(
     );
   }
 
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   // Request signed URL from our Next.js API
   const res = await fetch("/api/r2/upload", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       filename: file.name,
-      contentType: file.type,
+      contentType: file.type || "application/octet-stream",
       fileSize: file.size,
     }),
   });

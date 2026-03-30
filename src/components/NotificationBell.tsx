@@ -89,6 +89,14 @@ export function NotificationBell() {
         }
         return null;
       }
+      case "material_new": {
+        // targetId format: "classroomId/materialId"
+        if (n.targetId && n.targetId.includes("/")) {
+          const [classroomId] = n.targetId.split("/");
+          return `/${locale}/classroom/${classroomId}`;
+        }
+        return null;
+      }
       default:
         return null;
     }

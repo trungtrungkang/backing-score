@@ -15,16 +15,9 @@ export function buildStandardPermissions(ownerId: string): string[] {
     Permission.read(Role.user(ownerId)),
     Permission.update(Role.user(ownerId)),
     Permission.delete(Role.user(ownerId)),
-    
-    // Admin override rights
-    Permission.read(Role.label("admin")),
-    Permission.update(Role.label("admin")),
-    Permission.delete(Role.label("admin")),
 
-    // Content Manager moderation rights
-    Permission.read(Role.label("contentmanager")),
-    Permission.update(Role.label("contentmanager")),
-    Permission.delete(Role.label("contentmanager")),
+    // Note: Admin and Content Manager rights are now handled at the Collection 
+    // level in Appwrite to avoid "Role not allowed" errors during creation by standard users.
   ];
 }
 
@@ -54,12 +47,8 @@ export function buildClassroomPermissions(teacherId: string): string[] {
     Permission.delete(Role.user(teacherId)),
 
     // Global Discovery Read Access for join checks
-    Permission.read(Role.users()), 
+    Permission.read(Role.users()),
 
-    // Admin override rights
-    Permission.update(Role.label("admin")),
-    Permission.delete(Role.label("admin")),
-    Permission.update(Role.label("contentmanager")),
-    Permission.delete(Role.label("contentmanager")),
+    // Admin override rights are handled at Collection level
   ];
 }

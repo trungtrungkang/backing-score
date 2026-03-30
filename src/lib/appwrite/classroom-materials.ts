@@ -11,6 +11,9 @@ import {
   APPWRITE_CLASSROOM_MATERIALS_COLLECTION_ID,
 } from "./constants";
 import type { ClassroomMaterialDocument } from "./types";
+import { createNotification } from "./notifications";
+import { listClassroomMembers } from "./classrooms";
+import { getSheetMusic } from "./sheet-music";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_CLASSROOM_MATERIALS_COLLECTION_ID;
@@ -50,6 +53,28 @@ export async function shareToClassroom(params: {
       Permission.delete(Role.user(user.$id)),
     ]
   );
+
+  // Fire-and-forget: notify all students in class
+  (async () => {
+    try {
+      const [members, sheet] = await Promise.all([
+        listClassroomMembers(params.classroomId),
+        getSheetMusic(params.sheetMusicId)
+      ]);
+      const students = members.filter(m => m.role === "student" && m.status === "active");
+      await Promise.all(students.map(s =>
+        createNotification({
+          recipientId: s.userId,
+          type: "material_new",
+          sourceUserName: user.name || user.email || "Teacher",
+          sourceUserId: user.$id,
+          targetType: "material",
+          targetName: sheet.title || "A new PDF",
+          targetId: `${params.classroomId}/${doc.$id}`,
+        })
+      ));
+    } catch { /* best-effort */ }
+  })();
 
   return doc as unknown as ClassroomMaterialDocument;
 }

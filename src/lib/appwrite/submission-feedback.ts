@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import type { SubmissionFeedbackDocument } from "./types";
 import { createNotification } from "./notifications";
+import { createFeedbackAction } from "@/app/actions/submission-feedback";
 
 const dbId = APPWRITE_DATABASE_ID;
 const collId = APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID;
@@ -30,23 +31,13 @@ export async function createFeedback(params: {
 }): Promise<SubmissionFeedbackDocument> {
   const user = await account.get();
 
-  const doc = await databases.createDocument(
-    dbId,
-    collId,
-    ID.unique(),
-    {
-      submissionId: params.submissionId,
-      teacherId: user.$id,
-      teacherName: user.name || user.email || "Teacher",
-      content: params.content,
-      ...(params.grade !== undefined ? { grade: params.grade } : {}),
-    },
-    [
-      Permission.read(Role.users()),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id)),
-    ]
-  );
+  const doc = await createFeedbackAction({
+    submissionId: params.submissionId,
+    teacherId: user.$id,
+    teacherName: user.name || user.email || "Teacher",
+    content: params.content,
+    ...(params.grade !== undefined ? { grade: params.grade } : {}),
+  });
 
   // Fire-and-forget: notify the student
   (async () => {

@@ -395,6 +395,7 @@
     "noNotifications": "Chưa có thông báo",
     "justNow": "Vừa xong",
     "assignment_new": "{userName} đã giao bài \"{targetName}\"",
+    "material_new": "{userName} đã chia sẻ PDF \"{targetName}\"",
     "submission_new": "{userName} đã nộp bài \"{targetName}\"",
     "feedback_new": "{userName} đã chấm bài \"{targetName}\""
   },
@@ -752,11 +753,14 @@
     "practiceMode": "Tập đàn (Practice)"
   },
   "PlayShell": {
+    "connectInputForWaitMode": "Vui lòng bật Micro hoặc kết nối Đàn Piano MIDI để bắt đầu tính năng Luyện Tập.",
     "copied": "Đã sao chép!",
     "shareLink": "Chia sẻ liên kết",
     "addFavorite": "Thêm vào Yêu thích",
     "removeFavorite": "Hủy Yêu thích",
     "lightMode": "Chế độ Sáng",
-    "darkMode": "Chế độ Tối"
+    "darkMode": "Chế độ Tối",
+    "listeningModePreview": "Đang ở chế độ Nghe thử. Bạn phải bật tính năng Luyện Tập (Wait Mode) để thi và nộp bài.",
+    "waitModeRequiredToRecord": "Tính năng Luyện Tập (Wait Mode) là bắt buộc để ghi âm bài làm này."
   }
 }

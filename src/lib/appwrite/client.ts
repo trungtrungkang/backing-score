@@ -33,5 +33,23 @@ export function getAppwriteClient(): Client {
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
+
+let cachedJwt: string | null = null;
+let jwtExpires: number = 0;
+
+export async function getAuthToken(): Promise<string | null> {
+  try {
+    if (cachedJwt && Date.now() < jwtExpires) {
+      return cachedJwt;
+    }
+    const { jwt } = await account.createJWT();
+    cachedJwt = jwt;
+    jwtExpires = Date.now() + 14 * 60 * 1000; // cache for 14 mins
+    return jwt;
+  } catch (e) {
+    return null;
+  }
+}
+
 export { ID, Query, Permission, Role };
 export type { Models };

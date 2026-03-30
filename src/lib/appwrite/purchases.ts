@@ -49,10 +49,9 @@ export async function logPurchase(
       currency,
       createdAt: new Date().toISOString(),
     },
-    // Purchase receipt should be viewable by the user and admins
+    // Purchase receipt should be viewable by the user
     [
-      Permission.read(Role.user(userId)),
-      Permission.read(Role.label("admin"))
+      Permission.read(Role.user(userId))
     ]
   );
   return doc as unknown as PurchaseDoc;
@@ -92,9 +91,7 @@ export async function grantEntitlement(
       grantedAt: new Date().toISOString(),
     },
     [
-      Permission.read(Role.user(userId)),
-      Permission.read(Role.label("admin")),
-      Permission.delete(Role.label("admin")) // In case of refund
+      Permission.read(Role.user(userId))
     ]
   );
 

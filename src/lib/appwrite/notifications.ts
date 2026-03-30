@@ -15,6 +15,7 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_NOTIFICATIONS_COLLECTION_ID,
 } from "./constants";
+import { createNotificationAction } from "@/app/actions/notifications";
 
 const DB = APPWRITE_DATABASE_ID;
 const COLL = APPWRITE_NOTIFICATIONS_COLLECTION_ID;
@@ -23,7 +24,7 @@ export interface NotificationDoc {
   $id: string;
   $createdAt: string;
   recipientId: string;
-  type: "like" | "follow" | "comment" | "report_resolved" | "assignment_new" | "submission_new" | "feedback_new";
+  type: "like" | "follow" | "comment" | "report_resolved" | "assignment_new" | "submission_new" | "feedback_new" | "material_new";
   sourceUserName: string;
   sourceUserId: string;
   targetType?: string; // 'post' | 'project' | 'user'
@@ -50,7 +51,6 @@ export async function listMyNotifications(
   }
 }
 
-/** Create a notification document */
 export async function createNotification(data: {
   recipientId: string;
   type: NotificationDoc["type"];
@@ -60,26 +60,7 @@ export async function createNotification(data: {
   targetName?: string;
   targetId?: string;
 }) {
-  // Don't notify yourself
-  if (data.recipientId === data.sourceUserId) return null;
-
-  try {
-    return await databases.createDocument(
-      DB,
-      COLL,
-      ID.unique(),
-      { ...data, read: false },
-      [
-        // Any authenticated user can read/update — query filters by recipientId
-        Permission.read(Role.users()),
-        Permission.update(Role.users()),
-        Permission.delete(Role.users()),
-      ]
-    );
-  } catch (err) {
-    console.warn("[notifications] Failed to create notification:", err);
-    return null;
-  }
+  return await createNotificationAction(data);
 }
 
 /** Mark a single notification as read */

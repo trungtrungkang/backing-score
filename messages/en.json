@@ -427,6 +427,7 @@
     "noNotifications": "No notifications yet",
     "justNow": "Just now",
     "assignment_new": "{userName} assigned \"{targetName}\"",
+    "material_new": "{userName} shared a PDF \"{targetName}\"",
     "submission_new": "{userName} submitted \"{targetName}\"",
     "feedback_new": "{userName} graded \"{targetName}\""
   },
@@ -786,11 +787,14 @@
     "practiceMode": "Practice Mode"
   },
   "PlayShell": {
+    "connectInputForWaitMode": "Please enable Microphone or connect a MIDI Keyboard to use Wait Mode.",
     "copied": "Copied!",
     "shareLink": "Share Link",
     "addFavorite": "Add to Favorites",
     "removeFavorite": "Remove Favorite",
     "lightMode": "Light Mode",
-    "darkMode": "Dark Mode"
+    "darkMode": "Dark Mode",
+    "listeningModePreview": "Preview Mode. Turn Wait Mode back on to take your test.",
+    "waitModeRequiredToRecord": "Wait Mode is required to record your assignment submission."
   }
 }

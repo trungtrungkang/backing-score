@@ -11,6 +11,7 @@ import {
   Query,
   Permission,
   Role,
+  getAuthToken
 } from "./client";
 import {
   APPWRITE_DATABASE_ID,
@@ -52,9 +53,13 @@ export async function uploadSheetPdf(
   const title = meta.title || file.name.replace(/\.pdf$/i, "");
   
   // 1. Upload PDF to Cloudflare R2
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const resPdf = await fetch("/api/r2/upload", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       filename: file.name,
       contentType: "application/pdf",
@@ -101,7 +106,7 @@ export async function uploadSheetPdf(
       
       const resThumb = await fetch("/api/r2/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           filename: thumbFile.name,
           contentType: "image/jpeg",
