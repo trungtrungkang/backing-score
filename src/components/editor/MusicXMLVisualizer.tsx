@@ -478,7 +478,7 @@ export function MusicXMLVisualizer({
       return;
     }
 
-    const updatePlayhead = () => { console.log("UPDATE PLAYHEAD CALLED, pos:", positionMsRef.current);
+    const updatePlayhead = () => {
       const currentPosMs = positionMsRef.current;
       lastPlayheadMsRef.current = currentPosMs;
 
@@ -541,7 +541,8 @@ export function MusicXMLVisualizer({
         }
       }
 
-      if (rawTimemap && rawTimemap.length > 0 && timemapSource !== "manual") {
+      const EFFECTIVE_TIMEMAP_SOURCE = isWaitMode ? "auto" : timemapSource;
+      if (rawTimemap && rawTimemap.length > 0 && EFFECTIVE_TIMEMAP_SOURCE !== "manual") {
         const targetBPM = payloadTempo || 120;
         let vrvBaseTempo = targetBPM;
         for (const entry of rawTimemap) {
@@ -552,10 +553,13 @@ export function MusicXMLVisualizer({
         }
         
         // Translates real audio time strictly into Verovio theoretical time.
-        // Extremely critical for Manual Timemaps: manual timemaps dynamically warp `timeMs` 
-        // causing it to diverge drastically from the theoretical unrolled tstamp grid of Verovio natively.
-        let currentVrvMs = 0;
-        if (currentEvent) {
+        // Extremely critical for both Auto and Manual Timemaps because real Elapsed Time (Audio/MIDI ticks) 
+        // diverges from the strict unrolled SVG geometric `tstamp` grid.
+        let currentVrvMs = currentPosMs;
+        
+        // In Wait Mode, `positionMs` is exactly `parsedMidi` tick time matching `.tstamp`.
+        // Otherwise, run the unwarping map to bridge physical sound time to theoretical SVG time.
+        if (!isWaitMode && currentEvent) {
            const currentPhysicalId = getPhysicalMeasure(currentEvent.measure, measureMap);
            const firstOccurrence = timemap.find(t => getPhysicalMeasure(t.measure, measureMap) === currentPhysicalId);
            
@@ -571,10 +575,17 @@ export function MusicXMLVisualizer({
               const currentBpm = firstOccurrence.tempo || vrvBaseTempo;
               const currentDurationMs = (firstOccurrence.durationInQuarters || 4) * (60000 / currentBpm);
               
-              // Project relativistic `progress` onto strict theoretical geometry.
-              // Since `theoreticalMs` is computed exactly matching Verovio's tempo scale, 
-              // no further multiplication is required.
-              currentVrvMs = theoreticalMs + (progress * currentDurationMs);
+              // Project strictly uniform linear time onto the theoretical geometry.
+              // Do NOT use the global `progress` variable here because `progress` maps time non-linearly 
+              // across physical measure SVG widths using `beats` array distribution!
+              let exactLinearProgress = 0;
+              if (nextEvent) {
+                  const duration = nextEvent.timeMs - currentEvent.timeMs;
+                  if (duration > 0) {
+                      exactLinearProgress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
+                  }
+              }
+              currentVrvMs = theoreticalMs + (exactLinearProgress * currentDurationMs);
            }
         }
         
@@ -674,7 +685,8 @@ export function MusicXMLVisualizer({
           }
 
           // Handle per-note exact highlighting (MuseScore style)
-          if (isPlaying && currentEntry.on && currentEntry.on.length > 0) {
+          // Disabled explicitly in wait-mode because wait mode implements its own custom flashcard-based active measure feedback
+          if (isPlaying && !isWaitMode && currentEntry.on && currentEntry.on.length > 0) {
              // 1. Clear previous notes
              for (const el of activeNoteElementsRef.current) {
                 el.classList.remove('active-verovio-note');
