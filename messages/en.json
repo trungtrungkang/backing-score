@@ -796,5 +796,28 @@
     "darkMode": "Dark Mode",
     "listeningModePreview": "Preview Mode. Turn Wait Mode back on to take your test.",
     "waitModeRequiredToRecord": "Wait Mode is required to record your assignment submission."
+  },
+  "MicCalibrationWizard": {
+    "title": "AI Mic Calibration",
+    "desc": "Tune the neural network to your specific room environment and instrument.",
+    "introDesc": "This 15-second wizard will measure your room's background noise and analyze your instrument's acoustic frequency response to prevent missing notes.",
+    "startBtn": "Start Calibration Test",
+    "step1Title": "Step 1: Complete Silence",
+    "step1Desc": "Please do not play any notes or speak. We are measuring the room's ambient noise floor.",
+    "step2Title": "Step 2: Bass Frequencies",
+    "step2Desc": "Prepare to play the absolutely lowest note on your instrument repeatedly and loudly.",
+    "readyBtn": "I'm Ready (Start 5s Recording)",
+    "recordingBass": "Recording Bass...",
+    "playLowNotes": "PLAY YOUR LOWEST NOTE NOW!",
+    "step3Title": "Step 3: Treble Frequencies",
+    "step3Desc": "Prepare to play the absolutely highest note on your instrument repeatedly.",
+    "recordingTreble": "Recording Treble...",
+    "playHighNotes": "PLAY YOUR HIGHEST NOTE NOW!",
+    "generatingProfile": "Generating AI Profile...",
+    "calibrationComplete": "Calibration Complete!",
+    "successDesc": "Your custom ML profile has been saved. Wait Mode will now track your instrument far more accurately.",
+    "closeBtn": "Close & Return",
+    "liveAiMonitor": "Live AI Monitor",
+    "signalDetected": "Signal Detected!"
   }
 }

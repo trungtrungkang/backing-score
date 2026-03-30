@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { MicProfile, useMicInput } from "@/hooks/useMicInput";
 import { useMicProfile } from "@/hooks/useMicProfile";
 import { VirtualKeyboard } from "./VirtualKeyboard";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ interface MicCalibrationWizardProps {
 }
 
 export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibrationWizardProps) {
+  const t = useTranslations("MicCalibrationWizard");
   const [step, setStep] = useState<Step>("intro");
   const [timeRemaining, setTimeRemaining] = useState(5);
   const { saveProfile } = useMicProfile();
@@ -151,6 +153,9 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
     targetNotes.add(96); // C7
   }
 
+  const isLowDetected = step === "low" && Array.from(activeNotes).some(n => n <= 48);
+  const isHighDetected = step === "high" && Array.from(activeNotes).some(n => n >= 84);
+
   //console.log("step", step)
 
   return (
@@ -160,10 +165,10 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
               <Mic className="text-blue-500 w-5 h-5" />
-              AI Mic Calibration
+              {t("title")}
             </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              Tune the neural network to your specific room environment and instrument.
+              {t("desc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -175,18 +180,18 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
                   <Activity className="text-blue-500 w-8 h-8" />
                 </div>
                 <p className="text-sm text-zinc-300">
-                  This 15-second wizard will measure your room's background noise and analyze your instrument's acoustic frequency response to prevent missing notes.
+                  {t("introDesc")}
                 </p>
                 <Button onClick={startTest} className="w-full mt-4 font-bold bg-blue-600 hover:bg-blue-500">
-                  Start Calibration Test
+                  {t("startBtn")}
                 </Button>
               </div>
             )}
 
             {step === "noise" && (
               <div className="space-y-4 animate-in fade-in duration-300">
-                <h3 className="text-lg font-bold text-red-400">Step 1: Complete Silence</h3>
-                <p className="text-sm text-zinc-400">Please do not play any notes or speak. We are measuring the room&#39;s ambient noise floor.</p>
+                <h3 className="text-lg font-bold text-red-400">{t("step1Title")}</h3>
+                <p className="text-sm text-zinc-400">{t("step1Desc")}</p>
                 <div className="text-5xl font-black text-white p-4">{timeRemaining}s</div>
                 <Activity className="w-8 h-8 text-zinc-500 animate-pulse mx-auto" />
               </div>
@@ -194,46 +199,64 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
 
             {step === "low_ready" && (
               <div className="space-y-4 animate-in slide-in-from-right duration-300">
-                <h3 className="text-lg font-bold text-orange-400">Step 2: Bass Frequencies</h3>
-                <p className="text-sm text-zinc-400">Prepare to play a low, deep note (like C3 or below) repeatedly and loudly.</p>
+                <h3 className="text-lg font-bold text-orange-400">{t("step2Title")}</h3>
+                <p className="text-sm text-zinc-400">{t("step2Desc")}</p>
                 <Button onClick={() => setStep("low")} className="w-full mt-4 font-bold bg-orange-600 hover:bg-orange-500 text-white">
-                  I&apos;m Ready (Start 5s Recording)
+                  {t("readyBtn")}
                 </Button>
               </div>
             )}
 
             {step === "low" && (
               <div className="space-y-4 animate-in zoom-in duration-300">
-                <h3 className="text-lg font-bold text-orange-400">Recording Bass...</h3>
-                <p className="text-sm font-bold text-white animate-pulse">PLAY LOW NOTES NOW!</p>
+                <h3 className="text-lg font-bold text-orange-400">{t("recordingBass")}</h3>
+                <p className="text-sm font-bold text-white animate-pulse">{t("playLowNotes")}</p>
                 <div className="text-5xl font-black text-white p-4">{timeRemaining}s</div>
-                <Activity className="w-8 h-8 text-orange-500 animate-pulse mx-auto" />
+                <div className="h-8 flex items-center justify-center">
+                  {isLowDetected ? (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full animate-in zoom-in duration-200">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="text-sm font-bold">{t("signalDetected")}</span>
+                    </div>
+                  ) : (
+                    <Activity className="w-8 h-8 text-orange-500 animate-pulse mx-auto" />
+                  )}
+                </div>
               </div>
             )}
 
             {step === "high_ready" && (
               <div className="space-y-4 animate-in slide-in-from-right duration-300">
-                <h3 className="text-lg font-bold text-sky-400">Step 3: Treble Frequencies</h3>
-                <p className="text-sm text-zinc-400">Prepare to play a very high note (like C7 or E7) repeatedly to measure sharp transients.</p>
+                <h3 className="text-lg font-bold text-sky-400">{t("step3Title")}</h3>
+                <p className="text-sm text-zinc-400">{t("step3Desc")}</p>
                 <Button onClick={() => setStep("high")} className="w-full mt-4 font-bold bg-sky-600 hover:bg-sky-500 text-white">
-                  I&apos;m Ready (Start 5s Recording)
+                  {t("readyBtn")}
                 </Button>
               </div>
             )}
 
             {step === "high" && (
               <div className="space-y-4 animate-in zoom-in duration-300">
-                <h3 className="text-lg font-bold text-sky-400">Recording Treble...</h3>
-                <p className="text-sm font-bold text-white animate-pulse">PLAY HIGH NOTES NOW!</p>
+                <h3 className="text-lg font-bold text-sky-400">{t("recordingTreble")}</h3>
+                <p className="text-sm font-bold text-white animate-pulse">{t("playHighNotes")}</p>
                 <div className="text-5xl font-black text-white p-4">{timeRemaining}s</div>
-                <Activity className="w-8 h-8 text-sky-500 animate-pulse mx-auto" />
+                <div className="h-8 flex items-center justify-center">
+                  {isHighDetected ? (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full animate-in zoom-in duration-200">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="text-sm font-bold">{t("signalDetected")}</span>
+                    </div>
+                  ) : (
+                    <Activity className="w-8 h-8 text-sky-500 animate-pulse mx-auto" />
+                  )}
+                </div>
               </div>
             )}
 
             {step === "saving" && (
               <div className="space-y-4 animate-in fade-in duration-300">
                 <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto" />
-                <p className="text-sm font-semibold mt-4">Generating AI Profile...</p>
+                <p className="text-sm font-semibold mt-4">{t("generatingProfile")}</p>
               </div>
             )}
 
@@ -242,10 +265,10 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
                 <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(34,197,94,0.3)]">
                   <CheckCircle2 className="w-10 h-10 text-green-400" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Calibration Complete!</h3>
-                <p className="text-sm text-zinc-400">Your custom ML profile has been saved. Wait Mode will now track your instrument far more accurately.</p>
+                <h3 className="text-xl font-bold text-white">{t("calibrationComplete")}</h3>
+                <p className="text-sm text-zinc-400">{t("successDesc")}</p>
                 <Button onClick={handleFinish} className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold">
-                  Close & Return
+                  {t("closeBtn")}
                 </Button>
               </div>
             )}
@@ -258,7 +281,7 @@ export function MicCalibrationWizard({ isOpen, onClose, onComplete }: MicCalibra
       {(isOpen && step !== "intro" && step !== "saving" && step !== "success") && (
         <div className="fixed bottom-0 left-0 w-full h-[12vh] min-h-[80px] max-h-[140px] z-[150] shadow-[0_-20px_40px_rgba(0,0,0,0.6)] border-t border-zinc-800/80 bg-zinc-950 animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-auto flex flex-col">
           <div className="w-full py-1 bg-zinc-900 border-b border-zinc-800 flex justify-center items-center gap-2 relative">
-            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Live AI Monitor</p>
+            <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">{t("liveAiMonitor")}</p>
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           </div>
           <VirtualKeyboard

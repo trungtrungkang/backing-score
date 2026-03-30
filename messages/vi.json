@@ -762,5 +762,28 @@
     "darkMode": "Chế độ Tối",
     "listeningModePreview": "Đang ở chế độ Nghe thử. Bạn phải bật tính năng Luyện Tập (Wait Mode) để thi và nộp bài.",
     "waitModeRequiredToRecord": "Tính năng Luyện Tập (Wait Mode) là bắt buộc để ghi âm bài làm này."
+  },
+  "MicCalibrationWizard": {
+    "title": "Hiệu chuẩn Micro AI",
+    "desc": "Tinh chỉnh mạng nơ-ron phù hợp với môi trường phòng và nhạc cụ cụ thể của bạn.",
+    "introDesc": "Trình hướng dẫn 15 giây này sẽ đo tiếng ồn xung quanh phòng bạn và phân tích phản hồi tần số âm thanh của nhạc cụ để tránh bị mất nốt.",
+    "startBtn": "Bắt đầu kiểm tra hiệu chuẩn",
+    "step1Title": "Bước 1: Giữ im lặng tuyệt đối",
+    "step1Desc": "Vui lòng không chơi bất kỳ nốt nhạc nào hoặc nói chuyện. Chúng tôi đang đo mức tín hiệu nhiễu xung quanh của phòng.",
+    "step2Title": "Bước 2: Tần số trầm (Bass)",
+    "step2Desc": "Chuẩn bị đánh LẶP LẠI nốt thấp nhất, trầm nhất trên nhạc cụ của bạn thật lớn.",
+    "readyBtn": "Tôi đã sẵn sàng (Bắt đầu Ghi âm 5s)",
+    "recordingBass": "Đang ghi âm âm trầm...",
+    "playLowNotes": "ĐÁNH NỐT TRẦM NHẤT CỦA BẠN NGAY!",
+    "step3Title": "Bước 3: Tần số cao (Treble)",
+    "step3Desc": "Chuẩn bị đánh LẶP LẠI nốt cao nhất trên nhạc cụ của bạn để đo các âm sắc nhọn.",
+    "recordingTreble": "Đang ghi âm âm cao...",
+    "playHighNotes": "ĐÁNH NỐT CAO NHẤT CỦA BẠN NGAY!",
+    "generatingProfile": "Đang tạo hồ sơ AI...",
+    "calibrationComplete": "Hiệu chuẩn hoàn tất!",
+    "successDesc": "Hồ sơ ML tùy chỉnh của bạn đã được lưu lại. Chế độ Wait Mode giờ đây sẽ theo dõi nhạc cụ của bạn chính xác hơn nhiều.",
+    "closeBtn": "Đóng & Quay lại",
+    "liveAiMonitor": "Hệ thống AI giám sát trực tiếp",
+    "signalDetected": "Đã bắt được tín hiệu!"
   }
 }
