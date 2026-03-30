@@ -77,6 +77,8 @@ interface PlayerControlsProps {
   onRecordToggle?: (recording: boolean) => void;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
+  showVirtualKeyboard?: boolean;
+  onVirtualKeyboardToggle?: (show: boolean) => void;
 }
 
 export function formatTime(ms: number) {
@@ -139,6 +141,10 @@ export function PlayerControls({
   soloByTrackId,
   isAutoplayEnabled,
   onAutoplayToggle,
+  isCollapsed,
+  onCollapseToggle,
+  showVirtualKeyboard,
+  onVirtualKeyboardToggle,
 }: PlayerControlsProps) {
 
   const [localPos, setLocalPos] = useState(positionMs);
@@ -167,7 +173,7 @@ export function PlayerControls({
 
   return (
     <>
-      <div className="w-full bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col pointer-events-auto transition-all duration-300 pb-1 sm:pb-2">
+      <div className={cn("w-full bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col pointer-events-auto transition-all duration-300 overflow-hidden", isCollapsed ? "h-0 opacity-0 pb-0 border-none" : "h-auto opacity-100 pb-1 sm:pb-2")}>
 
         {/* ROW 1: Header / Top Bar */}
         <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 w-full h-12 sm:h-14">
@@ -451,6 +457,16 @@ export function PlayerControls({
                           className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", showWaitModeMonitor ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
                         >
                           {showWaitModeMonitor ? t("on") : t("off")}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Virtual Keyboard</span>
+                        <button
+                          onClick={() => onVirtualKeyboardToggle?.(!showVirtualKeyboard)}
+                          className={cn("text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors border", showVirtualKeyboard ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700")}
+                        >
+                          {showVirtualKeyboard ? t("on") : t("off")}
                         </button>
                       </div>
                     </div>
@@ -758,6 +774,67 @@ export function PlayerControls({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {isCollapsed && (
+        <div className="w-full h-14 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800 shadow-sm flex items-center justify-between px-2 sm:px-4 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-300 gap-2 sm:gap-4 overflow-hidden relative z-50">
+          <div className="flex items-center shrink-0 min-w-0 max-w-[35%] sm:max-w-xs">
+            {leftSlot}
+          </div>
+
+          <div className="flex-1 hidden sm:flex items-center justify-center gap-4 max-w-3xl mx-auto px-4">
+            <button
+              onClick={isPlaying ? onPause : onPlay}
+              disabled={loadingAudio}
+              className={cn(
+                "w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-colors shadow-sm",
+                isPlaying
+                  ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:scale-105"
+              )}
+            >
+              {loadingAudio ? (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : isPlaying ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current translate-x-0.5" />
+              )}
+            </button>
+            <div className="flex-1 flex items-center gap-3">
+              <span className="text-[10px] font-mono text-zinc-500 font-medium tracking-tighter w-[35px] text-right">
+                {formatTime(localPos)}
+              </span>
+              <Slider
+                value={[localPos]}
+                min={0}
+                max={durationMs}
+                step={10}
+                onValueChange={handleSliderChange}
+                onValueCommit={handleSliderCommit}
+                className="flex-1 cursor-pointer"
+              />
+              <span className="text-[10px] font-mono text-zinc-500 font-medium tracking-tighter w-[35px]">
+                {formatTime(durationMs)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Mobile play button */}
+            <button
+              onClick={isPlaying ? onPause : onPlay}
+              className="sm:hidden p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+            >
+               {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current translate-x-0.5" />}
+            </button>
+
+            {rightSlot}
+          </div>
+        </div>
+      )}
     </>
   );
 }

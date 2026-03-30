@@ -70,9 +70,11 @@ export async function processPracticeSession(
     else if (payload.waitModeScore >= 80) baseXP += rules.waitModeScore80Bonus;
   }
 
-  // Daily challenge bonus
+  // Daily challenge bonus (Anti-Cheat: requires >= 1 min practice OR WaitMode score >= 80)
   if (isDailyChallenge) {
-    baseXP += (rules.dailyChallengeBonus || 30);
+    if (durationMins >= 1 || (payload.waitModeScore !== undefined && payload.waitModeScore >= 80)) {
+      baseXP += (rules.dailyChallengeBonus || 30);
+    }
   }
 
   // 4. Log Practice Session (Audit Trail)

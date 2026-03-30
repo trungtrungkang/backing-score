@@ -2,9 +2,9 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check } from "lucide-react";
+import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import type { DAWPayload } from "@/lib/daw/types";
 import { cn } from "@/lib/utils";
@@ -156,6 +156,7 @@ export function PlayShell({
   const tc = useTranslations("Classroom");
   const tPlay = useTranslations("PlayShell");
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
+  const router = useRouter();
 
   // --- Gamification Tracking ---
   const [sessionMaxSpeed, setSessionMaxSpeed] = useState(1.0);
@@ -167,8 +168,33 @@ export function PlayShell({
   useEffect(() => { userRef.current = user; }, [user]);
   useEffect(() => { maxSpeedRef.current = sessionMaxSpeed; }, [sessionMaxSpeed]);
 
-  const submitPracticeSession = useCallback(async (waitModeScore?: number) => {
-    if (!userRef.current?.$id) return;
+  const [isNavigatingBack, setIsNavigatingBack] = useState(false);
+
+  // --- Layout Toggles (Synced to LocalStorage) ---
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(true);
+  const [isCompactHeader, setIsCompactHeader] = useState(false);
+
+  useEffect(() => {
+    try {
+      const vk = localStorage.getItem("bs_show_virtual_keyboard");
+      if (vk !== null) setShowVirtualKeyboard(vk === "true");
+      const ch = localStorage.getItem("bs_compact_header");
+      if (ch !== null) setIsCompactHeader(ch === "true");
+    } catch {}
+  }, []);
+
+  const handleVirtualKeyboardToggle = useCallback((v: boolean) => {
+    setShowVirtualKeyboard(v);
+    try { localStorage.setItem("bs_show_virtual_keyboard", String(v)); } catch {}
+  }, []);
+
+  const handleCompactHeaderToggle = useCallback((v: boolean) => {
+    setIsCompactHeader(v);
+    try { localStorage.setItem("bs_compact_header", String(v)); } catch {}
+  }, []);
+
+  const submitPracticeSession = useCallback(async (waitModeScore?: number): Promise<boolean> => {
+    if (!userRef.current?.$id) return false;
 
     let finalDuration = accumulatedTimeMsRef.current;
     if (sessionStartTimeRef.current !== null) {
@@ -176,7 +202,7 @@ export function PlayShell({
       sessionStartTimeRef.current = performance.now(); // reset timer
     }
 
-    if (finalDuration < 10000) return; // avoid submitting spam
+    if (finalDuration < 10000) return false; // avoid submitting spam
 
     // Lock the time so we don't double count if we submit midway
     accumulatedTimeMsRef.current = 0;
@@ -197,8 +223,10 @@ export function PlayShell({
       if (data.addedXP) {
         // Dispatch global event for header to animate
         window.dispatchEvent(new CustomEvent("gamification-xp-earned", { detail: data }));
+        return true;
       }
     } catch { }
+    return false;
   }, [projectId]);
 
   // Unmount tracker
@@ -228,7 +256,7 @@ export function PlayShell({
     payload,
     autoplayOnLoad,
     onNext,
-    onWaitModeComplete: (score) => submitPracticeSession(score)
+    onWaitModeComplete: (score) => { submitPracticeSession(score); }
   });
   const recorder = useAudioRecorder();
 
@@ -287,6 +315,21 @@ export function PlayShell({
       recorder.stopRecording();
     }
   }, [recorder, forceWaitMode, state.isWaitMode, tPlay]);
+
+  const handleBackClick = useCallback(() => {
+    if (isNavigatingBack) return;
+    setIsNavigatingBack(true);
+    
+    if (state.isPlaying) {
+      actions.handlePause();
+    }
+
+    // Fire and forget to save XP immediately without making the user wait for animations
+    submitPracticeSession().catch(() => {});
+    
+    // Instant Navigation
+    router.back();
+  }, [isNavigatingBack, submitPracticeSession, state.isPlaying, actions, router]);
 
   // Play handler — no limit for free users, just track server play count
   const gatedHandlePlay = useCallback(() => {
@@ -419,8 +462,10 @@ export function PlayShell({
           onMuteToggle={actions.handleMuteToggle}
           onSoloToggle={actions.handleSoloToggle}
           onVolumeChange={actions.handleVolumeChange}
-          isCollapsed={state.isControlsCollapsed}
-          onCollapseToggle={actions.handleCollapseToggle}
+          onCollapseToggle={handleCompactHeaderToggle}
+          isCollapsed={isCompactHeader}
+          showVirtualKeyboard={showVirtualKeyboard}
+          onVirtualKeyboardToggle={handleVirtualKeyboardToggle}
           playlistId={playlistId}
           hasNext={!!nextProjectId}
           hasPrev={!!prevProjectId}
@@ -459,7 +504,7 @@ export function PlayShell({
           } : {})}
           leftSlot={
             <>
-              <button onClick={() => window.history.back()} className="p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all">
+              <button onClick={handleBackClick} disabled={isNavigatingBack} className={cn("p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all", isNavigatingBack && "opacity-50 cursor-wait")}>
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="flex flex-col min-w-0">
@@ -484,12 +529,20 @@ export function PlayShell({
               <div className="sm:hidden">
                 <MobileActionsMenu projectId={projectId} projectName={projectName} />
               </div>
+              <div className="w-[1px] h-6 bg-zinc-300 dark:bg-zinc-700 mx-1" />
+              <button 
+                onClick={() => handleCompactHeaderToggle(!isCompactHeader)} 
+                title={isCompactHeader ? "Expand Header" : "Compact Header"}
+                className="p-1 sm:p-2 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all"
+              >
+                {isCompactHeader ? <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" /> : <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
             </div>
           }
         />
       </div>
 
-      {state.isWaitMode && (
+      {state.isWaitMode && showVirtualKeyboard && (
         <div className="fixed bottom-0 left-0 w-full h-[95px] z-[110] bg-zinc-950 border-t border-zinc-900 pointer-events-auto shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex flex-col">
           <div className="w-full py-1 bg-zinc-900 border-b border-zinc-800 flex justify-center items-center gap-2 relative shadow-sm">
             <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Real-time Wait Mode Monitor</p>
