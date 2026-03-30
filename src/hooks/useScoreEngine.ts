@@ -604,6 +604,26 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     return finalMax > 0 ? finalMax : 1800000; // 30 min fallback for metronome-only practice
   }, [durationMs, midiDurationMs, payload.notationData?.timemap, payload.metadata?.tempo, payload.metadata?.timeSignature]);
 
+  const skipWaitNote = useCallback(() => {
+    if (!isWaitModeRef.current || !isWaitingRef.current) return;
+    if (targetChordIndexRef.current < practiceChordsRef.current.length) {
+      targetChordIndexRef.current++;
+      releasedPitchesRef.current.clear();
+      
+      let currentPos = targetChordIndexRef.current < practiceChordsRef.current.length 
+        ? practiceChordsRef.current[targetChordIndexRef.current].timeMs 
+        : practiceChordsRef.current[practiceChordsRef.current.length - 1].timeMs;
+        
+      midiPlayStartTimeRef.current = performance.now();
+      midiPlayStartPosRef.current = currentPos;
+      setPositionMs(Math.round(currentPos));
+      
+      isWaitingRef.current = false;
+      if (midiPlayerRef.current && !isScoreSynthMutedRef.current) Promise.resolve(midiPlayerRef.current.start()).catch((e) => {});
+      if (audioManagerRef.current) Promise.resolve(audioManagerRef.current.play()).catch(e => {});
+    }
+  }, []);
+
   const handlePause = useCallback(() => {
     setIsPlaying(false);
     isPlayingRef.current = false;
@@ -1094,7 +1114,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       handlePartNamesExtracted: setPartNames,
       setIsWaitMode, setIsWaitModeLenient, setPracticeTrackIds, setShowWaitModeMonitor, setIsAutoplayEnabled,
       setMuteByTrackId, setSoloByTrackId, setLoopState,
-      initializeMidi, disconnectMidi, initializeMic, disconnectMic
+      initializeMidi, disconnectMidi, initializeMic, disconnectMic,
+      skipWaitNote
     }
   };
 }

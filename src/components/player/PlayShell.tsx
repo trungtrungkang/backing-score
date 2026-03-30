@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { Link, useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, ArrowRight, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
 import type { DAWPayload } from "@/lib/daw/types";
 import { cn } from "@/lib/utils";
@@ -297,6 +297,19 @@ export function PlayShell({
       }
     }
   }, [state.isPlaying]);
+
+  // Global Shortcut for skipping stuck Wait Mode note
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow overriding a stuck Wait Mode note when using ArrowRight
+      if (e.key === "ArrowRight" && state.isWaiting) {
+        e.preventDefault();
+        actions.skipWaitNote();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [state.isWaiting, actions]);
 
   useEffect(() => {
     if (state.playbackRate > sessionMaxSpeed) {
@@ -601,6 +614,25 @@ export function PlayShell({
 
       {showUpgrade && (
         <UpgradePrompt feature={showUpgrade} onClose={() => setShowUpgrade(null)} />
+      )}
+
+      {/* Stuck Note Escape Hatch */}
+      {state.isWaiting && (
+        <div className={cn(
+          "absolute right-4 sm:right-8 z-[120] animate-in fade-in zoom-in-95 duration-500 delay-1000 fill-mode-both",
+          (state.isWaitMode && showVirtualKeyboard) ? "bottom-[115px]" : "bottom-6 sm:bottom-8"
+        )}>
+          <button 
+            onClick={() => actions.skipWaitNote()}
+            className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 dark:bg-zinc-100/90 dark:hover:bg-white backdrop-blur-md text-white dark:text-black px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 border border-white/10 dark:border-black/10 group"
+            title="Press [Right Arrow] to skip"
+          >
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Bỏ qua nốt</span>
+            <div className="flex items-center justify-center px-1.5 py-0.5 rounded bg-white/20 dark:bg-black/10 text-[10px] font-black group-hover:bg-white/30 dark:group-hover:bg-black/20 transition-colors">
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </div>
+          </button>
+        </div>
       )}
 
       {/* Gamification Celebration Overlay */}
