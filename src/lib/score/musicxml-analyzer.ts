@@ -37,7 +37,7 @@ interface MeasureInfo {
   /** First tempo change in this measure (for duration calculation) */
   firstTempo?: number;
   /** Per-beat tempo changes within this measure: [{beatPos (in quarters from measure start), tempo}] */
-  tempoAtBeat?: {beatPos: number, tempo: number}[];
+  tempoAtBeat?: { beatPos: number, tempo: number }[];
   /** Beat duration sum in quarter-note units */
   durationInQuarters: number;
   /** Repeat forward barline */
@@ -230,7 +230,7 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
               // Track beat position of this tempo change
               const currentBeatPos = cumulativeDurVoice1 / currentDivisions;
               if (!info.tempoAtBeat) info.tempoAtBeat = [];
-              info.tempoAtBeat.push({beatPos: currentBeatPos, tempo: bpm});
+              info.tempoAtBeat.push({ beatPos: currentBeatPos, tempo: bpm });
               if (m > 0 || tempoChanges.length === 0 || tempoChanges[tempoChanges.length - 1][1] !== bpm) {
                 tempoChanges.push([physNum, bpm]);
               }
@@ -284,6 +284,10 @@ export function analyzeMusicXML(xmlText: string): MusicXMLAnalysis {
       for (let j = i; j < measureInfos.length; j++) {
         if (measureInfos[j].endingStop || (j > i && measureInfos[j].endingStart !== undefined)) {
           endIdx = measureInfos[j].endingStop ? j : j - 1;
+          break;
+        }
+        if (measureInfos[j].repeatBackward) {
+          endIdx = j;
           break;
         }
         endIdx = j;
@@ -427,6 +431,7 @@ function unrollMeasures(
     // Track repeat forward position
     if (m.repeatForward) {
       repeatStartIdx = i;
+      currentPass = 1;
     }
 
     // Build timemap entry
@@ -477,7 +482,7 @@ function unrollMeasures(
     latentMeasure++;
 
     // ── Handle repeat backward ──
-    if (m.repeatBackward !== undefined) {
+    if (m.repeatBackward !== undefined && !jumped) {
       const playCount = repeatCounts.get(i) || 1;
       const maxPlays = m.repeatBackward;
 
@@ -512,6 +517,7 @@ function unrollMeasures(
           i = sIdx; continue;
         }
       }
+    } else {
       if (m.tocoda) {
         const cIdx = codaIdxMap[m.tocoda];
         if (cIdx !== undefined) {

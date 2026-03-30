@@ -65,7 +65,7 @@ export default function ProjectPage() {
   // Enforce access control: non-owners go to /play mode
   useEffect(() => {
     if (!loading && !authLoading && project) {
-      if (!user || user.$id !== project.userId) {
+      if (!user || (user.$id !== project.userId && !user.labels?.includes("admin"))) {
         router.replace(`/play/${projectId}`);
       }
     }
@@ -113,7 +113,7 @@ export default function ProjectPage() {
     }).catch(() => {});
   }, [load]);
 
-  const isOwner = user && project && project.userId === user.$id;
+  const isOwner = user && project && (project.userId === user.$id || user.labels?.includes("admin"));
 
   const handleSave = useCallback(async () => {
     if (!project || !isOwner || saving || payload === null) return;

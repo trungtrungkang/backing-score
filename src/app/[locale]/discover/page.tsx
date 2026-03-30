@@ -162,6 +162,15 @@ function ScoreCard({
         </div>
         <div className="flex items-center gap-1">
           <ProjectActionsMenu projectId={project.$id} hideFavorite={true} />
+          {user && (user.$id === project.userId || user.labels?.includes("admin")) && (
+            <Link
+              href={`/p/${project.$id}`}
+              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors text-zinc-500 dark:text-zinc-400 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-white/5"
+              title="Edit Project"
+            >
+              <Pencil className="w-4 h-4" />
+            </Link>
+          )}
           {user && (
             <button
               onClick={(e) => onToggleFavorite(e, project.$id)}
@@ -841,6 +850,15 @@ export default function DiscoverPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <ProjectActionsMenu projectId={p.$id} hideFavorite={true} />
+                          {user && (user.$id === p.userId || user.labels?.includes("admin")) && (
+                            <Link
+                              href={`/p/${p.$id}`}
+                              className="w-9 h-9 flex items-center justify-center rounded-full transition-colors text-zinc-500 dark:text-zinc-400 hover:text-blue-500 hover:bg-zinc-100 dark:hover:bg-white/5"
+                              title="Edit Project"
+                            >
+                              <Pencil className="w-[18px] h-[18px]" />
+                            </Link>
+                          )}
                           {user && (
                             <button
                               onClick={(e) => handleToggleFavorite(e, p.$id)}
