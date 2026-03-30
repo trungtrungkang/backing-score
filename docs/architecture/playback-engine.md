@@ -41,3 +41,18 @@ Chế độ Wait-Mode sở hữu những quy luật cực kỳ nghiêm ngặt kh
 
 ## 4. `useScoreEngine` Architecture
 Engine này đóng vai trò như bộ máy đếm nhịp (Metronome) và điều phối toạ độ tập trung (`positionMs`). Tránh việc mutate trực tiếp toạ độ này ở các Component con. Khi cần tua nhạc (`handleSeek`) hoặc Sync với các thiết bị bên ngoài (MIDI Keyboard), `useScoreEngine` sẽ ép `positionMsRef.current` tức thời rồi mới phát tín hiệu ra vòng ngoài thông qua React State. Hệ thống `MusicXMLVisualizer` sẽ "nghe" trực tiếp từ `positionMsRef.current` (chứ không phải State) để loại bỏ độ trễ (latency lag) từ React Batch Updates.
+
+### Đồng hồ hệ thống & Độ trễ phần cứng (WebAudio Latency)
+`<midi-player>` của `@magenta/music` có độ trễ khởi động phần cứng (`WebAudio start latency`) khoảng 150ms-250ms sau khi hàm `start()` được gọi.
+- `currentTime` nội bộ của `<midi-player>` di chuyển theo mô hình Nấc (Event-driven stuttering) nên nếu Binding directly vào UI, thanh Playhead sẽ bị giật cục.
+- Giải pháp tuyệt đối mượt mà: Luôn dùng `performance.now()` thuần túy trơn tru suốt 60fps, tuy nhiên **phải thiết lập một hằng số Delay cứng** (`LATENCY_COMPENSATION_MS = 150`) trừ thẳng vào `currentPos` để hình ảnh Playhead hoàn thiện đồng bộ tĩnh với thời điểm sóng âm thanh phát ra tới tai người nghe. 
+
+## 5. MusicXMLVisualizer - Chấn Chỉnh Lỗi Đồng Bộ
+Các thuật toán phức tạp đã được áp dụng để triệt tiêu vĩnh viễn mọi giới hạn sai số:
+
+1. **Native Measure Intersection (Chiết xuất Tọa Độ Trực Hệ DOM):**
+   Thay vì cố cộng dồn `theoreticalMs` toán học một cách rủi ro (vì Verovio hay gộp/tách nhịp đà lấy đà), thuật toán giờ đây sẽ query trực tiếp lớp SVG chứa nốt đầu tiên của từng ô nhịp (`measureEl.contains(noteEl)`) để quét chính xác tuyệt đối `.tstamp` thật sự nằm trên hình vẽ. Lệnh query này được "đóng băng" bằng `algTstampCache` chặn hiện tượng lag do query DOM 60 lần/giây.
+
+2. **Polyphony Highlight History (Bộ lọc Đa âm):**
+   Thay vì đọc mù quáng mảng `on` (chỉ xuất Nốt MỚI Gõ), thuật toán thiết lập 1 hàm quyét Lịch sử `for ( i = 0 to activeIdx )` tích luỹ các tín hiệu `on` (Gõ phím) và đào thải các tín hiệu `off` (Bỏ phím) để ra được một tập Hợp Âm Thực Mặc Định (`currentlySoundingIds` Set).
+   Nhờ Set lịch sử đa âm này, các nốt đang được ngân dài (Held notes) sẽ giữ vững độ sáng màu cam kể cả khi có bè khác gõ chèn phím xen ngang, đồng thời hoạt động không khuyết điểm khi Tua lùi (Seek Backwards).

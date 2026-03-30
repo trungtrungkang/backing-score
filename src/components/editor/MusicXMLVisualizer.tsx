@@ -560,33 +560,72 @@ export function MusicXMLVisualizer({
         // In Wait Mode, `positionMs` is exactly `parsedMidi` tick time matching `.tstamp`.
         // Otherwise, run the unwarping map to bridge physical sound time to theoretical SVG time.
         if (!isWaitMode && currentEvent) {
-           const currentPhysicalId = getPhysicalMeasure(currentEvent.measure, measureMap);
-           const firstOccurrence = timemap.find(t => getPhysicalMeasure(t.measure, measureMap) === currentPhysicalId);
+           // NATIVE TSTAMP EXTRACTION (Cached per-measure for 60fps performance)
+           // Instead of mathematically accumulating theoreticalMs (which suffers from pickup/repeat offset drift),
+           // we physically map the current algebraic measure into Verovio DOM space to find its exact starting .tstamp!
+           const algTstampCache = (playheadRef.current as any)._algTstampCache || {};
+           const cacheKey = `${currentEvent.measure}_${nextEvent?.measure || 'end'}_${renderVersion}`;
            
-           if (firstOccurrence) {
-              let theoreticalMs = 0;
-              for (let i = 0; i < timemap.length; i++) {
-                 const ev = timemap[i];
-                 if (ev === firstOccurrence) break;
-                 const bpm = ev.tempo || vrvBaseTempo;
-                 theoreticalMs += (ev.durationInQuarters || 4) * (60000 / bpm);
-              }
-              
-              const currentBpm = firstOccurrence.tempo || vrvBaseTempo;
-              const currentDurationMs = (firstOccurrence.durationInQuarters || 4) * (60000 / currentBpm);
-              
-              // Project strictly uniform linear time onto the theoretical geometry.
-              // Do NOT use the global `progress` variable here because `progress` maps time non-linearly 
-              // across physical measure SVG widths using `beats` array distribution!
-              let exactLinearProgress = 0;
-              if (nextEvent) {
-                  const duration = nextEvent.timeMs - currentEvent.timeMs;
-                  if (duration > 0) {
-                      exactLinearProgress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
-                  }
-              }
-              currentVrvMs = theoreticalMs + (exactLinearProgress * currentDurationMs);
+           if (algTstampCache.key !== cacheKey) {
+               const currentPhysicalId = getPhysicalMeasure(currentEvent.measure, measureMap);
+               const measureEl = measuresCacheRef.current?.[currentPhysicalId - 1];
+               
+               let baseTstamp = 0;
+               let nextTstamp = 0;
+               let foundBase = false;
+               let foundNext = false;
+
+               if (measureEl) {
+                   for (const entry of rawTimemap) {
+                       if (entry.on && entry.on.length > 0) {
+                           const noteEl = document.getElementById(entry.on[0]);
+                           if (noteEl) {
+                               // Does this note fall inside the current measure?
+                               if (!foundBase && measureEl.contains(noteEl)) {
+                                   baseTstamp = entry.tstamp;
+                                   foundBase = true;
+                               }
+                               // Does this note fall into the NEXT measure?
+                               if (foundBase && !foundNext && nextEvent) {
+                                   const nextPhysicalId = getPhysicalMeasure(nextEvent.measure, measureMap);
+                                   const nextMeasureEl = measuresCacheRef.current?.[nextPhysicalId - 1];
+                                   if (nextMeasureEl && nextMeasureEl.contains(noteEl)) {
+                                       nextTstamp = entry.tstamp;
+                                       foundNext = true;
+                                   }
+                               }
+                               if (foundBase && (foundNext || !nextEvent)) break;
+                           }
+                       }
+                   }
+               }
+               
+               // Fallbacks for empty/rest measures
+               if (!foundBase) {
+                  const firstOccurrence = timemap.find(t => getPhysicalMeasure(t.measure, measureMap) === currentPhysicalId);
+                  baseTstamp = firstOccurrence ? (firstOccurrence.timeMs || 0) : 0; // rough fallback
+               }
+               if (!foundNext) {
+                  const currentBpm = currentEvent.tempo || vrvBaseTempo;
+                  nextTstamp = baseTstamp + ((currentEvent.durationInQuarters || 4) * (60000 / currentBpm));
+               }
+
+               algTstampCache.key = cacheKey;
+               algTstampCache.baseTstamp = baseTstamp;
+               algTstampCache.nextTstamp = nextTstamp;
+               (playheadRef.current as any)._algTstampCache = algTstampCache;
            }
+           
+           let exactLinearProgress = 0;
+           if (nextEvent) {
+               const duration = nextEvent.timeMs - currentEvent.timeMs;
+               if (duration > 0) {
+                   exactLinearProgress = Math.max(0, Math.min(1, (currentPosMs - currentEvent.timeMs) / duration));
+               }
+           }
+           
+           const { baseTstamp, nextTstamp } = (playheadRef.current as any)._algTstampCache;
+           currentVrvMs = baseTstamp + (exactLinearProgress * (nextTstamp - baseTstamp));
         }
         
         let activeIdx = 0;
@@ -598,18 +637,32 @@ export function MusicXMLVisualizer({
           }
         }
         
+        // Reconstruct the exact polyphonic chord currently sounding
+        // Verovio issues `.on` ONLY when a note is struck, and `.off` when it releases.
+        // We sweep from 0 to activeIdx to guarantee perfect state even during seeks!
+        const currentlySoundingIds = new Set<string>();
+        for (let i = 0; i <= activeIdx; i++) {
+           if (rawTimemap[i].on) {
+               for (const id of rawTimemap[i].on!) currentlySoundingIds.add(id);
+           }
+           if (rawTimemap[i].off) {
+               for (const id of rawTimemap[i].off!) currentlySoundingIds.delete(id);
+           }
+        }
+        
         // Find the most recent event that actually turns notes ON so we don't null-bailout on "off" ticks
         let validActiveIdx = activeIdx;
         while (validActiveIdx > 0 && (!rawTimemap[validActiveIdx]?.on || rawTimemap[validActiveIdx]?.on?.length === 0)) {
            validActiveIdx--;
         }
         
-        // Find the next upcoming event that turns notes ON
+        // Find the next upcoming event that turns notes ON (for geometry tracking)
         let validNextIdx = activeIdx + 1;
         while (validNextIdx < rawTimemap.length && (!rawTimemap[validNextIdx]?.on || rawTimemap[validNextIdx]?.on?.length === 0)) {
            validNextIdx++;
         }
-
+        
+        // Use the active event itself for layout fallback, but rely on the `currentlySoundingIds` for DOM highlighting
         const currentEntry = rawTimemap[validActiveIdx];
         const nextEntry = validNextIdx < rawTimemap.length ? rawTimemap[validNextIdx] : undefined;
         
@@ -686,21 +739,33 @@ export function MusicXMLVisualizer({
 
           // Handle per-note exact highlighting (MuseScore style)
           // Disabled explicitly in wait-mode because wait mode implements its own custom flashcard-based active measure feedback
-          if (isPlaying && !isWaitMode && currentEntry.on && currentEntry.on.length > 0) {
-             // 1. Clear previous notes
+          if (isPlaying && !isWaitMode && currentlySoundingIds.size > 0) {
+             const nextActiveElements: SVGElement[] = [];
+
+             // 1. Clear previous notes that are NO LONGER sounding
+             for (const el of activeNoteElementsRef.current) {
+                if (!currentlySoundingIds.has(el.id)) {
+                   el.classList.remove('active-verovio-note');
+                } else {
+                   nextActiveElements.push(el as any);
+                }
+             }
+             
+             // 2. Add class to current playing notes that aren't already highlighted
+             for (const id of currentlySoundingIds) {
+                const el = document.getElementById(id);
+                if (el && !el.classList.contains('active-verovio-note')) {
+                   el.classList.add('active-verovio-note');
+                   nextActiveElements.push(el as any);
+                }
+             }
+             activeNoteElementsRef.current = nextActiveElements;
+          } else if (!isPlaying || (!isWaitMode && currentlySoundingIds.size === 0)) {
+             // Clear all if paused or resting
              for (const el of activeNoteElementsRef.current) {
                 el.classList.remove('active-verovio-note');
              }
              activeNoteElementsRef.current = [];
-             
-             // 2. Add class to current playing notes
-             for (const id of currentEntry.on) {
-                const el = document.getElementById(id);
-                if (el) {
-                   el.classList.add('active-verovio-note');
-                   activeNoteElementsRef.current.push(el as any);
-                }
-             }
           }
 
           // Compute absolute container coordinates

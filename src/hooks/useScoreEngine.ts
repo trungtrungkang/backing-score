@@ -830,7 +830,17 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       const now = performance.now();
       if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
           const elapsedMs = now - midiPlayStartTimeRef.current;
-          currentPos = Math.max(0, midiPlayStartPosRef.current + (elapsedMs * playbackRate));
+          const theoreticalPos = midiPlayStartPosRef.current + (elapsedMs * playbackRate);
+          
+          // WEBAUDIO LATENCY COMPENSATION
+          // The Tone.js context inside `<midi-player>` typically requires ~150-250ms to physically spin up
+          // and emit audible synth waves after `start()` is dispatched.
+          // By offsetting the frontend UI visual clock backwards by this exact hardware latency,
+          // the UI SVG Highlighting syncs perfectly with the user's speakers, while avoiding
+          // any of the playhead jitter/stuttering caused by reading `.currentTime` iteratively!
+          const LATENCY_COMPENSATION_MS = 150; 
+          
+          currentPos = Math.max(0, theoreticalPos - LATENCY_COMPENSATION_MS);
 
           // MIDI-only loop enforcement: AudioManager's loop interval doesn't run without audio tracks
           if (loopState.enabled && !isWaitModeRef.current) {
