@@ -738,6 +738,28 @@ export function MusicXMLVisualizer({
   const lastActiveQueryMsRef = useRef<number>(0);
   const isQueryingActiveNotesRef = useRef(false);
 
+  // Helper to map unrolled playback time back to the first physical pass for Verovio
+  const mapToPhysicalTime = useCallback((unrolledMs: number) => {
+    if (!timemap || timemap.length === 0 || !measureMap) return unrolledMs;
+    let currentEvent = timemap[0];
+    for (let i = 0; i < timemap.length; i++) {
+      if (unrolledMs >= timemap[i].timeMs) {
+        currentEvent = timemap[i];
+      } else {
+        break;
+      }
+    }
+    const physicalMeasure = getPhysicalMeasure(currentEvent.measure, measureMap);
+    const originalEvent = timemap.find(t => getPhysicalMeasure(t.measure, measureMap) === physicalMeasure);
+    
+    if (originalEvent && originalEvent.timeMs < currentEvent.timeMs) {
+      const offset = unrolledMs - currentEvent.timeMs;
+      return originalEvent.timeMs + offset;
+    }
+    
+    return unrolledMs;
+  }, [timemap, measureMap]);
+
   // Active Playback Highlighting (Blue) + Inverse Sieve Extraction
   useEffect(() => {
     if (isPlaying || (isWaitMode && !isWaiting)) {
@@ -746,7 +768,7 @@ export function MusicXMLVisualizer({
         lastActiveQueryMsRef.current = currentPosMs;
         isQueryingActiveNotesRef.current = true;
 
-        const qPos = Math.round(currentPosMs);
+        const qPos = Math.round(mapToPhysicalTime(currentPosMs));
         workerProxyRef.current.getElementsAtTime(qPos).then((data: any) => {
           isQueryingActiveNotesRef.current = false;
           const container = svgContainerRef.current;
@@ -780,8 +802,8 @@ export function MusicXMLVisualizer({
                 const bbox = el.getBBox();
                 if (targetX === -1) {
                   targetX = bbox.x;
-                } else if (targetX - bbox.x > 75) {
-                  break; // INSTANT ABORT. We are officially evaluating the previous discrete hit. 0 layout thrashing!
+                } else if (targetX - bbox.x > 35 || bbox.x - targetX > 150) {
+                  break; // INSTANT ABORT.
                 }
               } catch (e) { }
 
@@ -802,7 +824,7 @@ export function MusicXMLVisualizer({
   useEffect(() => {
     if (isWaitMode && isWaiting && workerProxyRef.current && svgContainerRef.current) {
       const container = svgContainerRef.current;
-      const qPos = Math.round(positionMsRef.current);
+      const qPos = Math.round(mapToPhysicalTime(positionMsRef.current));
 
       workerProxyRef.current.getElementsAtTime(qPos + 5).then((data: any) => {
         const notes = data?.notes || [];
@@ -842,7 +864,7 @@ export function MusicXMLVisualizer({
               const bbox = el.getBBox();
               if (targetX === -1) {
                 targetX = bbox.x;
-              } else if (targetX - bbox.x > 35) {
+              } else if (targetX - bbox.x > 35 || bbox.x - targetX > 150) {
                 break; // Halt execution. Only target the exact unified visual chord sequence.
               }
 
@@ -881,9 +903,8 @@ export function MusicXMLVisualizer({
     } else if (svgContainerRef.current) {
       svgContainerRef.current.querySelectorAll(".wait-mode-missed").forEach(el => el.classList.remove("wait-mode-missed"));
     }
-    // positionMs intentionally read from ref, not deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWaitMode, isWaiting, renderVersion, practiceTrackIds]);
+  }, [isWaitMode, isWaiting, positionMs, renderVersion, practiceTrackIds]);
 
   const hasSvg = svgContentRef.current !== null;
 
