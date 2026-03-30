@@ -210,6 +210,7 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
         )}
         <MusicXMLVisualizer
           scoreFileId={scoreFileId}
+          positionMs={positionMs}
           playbackRate={playbackRate}
           externalPositionMsRef={positionMsRef}
           isPlaying={isPlaying}

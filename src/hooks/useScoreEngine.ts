@@ -710,6 +710,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     if (audioManagerRef.current) {
       audioManagerRef.current.seek(ms);
     }
+    positionMsRef.current = ms;
     setPositionMs(ms);
   }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, isScoreSynthMuted]);
 
@@ -1029,6 +1030,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       handlePause();
     }
 
+    positionMsRef.current = capturedSongTimeMs;
     setPositionMs(capturedSongTimeMs);
 
     if (wasPlaying) {

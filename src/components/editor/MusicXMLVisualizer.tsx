@@ -471,13 +471,14 @@ export function MusicXMLVisualizer({
   // from expensive SVG layout queries (getBBox, getScreenCTM, getBoundingClientRect)
   const playheadRafRef = useRef<number>(0);
   const lastPlayheadMsRef = useRef(-1);
+  const updatePlayheadRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!timemap || timemap.length === 0 || renderVersion === 0) {
       return;
     }
 
-    const updatePlayhead = () => {
+    const updatePlayhead = () => { console.log("UPDATE PLAYHEAD CALLED, pos:", positionMsRef.current);
       const currentPosMs = positionMsRef.current;
       lastPlayheadMsRef.current = currentPosMs;
 
@@ -651,6 +652,15 @@ export function MusicXMLVisualizer({
         const currentX = (playhead as any)._currentX;
         const measureEl = outMeasure.el;
 
+        // GUARANTEED DOM CLEARANCE: If we are paused/stopped, or reset to 0, 
+        // aggressively clear active notes even if layout evaluation bails out!
+        if (!isPlaying || positionMsRef.current === 0) {
+           for (const el of activeNoteElementsRef.current) {
+              el.classList.remove('active-verovio-note');
+           }
+           activeNoteElementsRef.current = [];
+        }
+
         if (currentX !== null && measureEl) {
           // Highlight the measure directly via its DOM element natively
           // ONLY handle scrolling in Verovio if Wait Mode is on!
@@ -679,12 +689,6 @@ export function MusicXMLVisualizer({
                    activeNoteElementsRef.current.push(el as any);
                 }
              }
-          } else if (!isPlaying) {
-             // Clear all if paused
-             for (const el of activeNoteElementsRef.current) {
-                el.classList.remove('active-verovio-note');
-             }
-             activeNoteElementsRef.current = [];
           }
 
           // Compute absolute container coordinates
@@ -830,13 +834,14 @@ export function MusicXMLVisualizer({
         playheadRafRef.current = requestAnimationFrame(updatePlayhead);
       }
     };
+    updatePlayheadRef.current = updatePlayhead;
 
     if (isPlaying) {
-      lastPlayheadMsRef.current = -1; // Force first update
+      console.log("SEEK CALLED", positionMs); lastPlayheadMsRef.current = -1; // Force first update
       playheadRafRef.current = requestAnimationFrame(updatePlayhead);
     } else {
       // One-shot update when not playing (for seek/stop position)
-      lastPlayheadMsRef.current = -1;
+      console.log("SEEK CALLED", positionMs); lastPlayheadMsRef.current = -1;
       updatePlayhead();
     }
 
@@ -846,46 +851,19 @@ export function MusicXMLVisualizer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, timemap, measureMap, renderVersion, isWaitMode]);
 
-  // Dedicated stop-reset: when playback stops and position is 0, force playhead/highlight to measure 1
+  // Trigger coordinate update when Seeking while Paused (including Stop)
   useEffect(() => {
-    const isActuallyAtStart = positionMsRef.current === 0;
-    if (!isPlaying && isActuallyAtStart && measuresCacheRef.current && timemap.length > 0) {
-      // Clear any existing highlight
-      svgContainerRef.current?.querySelectorAll('.active-measure').forEach(el => el.classList.remove('active-measure'));
-      // Highlight first measure
-      const firstMeasure = timemap[0];
-      const physicalIndex = getPhysicalMeasure(firstMeasure.measure, measureMap);
-      const measureEl = measuresCacheRef.current[physicalIndex - 1] as SVGGElement | undefined;
-      if (measureEl && !isWaitMode) {
-        measureEl.classList.add('active-measure');
+    if (!isPlaying && updatePlayheadRef.current) {
+      console.log("SEEK CALLED", positionMs); lastPlayheadMsRef.current = -1;
+      updatePlayheadRef.current();
+      
+      // If we explicitly sought to 0 (Stop), scroll the view back to the absolute top
+      if (positionMsRef.current === 0 && containerRef.current) {
+         containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      // Reset playhead to first measure position
-      if (playheadRef.current && measureEl) {
-        const bbox = measureEl.getBBox();
-        const ctm = measureEl.getScreenCTM();
-        if (ctm) {
-          const scrollContainerNode = containerRef.current;
-          if (scrollContainerNode) {
-            const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
-            const scrollLeft = scrollContainerNode.scrollLeft || 0;
-            const scrollTop = scrollContainerNode.scrollTop || 0;
-            const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
-            const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
-            const startX = (screenLeft - scrollContainerRect.left) + scrollLeft;
-            const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
-            const screenHeight = bbox.height * ctm.d;
-            playheadRef.current.style.transform = `translate(${startX}px, ${absoluteY}px)`;
-            playheadRef.current.style.height = `${screenHeight}px`;
-            playheadRef.current.style.opacity = '1';
-            // Scroll back to top
-            scrollContainerNode.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        }
-      }
-      activeMeasureRef.current = firstMeasure.measure;
-      lastPlayheadMsRef.current = -1;
     }
-  }, [isPlaying, positionMs, timemap, measureMap, isWaitMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positionMs]);
 
   // Handle clicking on measures to seek
   const handleSvgClick = (e: React.MouseEvent<HTMLDivElement>) => {
