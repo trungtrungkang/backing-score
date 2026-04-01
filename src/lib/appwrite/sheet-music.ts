@@ -291,23 +291,41 @@ export async function backfillThumbnails(
   for (const doc of docs) {
     onProgress?.(processed + 1, docs.length);
     try {
-      // Download the PDF file
-      const fileUrl = storage.getFileView(bucketId, doc.fileId);
-      const response = await fetch(fileUrl);
+      // Download the PDF file from R2
+      const downloadUrl = `/api/r2/download/${doc.fileId}`;
+      const response = await fetch(downloadUrl);
+      if (!response.ok) throw new Error("Failed to download PDF from R2");
       const blob = await response.blob();
       const file = new File([blob], `${doc.title}.pdf`, { type: "application/pdf" });
 
       // Generate thumbnail
       const { thumbnailBlob } = await extractPdfMetadata(file);
 
-      // Upload thumbnail
-      const thumbId = ID.unique();
+      // Upload thumbnail to R2
       const thumbFile = new File([thumbnailBlob], `thumb_${doc.fileId}.jpg`, { type: "image/jpeg" });
-      await storage.createFile(bucketId, thumbId, thumbFile, [
-        Permission.read(Role.user(doc.userId)),
-        Permission.update(Role.user(doc.userId)),
-        Permission.delete(Role.user(doc.userId)),
-      ]);
+      
+      const token = await getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const resThumb = await fetch("/api/r2/upload", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          filename: thumbFile.name,
+          contentType: "image/jpeg",
+          fileSize: thumbFile.size,
+        }),
+      });
+      if (!resThumb.ok) throw new Error("Failed to get Thumb upload URL");
+      const { fileId: thumbId, uploadUrl: thumbUploadUrl } = await resThumb.json();
+
+      const uploadRes = await fetch(thumbUploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "image/jpeg" },
+        body: thumbFile,
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload thumbnail to R2");
 
       // Update document
       await databases.updateDocument(dbId, collId, doc.$id, { thumbnailId: thumbId });
