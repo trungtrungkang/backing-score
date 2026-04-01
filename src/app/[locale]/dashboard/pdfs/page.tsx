@@ -63,6 +63,7 @@ import {
   PanelLeftOpen,
   Share2,
   GraduationCap,
+  Check,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -188,6 +189,30 @@ export default function PdfsLibraryPage() {
   const [classroomsLoading, setClassroomsLoading] = useState(false);
   const [sharingToClassroom, setSharingToClassroom] = useState(false);
   const [classroomShareNote, setClassroomShareNote] = useState("");
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const isSelectionMode = selectedIds.size > 0;
+
+  const toggleSelection = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === sheets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sheets.map(s => s.$id)));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   // Load data
   const loadData = useCallback(async () => {
@@ -345,6 +370,28 @@ export default function PdfsLibraryPage() {
   const hasMissingThumbnails = sheets.some(s => !s.thumbnailId);
 
   // Sheet actions
+  const handleDeleteSelected = async () => {
+    const ok = await confirm({
+      title: t("delete"),
+      description: `Delete ${selectedIds.size} selected PDFs? This cannot be undone.`,
+    });
+    if (!ok) return;
+
+    try {
+      const toastId = toast.loading(`Deleting ${selectedIds.size} PDFs...`);
+      await Promise.all(
+        Array.from(selectedIds).map(id => deleteSheetMusic(id).catch(err => {
+          console.error("Failed to delete", id, err);
+        }))
+      );
+      toast.success("Selected PDFs deleted successfully", { id: toastId });
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err) {
+      toast.error(String(err));
+    }
+  };
+
   const handleDeleteSheet = async (id: string) => {
     const ok = await confirm({
       title: t("delete"),
@@ -546,9 +593,18 @@ export default function PdfsLibraryPage() {
               className="pl-9 pr-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder:text-zinc-400 text-sm border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64 sm:w-80"
             />
           </div>
-          <button
-            onClick={() =>
-              setViewMode(
+          <div className="flex items-center gap-2">
+            {sheets.length > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-sm font-medium transition-colors"
+              >
+                {selectedIds.size === sheets.length ? "Deselect All" : "Select All"}
+              </button>
+            )}
+            <button
+              onClick={() =>
+                setViewMode(
                 viewMode === "grid"
                   ? "compact"
                   : viewMode === "compact"
@@ -567,6 +623,7 @@ export default function PdfsLibraryPage() {
               <LayoutGrid className="w-4 h-4" />
             )}
           </button>
+          </div>
         </div>
 
 
@@ -657,13 +714,25 @@ export default function PdfsLibraryPage() {
                       e.dataTransfer.setData("text/sheet-id", sheet.$id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    className="group bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 dark:hover:border-indigo-500/30 transition-all cursor-pointer overflow-hidden"
-                    onClick={() =>
-                      router.push(`/dashboard/pdfs/view/${sheet.$id}`)
-                    }
+                    className={`group bg-white dark:bg-zinc-900 rounded-xl border transition-all cursor-pointer overflow-hidden relative ${selectedIds.has(sheet.$id) ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50 dark:hover:border-indigo-500/30'}`}
+                    onClick={(e) => {
+                      if (isSelectionMode) {
+                        toggleSelection(e as any, sheet.$id);
+                      } else {
+                        router.push(`/dashboard/pdfs/view/${sheet.$id}`);
+                      }
+                    }}
                   >
                     {/* Thumbnail */}
                     <div className={`${viewMode === "compact" ? "aspect-[4/3]" : "aspect-[3/4]"} bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center relative overflow-hidden`}>
+                      <div className={`absolute top-2 left-2 z-10 transition-opacity duration-200 ${selectedIds.has(sheet.$id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <div
+                          onClick={(e) => toggleSelection(e, sheet.$id)}
+                          className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${selectedIds.has(sheet.$id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white/90 backdrop-blur border-zinc-300 hover:border-indigo-400'}`}
+                        >
+                          {selectedIds.has(sheet.$id) && <Check className="w-3.5 h-3.5" />}
+                        </div>
+                      </div>
                       {sheet.thumbnailId ? (
                         <img
                           src={getThumbnailUrl(sheet.thumbnailId)}
@@ -846,11 +915,21 @@ export default function PdfsLibraryPage() {
                       idx > 0
                         ? "border-t border-zinc-100 dark:border-zinc-800"
                         : ""
-                    }`}
-                    onClick={() =>
-                      router.push(`/dashboard/pdfs/view/${sheet.$id}`)
-                    }
+                    } ${selectedIds.has(sheet.$id) ? "bg-indigo-50/50 dark:bg-indigo-500/10" : ""}`}
+                    onClick={(e) => {
+                      if (isSelectionMode) {
+                        toggleSelection(e as any, sheet.$id);
+                      } else {
+                        router.push(`/dashboard/pdfs/view/${sheet.$id}`);
+                      }
+                    }}
                   >
+                    <div
+                      onClick={(e) => toggleSelection(e, sheet.$id)}
+                      className={`w-5 h-5 flex-shrink-0 cursor-pointer rounded flex items-center justify-center border transition-colors ${selectedIds.has(sheet.$id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white shadow-sm border-zinc-300 dark:bg-zinc-800 dark:border-zinc-600 hover:border-indigo-400'}`}
+                    >
+                      {selectedIds.has(sheet.$id) && <Check className="w-3.5 h-3.5" />}
+                    </div>
                     <FileText className="w-8 h-8 text-zinc-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-zinc-900 dark:text-white truncate">
@@ -953,6 +1032,30 @@ export default function PdfsLibraryPage() {
             handleUpload(e.dataTransfer.files);
           }}
         />
+
+        {/* Floating Selection Bar */}
+        {selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-zinc-800 shadow-xl border border-zinc-200 dark:border-zinc-700 rounded-full py-2 px-4 flex justify-between items-center gap-4 text-sm max-w-full overflow-x-auto min-w-[300px]">
+            <span className="font-medium text-zinc-700 dark:text-zinc-200 whitespace-nowrap">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleDeleteSelected}
+                className="text-red-500 hover:text-red-600 font-medium whitespace-nowrap flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+              <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700"></div>
+              <button
+                onClick={clearSelection}
+                className="px-2 py-1 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 font-medium whitespace-nowrap"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Share to Classroom Dialog */}
