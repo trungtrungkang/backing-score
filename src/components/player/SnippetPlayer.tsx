@@ -72,7 +72,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
     }
   };
 
-  const handleWaitModeComplete = async (score: number) => {
+  const handleWaitModeComplete = async (score?: number) => {
     // Only execute Learner gamification if inside a valid Student Context (not Creator mode)
     if (!gami || gami.readOnly) return;
 
@@ -85,7 +85,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
     });
 
     try {
-      const clampedScore = Math.max(0, Math.min(100, score));
+      const clampedScore = Math.max(0, Math.min(100, score ?? 100));
       const { progressDoc, justUnlocked } = await saveWaitModeScore(
         gami.userId, 
         gami.courseId, 
@@ -135,7 +135,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
 
   const { state, refs, actions } = useScoreEngine({
     payload,
-    onWaitModeComplete: handleWaitModeComplete
+    onPracticeComplete: handleWaitModeComplete
   });
 
   const scoreFileId = payload.notationData?.fileId;
@@ -277,21 +277,19 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               <div className="relative flex items-center">
               <button
                 onClick={() => {
-                  if (state.isWaitMode) {
-                    actions.setIsWaitMode(false);
-                  } else {
-                    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-                    setShowFullscreenWarning(true);
-                    warningTimeoutRef.current = setTimeout(() => setShowFullscreenWarning(false), 3000);
-                  }
+                  actions.setPracticeModeType('none');
+                  actions.handleStop(true);
+                  if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+                  setShowFullscreenWarning(true);
+                  warningTimeoutRef.current = setTimeout(() => setShowFullscreenWarning(false), 3000);
                 }}
-                className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
-                title={state.isWaitMode ? "Turn off Practice Mode" : "Please exit Fullscreen to configure Practice Mode"}
+                className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.practiceModeType !== 'none' ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+                title={state.practiceModeType !== 'none' ? "Turn off Practice Mode" : "Please exit Fullscreen to configure Practice Mode"}
               >
                 <Keyboard className="w-4 h-4" /> Practice
               </button>
 
-              {showFullscreenWarning && !state.isWaitMode && (
+              {showFullscreenWarning && state.practiceModeType === 'none' && (
                 <div className="absolute right-0 bottom-[calc(100%+8px)] w-max max-w-sm px-3 py-2.5 bg-zinc-950 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 z-[9999]">
                   <span className="text-blue-400">ℹ️</span> Please exit Fullscreen to configure Practice Mode
                 </div>
@@ -301,7 +299,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
             <Popover>
               <PopoverTrigger asChild>
                 <button
-                  className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.isWaitMode ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
+                  className={`h-8 px-3 flex shrink-0 whitespace-nowrap items-center gap-2 rounded-md border text-xs font-bold tracking-wider transition-all ${state.practiceModeType !== 'none' ? "bg-blue-500/20 border-blue-500/50 text-blue-500 dark:text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]" : "bg-transparent border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
                   title="Practice Mode Settings"
                 >
                   <Keyboard className="w-4 h-4" /> Practice
@@ -318,7 +316,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                       <input
                         type="checkbox"
                         id="wait-mode-toggle-popup-snippet"
-                        checked={state.isWaitMode}
+                        checked={state.practiceModeType !== 'none'}
                         onChange={(e) => {
                           if (e.target.checked && !state.isMidiInitialized && !state.isMicInitialized) {
                             const pref = localStorage.getItem("bs_preferred_instrument");
@@ -327,20 +325,20 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                               actions.initializeMic().then(success => {
                                 setIsInitializingMidi(false);
                                 if (success) {
-                                  actions.setIsWaitMode(true);
+                                  actions.setPracticeModeType('wait');
                                 }
                               });
                             } else if (pref === "midi") {
                               setIsInitializingMidi(true);
                               actions.initializeMidi().then(success => {
                                 setIsInitializingMidi(false);
-                                if (success) actions.setIsWaitMode(true);
+                                if (success) actions.setPracticeModeType('wait');
                               });
                             } else {
                               setShowMidiDialog(true);
                             }
                           } else {
-                            actions.setIsWaitMode(e.target.checked);
+                            actions.setPracticeModeType(e.target.checked ? 'wait' : 'none');
                           }
                         }}
                         className="cursor-pointer w-4 h-4 accent-blue-500 rounded bg-zinc-200 dark:bg-white/10 border-zinc-300 dark:border-white/20 hover:border-zinc-400 dark:hover:border-white/40 focus:ring-0 transition-colors"
@@ -606,7 +604,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
       {/* Wait Mode Real-time Monitor HUD Overlay */}
       <div
         ref={refs.waitModeMonitorRef}
-        className={`absolute top-4 right-4 z-[100] bg-black/80 backdrop-blur-md text-emerald-400 font-mono text-xs p-3 rounded-lg border border-emerald-500/30 shadow-2xl shadow-emerald-500/10 transition-opacity duration-300 pointer-events-none min-w-[220px] ${state.showWaitModeMonitor && state.isWaitMode ? "opacity-100" : "opacity-0"
+        className={`absolute top-4 right-4 z-[100] bg-black/80 backdrop-blur-md text-emerald-400 font-mono text-xs p-3 rounded-lg border border-emerald-500/30 shadow-2xl shadow-emerald-500/10 transition-opacity duration-300 pointer-events-none min-w-[220px] ${state.showWaitModeMonitor && state.practiceModeType !== 'none' ? "opacity-100" : "opacity-0"
           }`}
       />
 
@@ -639,7 +637,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                   if (success) {
                     localStorage.setItem("bs_preferred_instrument", "mic");
                     setShowMidiDialog(false);
-                    actions.setIsWaitMode(true);
+                    actions.setPracticeModeType('wait');
                   } else {
                     setShowMidiDialog(false);
                   }
@@ -658,7 +656,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                   if (success) {
                     localStorage.setItem("bs_preferred_instrument", "midi");
                     setShowMidiDialog(false);
-                    actions.setIsWaitMode(true);
+                    actions.setPracticeModeType('wait');
                   } else {
                     setShowMidiDialog(false);
                   }

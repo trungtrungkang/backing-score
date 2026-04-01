@@ -764,7 +764,10 @@
     "lightMode": "Chế độ Sáng",
     "darkMode": "Chế độ Tối",
     "listeningModePreview": "Đang ở chế độ Nghe thử. Bạn phải bật tính năng Luyện Tập (Wait Mode) để thi và nộp bài.",
-    "waitModeRequiredToRecord": "Tính năng Luyện Tập (Wait Mode) là bắt buộc để ghi âm bài làm này."
+    "waitModeRequiredToRecord": "Tính năng Luyện Tập (Wait Mode) là bắt buộc để ghi âm bài làm này.",
+    "appleVoiceIsolationWarning": "Người dùng Apple: Vui lòng tắt chế độ Mic 'Voice Isolation' trong Control Center nếu thiết bị không bắt được các nốt cao (E7+).",
+    "gamificationInvalidatedMicWarning": "Chế độ chấm điểm tạm tắt: Vui lòng tắt âm thanh Nhạc cụ chính (Mute) khi dùng Mic để đảm bảo điểm số chính xác.",
+    "gamificationMicWarning": "Vui lòng tắt các Audio Track chứa Nhạc cụ chính khi dùng Mic để đảm bảo điểm số chính xác."
   },
   "MicCalibrationWizard": {
     "title": "Hiệu chuẩn Micro AI",

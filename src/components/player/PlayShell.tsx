@@ -324,12 +324,12 @@ export function PlayShell({
         gamificationWarningShownRef.current = true;
 
         if (state.isGamificationInvalidated) {
-          toast.error("Chế độ chấm điểm tạm tắt: Vui lòng tắt âm thanh Nhạc cụ chính (Mute) khi dùng Mic để đảm bảo điểm số chính xác.", {
+          toast.error(tPlay("gamificationInvalidatedMicWarning"), {
             duration: 8000,
             position: "top-center"
           });
         } else {
-          toast.info("Vui lòng tắt các Audio Track chứa Nhạc cụ chính khi dùng Mic để đảm bảo điểm số chính xác.", {
+          toast.info(tPlay("gamificationMicWarning"), {
             duration: 8000,
             position: "top-center"
           });

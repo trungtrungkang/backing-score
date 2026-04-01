@@ -798,7 +798,10 @@
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
     "listeningModePreview": "Preview Mode. Turn Wait Mode back on to take your test.",
-    "waitModeRequiredToRecord": "Wait Mode is required to record your assignment submission."
+    "waitModeRequiredToRecord": "Wait Mode is required to record your assignment submission.",
+    "appleVoiceIsolationWarning": "Apple Users: Please turn off 'Voice Isolation' Mic Mode in your Control Center if you lose high notes (E7+).",
+    "gamificationInvalidatedMicWarning": "Scoring Temporarily Disabled: Please mute the Main Instrument audio track when using Mic to ensure accurate scoring.",
+    "gamificationMicWarning": "Please mute the Main Instrument audio track when using Mic to ensure accurate scoring."
   },
   "MicCalibrationWizard": {
     "title": "AI Mic Calibration",

@@ -78,3 +78,30 @@ Nếu hệ thống chấm điểm dùng Tên Giao diện (`physicalMeasure` ví 
 > **Latent vs Physical Splitting**
 > - **Chấm điểm:** `useScoreEngine` sử dụng một ID thứ nguyên bí mật gọi là `latentMeasure` (Chỉ số tịnh tiến tuyệt đối, vd 1, 2, 3... 90). Vòng số 1 sẽ được mã hóa vào ID 5. Vòng lặp số 2 sẽ được mã hóa vào ID 62. Khép kín và hoàn toàn cách ly mảng đối chiếu điểm số.
 > - **Hiển thị UI:** Engine gửi một Payload `AssessmentMeasureResult` nhét kèm ID `physicalMeasure` (Là số ID DOM thực tế ở trên màn hình, luôn là số 5). `MusicXMLVisualizer` sẽ đọc `physicalMeasure` (số 5) để tìm Bounding Box toạ độ trên màn hình. Kết quả sẽ tạo ra Bong bóng % Rực rỡ vòng 1. Và khi tua đến vòng 2, một Quả bong bóng % độc lập hoàn toàn mới sẽ tiếp tục được sinh ra và chèn đúng vào khoảng không gia đó mà không bị giẫm chân, lỗi gộp ID.
+
+## 7. Gamification System & Anti-Cheat (Hệ thống Điểm thưởng và Chống Gian lận)
+Chế độ Flow-Mode yêu cầu sự công bằng trong việc xếp hạng và cấp phát XP. Vì người dùng có thể sử dụng Microphone thay vì cáp MIDI, hệ thống rất dễ bị qua mặt bằng việc "bật loa ngoài" (Acoustic Loopback). Nốt nhạc phát ra từ loa máy tính sẽ vọng thẳng vào Mic, tạo ra điểm số ảo 100%.
+
+### Chiến lược Chống Gian lận (Acoustic Loopback Invalidation)
+Thay vì chặn hoàn toàn quyền sử dụng Mic, hệ thống áp dụng cơ chế **đẩy trách nhiệm (Warning) kết hợp giảm trừ (Penalty)**:
+
+1. **Nhận diện Loopback trực tiếp (`isGamificationInvalidated`):**
+   Cờ trạng thái `isGamificationInvalidated` trong `useScoreEngine` được kích hoạt tự động theo công thức:
+   `isMicInitialized && !isScoreSynthMuted && (isFlowMode || isWaitMode)`.
+   Nghĩa là: Nếu người chơi đang bật Mic, VÀ âm thanh của phím đàn Guide/Synth gốc không bị tắt đi (Muted), hệ thống kết luận 100% tiếng đàn sẽ vọng vào Mic.
+
+2. **Cảnh báo Thông minh (UI Warning Toast):**
+   - Khi phát hiện Loopback, một popup Toast (sử dụng thư viện `sonner` với ref-tracker tối ưu để không bị nháy liên tục) sẽ yêu cầu người dùng tắt "Audio Track nhạc cụ chính" hoặc "Mute nhạc cụ".
+   - UI chỉ cảnh báo, không cưỡng ép người dùng thoát ra. User vân có thể tiếp tục chơi.
+
+3. **Hình phạt Điểm số (Zero-Score Submission):**
+   Hàm `submitPracticeSession` tại thời điểm gửi API POST `/api/gamification/session` sẽ kiểm tra cờ này. 
+   - Nếu vi phạm Loopback, `flowModeScore` (hoặc `waitModeScore`) sẽ bị ghi đè thô bạo về `0` (Zero).
+   - Backend (`gamification.ts`) tiếp tục áp dụng thuật toán `0 XP` với Modifier Zero nếu nó nhận được điểm thi bằng 0.
+
+4. **Kinh tế Hệ số (Mic Penalty Input Modifier):**
+   Ngay cả khi người chơi không gian lận (đã tắt Synth), việc dùng Mic luôn có biên độ sai lệch so với MIDI. Backend áp dụng hệ số phạt cứng `M_MIC_PENALTY`: `baseXP * 0.5`. Người dùng dùng Mic chỉ nhận được tối đa 50% XP so với dùng dây cáp MIDI, khuyến khích họ đầu tư cáp chuẩn để đảm bảo trải nghiệm sư phạm tốt nhất.
+
+### Pipeline gửi điểm API
+- Hàm hook `onPracticeComplete` ở core `useScoreEngine` sẽ tự động trigger Event khi thanh Playhead vượt quá biên độ thời gian của bản nhạc (`totalSongDurationMs`).
+- Sự kiện này bốc dỡ payload trích xuất động linh hoạt % Hits / Misses trên thời gian thực, truyền gọi tắt lên Backend Appwrite mà không cần phải nhúng các logic nặng nề tính toán lại vào trong `PlayShell`.
