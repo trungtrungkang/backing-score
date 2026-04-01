@@ -337,3 +337,53 @@ export async function backfillThumbnails(
 
   return processed;
 }
+
+/**
+ * Regenerate thumbnail for a single PDF.
+ * Runs client-side (needs canvas for rendering).
+ */
+export async function regenerateThumbnail(sheetId: string): Promise<string> {
+  const { extractPdfMetadata } = await import("@/lib/pdf-utils");
+  
+  const doc = await databases.getDocument(dbId, collId, sheetId) as unknown as SheetMusicDocument;
+  
+  // Download the PDF file from R2
+  const downloadUrl = `/api/r2/download/${doc.fileId}`;
+  const response = await fetch(downloadUrl);
+  if (!response.ok) throw new Error("Failed to download PDF from R2");
+  const blob = await response.blob();
+  const file = new File([blob], `${doc.title}.pdf`, { type: "application/pdf" });
+
+  // Generate thumbnail
+  const { thumbnailBlob } = await extractPdfMetadata(file);
+
+  // Upload thumbnail to R2
+  const thumbFile = new File([thumbnailBlob], `thumb_${doc.fileId}.jpg`, { type: "image/jpeg" });
+  
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const resThumb = await fetch("/api/r2/upload", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      filename: thumbFile.name,
+      contentType: "image/jpeg",
+      fileSize: thumbFile.size,
+    }),
+  });
+  if (!resThumb.ok) throw new Error("Failed to get Thumb upload URL");
+  const { fileId: newThumbId, uploadUrl: thumbUploadUrl } = await resThumb.json();
+
+  const uploadRes = await fetch(thumbUploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "image/jpeg" },
+    body: thumbFile,
+  });
+  if (!uploadRes.ok) throw new Error("Failed to upload thumbnail to R2");
+
+  // Update document
+  await databases.updateDocument(dbId, collId, doc.$id, { thumbnailId: newThumbId });
+  return newThumbId;
+}

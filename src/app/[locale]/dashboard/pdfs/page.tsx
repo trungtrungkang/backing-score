@@ -30,6 +30,7 @@ import {
   uploadSheetPdf,
   getThumbnailUrl,
   backfillThumbnails,
+  regenerateThumbnail,
   listMyClassrooms,
   shareToClassroom,
   type SheetMusicDocument,
@@ -327,6 +328,17 @@ export default function PdfsLibraryPage() {
     } finally {
       setBackfilling(false);
       setTimeout(() => setBackfillProgress(""), 3000);
+    }
+  };
+
+  const handleRegenerateThumbnail = async (sheetId: string) => {
+    try {
+      toast.info(t("regeneratingThumbnail") || "Regenerating thumbnail...");
+      await regenerateThumbnail(sheetId);
+      toast.success(t("regenerateSuccess") || "Thumbnail regenerated successfully");
+      loadData();
+    } catch (err) {
+      toast.error(String(err));
     }
   };
 
@@ -794,6 +806,17 @@ export default function PdfsLibraryPage() {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
+                                handleRegenerateThumbnail(sheet.$id);
+                              }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              {t("regenerateThumbnail") || "Regenerate Thumbnail"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 handleDeleteSheet(sheet.$id);
                               }}
                               className="flex items-center gap-2 cursor-pointer text-red-500 focus:text-red-500"
@@ -880,6 +903,16 @@ export default function PdfsLibraryPage() {
                         >
                           <Share2 className="w-4 h-4 mr-2" />
                           {t("shareToClassroom")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRegenerateThumbnail(sheet.$id);
+                          }}
+                        >
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          {t("regenerateThumbnail") || "Regenerate Thumbnail"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

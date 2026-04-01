@@ -153,6 +153,7 @@ export {
   getThumbnailUrl,
   touchSheetLastOpened,
   backfillThumbnails,
+  regenerateThumbnail,
 } from "./sheet-music";
 export {
   createSheetFolder,
