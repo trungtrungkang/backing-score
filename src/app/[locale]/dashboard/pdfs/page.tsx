@@ -373,7 +373,7 @@ export default function PdfsLibraryPage() {
   const handleDeleteSelected = async () => {
     const ok = await confirm({
       title: t("delete"),
-      description: `Delete ${selectedIds.size} selected PDFs? This cannot be undone.`,
+      description: t("deleteConfirmGroup", { count: selectedIds.size }) || `Delete ${selectedIds.size} selected PDFs? This cannot be undone.`,
     });
     if (!ok) return;
 
@@ -384,7 +384,7 @@ export default function PdfsLibraryPage() {
           console.error("Failed to delete", id, err);
         }))
       );
-      toast.success("Selected PDFs deleted successfully", { id: toastId });
+      toast.success(t("deleteSuccessGroup", { count: selectedIds.size }) || "Selected PDFs deleted successfully", { id: toastId });
       setSelectedIds(new Set());
       loadData();
     } catch (err) {

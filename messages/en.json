@@ -757,7 +757,12 @@
     "shareNote": "Note (optional)",
     "shareNotePlaceholder": "e.g., Practice pages 2–3",
     "selectClassroom": "Select classroom",
-    "noClassrooms": "No classrooms found"
+    "noClassrooms": "No classrooms found",
+    "regeneratingThumbnail": "Regenerating thumbnail...",
+    "regenerateSuccess": "Thumbnail regenerated successfully",
+    "regenerateThumbnail": "Regenerate Thumbnail",
+    "deleteConfirmGroup": "Delete {count} selected PDFs? This cannot be undone.",
+    "deleteSuccessGroup": "Selected PDFs deleted successfully"
   },
   "PlayerControls": {
     "connectInstrument": "Connect Instrument",

@@ -723,7 +723,12 @@
     "shareNote": "Ghi chú (tùy chọn)",
     "shareNotePlaceholder": "VD: Luyện trang 2–3",
     "selectClassroom": "Chọn lớp học",
-    "noClassrooms": "Không tìm thấy lớp"
+    "noClassrooms": "Không tìm thấy lớp",
+    "regeneratingThumbnail": "Đang tạo lại ảnh đại diện...",
+    "regenerateSuccess": "Đã tạo lại ảnh đại diện thành công",
+    "regenerateThumbnail": "Tạo lại ảnh đại diện",
+    "deleteConfirmGroup": "Xóa {count} PDF đã chọn? Hành động này không thể hoàn tác.",
+    "deleteSuccessGroup": "Tất cả PDF đã chọn đã được xoá"
   },
   "PlayerControls": {
     "connectInstrument": "Kết nối Nhạc cụ",
