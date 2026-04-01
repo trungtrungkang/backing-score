@@ -9,6 +9,14 @@ import { useMicInput } from "@/hooks/useMicInput";
 import { useMicProfile } from "@/hooks/useMicProfile";
 import { getPhysicalMeasure, evaluateWaitModeMatch } from "@/lib/score/math";
 
+export type PracticeModeType = 'none' | 'wait' | 'flow';
+export type AssessmentResultType = 'hit' | 'miss' | 'pending';
+export interface AssessmentMeasureResult {
+  physicalMeasure: number;
+  result: 'hit' | 'miss' | 'partial';
+  score: number;
+}
+
 export interface ScoreEngineParams {
   payload: DAWPayload;
   autoplayOnLoad?: boolean;
@@ -44,17 +52,27 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     return combined;
   }, [midiNotes, micNotes]);
 
-  const [isWaitMode, setIsWaitMode] = useState(false);
+  const [practiceModeType, setPracticeModeType] = useState<PracticeModeType>('none');
+  const [assessmentResults, setAssessmentResults] = useState<Record<number, AssessmentResultType>>({});
+  const [assessmentMeasureResults, setAssessmentMeasureResults] = useState<Record<number, AssessmentMeasureResult>>({});
+  const isWaitMode = practiceModeType === 'wait';
+  const isFlowMode = practiceModeType === 'flow';
   const [practiceTrackIds, setPracticeTrackIds] = useState<number[]>([-1]);
   const [parsedMidi, setParsedMidi] = useState<any>(null);
   const [showWaitModeMonitor, setShowWaitModeMonitor] = useState(false);
+  const [targetMeasure, setTargetMeasure] = useState<number | null>(null);
+  const [activeMeasure, setActiveMeasure] = useState<number | null>(null);
 
   const activeNotesRef = useRef<Set<number>>(new Set());
+  const practiceModeTypeRef = useRef<PracticeModeType>('none');
   const isWaitModeRef = useRef(false);
+  const isFlowModeRef = useRef(false);
+  const assessmentResultsRef = useRef<Record<number, AssessmentResultType>>({});
+  const assessmentMeasureResultsRef = useRef<Record<number, AssessmentMeasureResult>>({});
   const [isWaitModeLenient, setIsWaitModeLenient] = useState(false);
   const isWaitModeLenientRef = useRef(false);
   const practiceTrackIdsRef = useRef<number[]>([-1]);
-  const practiceChordsRef = useRef<{ timeMs: number, notes: Set<number>, measure?: number, trackIndex?: number }[]>([]);
+  const practiceChordsRef = useRef<{ timeMs: number, notes: Set<number>, measure?: number, latentMeasure?: number, trackIndex?: number }[]>([]);
   const targetChordIndexRef = useRef(0);
   const isWaitingRef = useRef(false);
   const releasedPitchesRef = useRef<Set<number>>(new Set());
@@ -62,7 +80,13 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   const parsedMidiRef = useRef<any>(null);
 
   useEffect(() => { activeNotesRef.current = activeNotes; }, [activeNotes]);
-  useEffect(() => { isWaitModeRef.current = isWaitMode; }, [isWaitMode]);
+  useEffect(() => { 
+    practiceModeTypeRef.current = practiceModeType;
+    isWaitModeRef.current = practiceModeType === 'wait';
+    isFlowModeRef.current = practiceModeType === 'flow';
+  }, [practiceModeType]);
+  useEffect(() => { assessmentResultsRef.current = assessmentResults; }, [assessmentResults]);
+  useEffect(() => { assessmentMeasureResultsRef.current = assessmentMeasureResults; }, [assessmentMeasureResults]);
   useEffect(() => { isWaitModeLenientRef.current = isWaitModeLenient; }, [isWaitModeLenient]);
   useEffect(() => { practiceTrackIdsRef.current = practiceTrackIds; }, [practiceTrackIds]);
 
@@ -70,6 +94,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   const timemap = payload.notationData?.timemap || [];
   const getMeasureForTime = useCallback((timeMs: number) => {
     if (!timemap || timemap.length === 0) return 0;
+    if (timeMs < timemap[0].timeMs) return timemap[0].measure;
     
     // Scan exactly like the math.ts implementation to guarantee UI sync
     for (let i = 0; i < timemap.length; i++) {
@@ -181,17 +206,101 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       });
     }
 
-    const chords: { timeMs: number, notes: Set<number>, measure: number, trackIndex?: number }[] = [];
+    const chords: { timeMs: number, notes: Set<number>, measure: number, latentMeasure: number, trackIndex?: number }[] = [];
     const measureMap = payload.notationData?.measureMap;
+    const timemap = payload.notationData?.timemap || [];
+    
+    const ppq = parsedMidi.header.ppq || 480;
+    const timeSigs = parsedMidi.header.timeSignatures || [];
+    const activeTimeSigs = timeSigs.length > 0 ? timeSigs : [{ ticks: 0, timeSignature: [4, 4] }];
+    
+    // Build Dynamic Measure Grid to perfectly track boundaries across Time Signature changes
+    let maxTicks = 0;
+    tracksToParse.forEach(track => {
+      const lastTick = track.notes.length > 0 ? track.notes[track.notes.length - 1].ticks : 0;
+      if (lastTick > maxTicks) maxTicks = lastTick;
+    });
+
+    const measureGrid: { measure: number, startTick: number, ticksPerMeasure: number }[] = [];
+    let currentMeasure = timemap.length > 0 ? timemap[0].measure : 1; // Align starting latentMeasure dynamically with the exact Verovio start point (0 or 1)
+    let currentTick = 0;
+    
+    // Check if timemap provides high-fidelity `durationInQuarters` payload
+    const hasFullCoverage = timemap.length > 0 && timemap.every((t: any) => t.durationInQuarters !== undefined);
+    
+    if (hasFullCoverage) {
+        // Preferred: Build grid perfectly from verified MusicXML/Timemap properties
+        for (let i = 0; i < timemap.length; i++) {
+            const tm = timemap[i];
+            const ticksPerMeasure = tm.durationInQuarters! * ppq;
+            measureGrid.push({ measure: tm.measure, startTick: currentTick, ticksPerMeasure });
+            currentTick += ticksPerMeasure;
+        }
+        // Add a final conceptual dummy box just in case notes exceed the end
+        if (timemap.length > 0) {
+           const lastTm = timemap[timemap.length - 1];
+           measureGrid.push({ measure: lastTm.measure + 1, startTick: currentTick, ticksPerMeasure: lastTm.durationInQuarters! * ppq });
+        }
+    } else {
+        // Fallback: Build Dynamic Measure Grid based on TimeSignatures parsed from MIDI
+        let tsIndex = 0;
+        
+        while (currentTick <= maxTicks) {
+            let activeTs = activeTimeSigs[tsIndex].timeSignature;
+            while (tsIndex + 1 < activeTimeSigs.length && activeTimeSigs[tsIndex + 1].ticks <= currentTick) {
+                tsIndex++;
+                activeTs = activeTimeSigs[tsIndex].timeSignature;
+            }
+            
+            const ticksPerMeasure = activeTs[0] * (4 / activeTs[1]) * ppq;
+            measureGrid.push({ measure: currentMeasure, startTick: currentTick, ticksPerMeasure });
+            
+            currentTick += ticksPerMeasure;
+            currentMeasure++;
+            if (currentMeasure > 50000) break; // extreme failsafe
+        }
+        // Final conceptual boundary buffer
+        const finalTs = activeTimeSigs[activeTimeSigs.length - 1].timeSignature;
+        measureGrid.push({ measure: currentMeasure, startTick: currentTick, ticksPerMeasure: finalTs[0] * (4 / finalTs[1]) * ppq });
+    }
 
     tracksToParse.forEach((track, trackIndex) => {
       track.notes.forEach((n: any) => {
-        const timeMs = n.time * 1000;
-        const latentMeasure = getMeasureForTime(timeMs);
+        let audioTimeMs = n.time * 1000;
+        
+        // Find grid cell
+        let gridCell = measureGrid[measureGrid.length - 1]; // Default to final bounding measure
+        for (let i = 0; i < measureGrid.length; i++) {
+           if (n.ticks >= measureGrid[i].startTick && n.ticks < measureGrid[i].startTick + measureGrid[i].ticksPerMeasure) {
+              gridCell = measureGrid[i];
+              break;
+           }
+        }
+        
+        // Derive Latent Measure from Dynamic Rhythmic Grid, preventing drift when TimeSignatures change!
+        const latentMeasure = gridCell.measure;
+        const measureFraction = (n.ticks - gridCell.startTick) / gridCell.ticksPerMeasure;
+        
+        // If an Audio Timemap exists, interpolate the musical fraction into Real Audio Time
+        if (timemap && timemap.length > 0) {
+            const tmStartIdx = timemap.findIndex((t: any) => t.measure === latentMeasure);
+            if (tmStartIdx !== -1) {
+                const tmStart = timemap[tmStartIdx];
+                const tmEnd = timemap[tmStartIdx + 1];
+                if (tmStart && tmEnd) {
+                    audioTimeMs = tmStart.timeMs + measureFraction * (tmEnd.timeMs - tmStart.timeMs);
+                } else if (tmStart) {
+                    const defaultBpm = parsedMidi.header.tempos?.[0]?.bpm || 120;
+                    const measureDurationAudioMs = (gridCell.ticksPerMeasure / ppq) * (60000 / defaultBpm);
+                    audioTimeMs = tmStart.timeMs + measureFraction * measureDurationAudioMs;
+                }
+            }
+        }
+
         const physicalMeasure = getPhysicalMeasure(latentMeasure, measureMap);
         
         const existing = chords.find(c => {
-          const isSameTime = Math.abs(c.timeMs - timeMs) < 20;
+          const isSameTime = Math.abs(c.timeMs - audioTimeMs) < 20;
           if (isMicInitializedState) return isSameTime;
           return isSameTime && c.trackIndex === trackIndex;
         });
@@ -199,13 +308,15 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
         if (existing) {
           existing.notes.add(n.midi);
         } else {
-          chords.push({ timeMs, notes: new Set([n.midi]), measure: physicalMeasure, trackIndex });
+          chords.push({ timeMs: audioTimeMs, notes: new Set([n.midi]), measure: physicalMeasure, latentMeasure, trackIndex });
         }
       });
     });
     chords.sort((a,b) => a.timeMs - b.timeMs);
     practiceChordsRef.current = chords;
     targetChordIndexRef.current = 0;
+    setAssessmentResults({});
+    setAssessmentMeasureResults({});
   }, [parsedMidi, practiceTrackIds, getMeasureForTime, isMicInitializedState, payload.notationData?.measureMap]); 
 
   // Synchronize global mute
@@ -720,6 +831,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     activeNotesRef.current.clear();
     releasedPitchesRef.current.clear();
     targetChordIndexRef.current = 0; 
+    setAssessmentResults({});
+    setAssessmentMeasureResults({});
     handleSeek(0);
   }, [handlePause, handleSeek]);
 
@@ -888,6 +1001,107 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       } else if (audioManagerRef.current) {
           currentPos = audioManagerRef.current.getCurrentPositionMs();
       }
+
+      if (isFlowModeRef.current && practiceChordsRef.current.length > 0) {
+        setAssessmentResults(prev => {
+           let updated = { ...prev };
+           let hasChanges = false;
+           const pressed = activeNotesRef.current;
+           const FLOW_WINDOW_MS = 200;
+
+           for (let i = 0; i < practiceChordsRef.current.length; i++) {
+              const chord = practiceChordsRef.current[i];
+              if (prev[i] === 'hit' || prev[i] === 'miss') continue;
+
+              const timeDiff = currentPos - chord.timeMs;
+              let newStatus: AssessmentResultType | null = null;
+              
+              if (Math.abs(timeDiff) <= FLOW_WINDOW_MS) {
+                 if (pressed.size > 0) {
+                    const { allMatched, isAllowedEarly } = evaluateWaitModeMatch(
+                      pressed, chord.notes, isWaitModeLenientRef.current,
+                      i > 0 ? practiceChordsRef.current[i - 1].notes : undefined,
+                      releasedPitchesRef.current
+                    );
+                    if (allMatched && isAllowedEarly) {
+                       newStatus = 'hit';
+                    }
+                 }
+              } else if (timeDiff > FLOW_WINDOW_MS) {
+                 newStatus = 'miss';
+              }
+
+              if (newStatus) {
+                 updated[i] = newStatus;
+                 hasChanges = true;
+
+                 // Map to Physical Measure
+                 if (chord.measure && chord.latentMeasure) {
+                    const latentMeasure = chord.latentMeasure;
+                    const physMeasure = chord.measure; // we already pre-calculated physicalMeasure in `chord.measure`
+                    
+                    setAssessmentMeasureResults(prevMeasure => {
+                        const currentMeasureRes = prevMeasure[latentMeasure];
+                        if (currentMeasureRes && currentMeasureRes.result === 'miss' && currentMeasureRes.score === 0) {
+                           // Try to aggregate continually if we want to update the score on the fly
+                        }
+                        
+                        // Evaluate if this measure is now fully evaluated
+                        let fullyEvaluated = true;
+                        let hitCount = 0;
+                        let totalCount = 0;
+                        for (let j = 0; j < practiceChordsRef.current.length; j++) {
+                           const iterChord = practiceChordsRef.current[j];
+                           if (iterChord.latentMeasure === latentMeasure) {
+                              totalCount++;
+                              const st = j === i ? newStatus : (updated[j] || prev[j]);
+                              if (st === 'hit') hitCount++;
+                              if (st !== 'hit' && st !== 'miss') { fullyEvaluated = false; break; }
+                           }
+                        }
+                        
+                        if (fullyEvaluated && totalCount > 0) {
+                           const score = Math.round((hitCount / totalCount) * 100);
+                           let finalRes: 'hit' | 'miss' | 'partial' = 'miss';
+                           if (score === 100) finalRes = 'hit';
+                           else if (score > 0) finalRes = 'partial';
+                           
+                           return { ...prevMeasure, [latentMeasure]: { physicalMeasure: physMeasure, result: finalRes, score } };
+                        }
+                        return prevMeasure;
+                     });
+                 }
+              }
+           }
+
+           return hasChanges ? updated : prev;
+        });
+      }
+      
+      // === HUD Monitor Update (Measures) ===
+      // Active Measure is the physical measure at the current synced Audio Pos Time
+      const latentMeasure = getMeasureForTime(currentPos);
+      const physMeasure = getPhysicalMeasure(latentMeasure, payload.notationData?.measureMap);
+      
+      let nextTargetMeasure: number | null = null;
+      if (isWaitModeRef.current && practiceChordsRef.current.length > 0) {
+         const targetIdx = targetChordIndexRef.current;
+         if (targetIdx < practiceChordsRef.current.length) {
+            nextTargetMeasure = practiceChordsRef.current[targetIdx].measure || null;
+         }
+      } else if (isFlowModeRef.current && practiceChordsRef.current.length > 0) {
+         const currentAss = assessmentResultsRef.current;
+         for (let i = 0; i < practiceChordsRef.current.length; i++) {
+            const st = currentAss[i];
+            if (st !== 'hit' && st !== 'miss') {
+               nextTargetMeasure = practiceChordsRef.current[i].measure || null;
+               break;
+            }
+         }
+      }
+
+      setTargetMeasure(prev => prev !== nextTargetMeasure ? nextTargetMeasure : prev);
+      setActiveMeasure(prev => prev !== physMeasure ? physMeasure : prev);
     }
 
     setPositionMs(prev => {
@@ -1122,10 +1336,11 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       midiBase64, stretchedMidiBase64, parsedMidi,
       playbackRate, pitchShift, isMetronomeEnabled, isPreRollEnabled,
       muteByTrackId, soloByTrackId, volumes,
-      isWaitMode, isWaitModeLenient, practiceTrackIds, showWaitModeMonitor,
+      practiceModeType, isWaitMode, isFlowMode, assessmentResults, assessmentMeasureResults,
+      isWaitModeLenient, practiceTrackIds, showWaitModeMonitor,
       isControlsCollapsed, isAutoplayEnabled,
       isWaiting: isWaitingRef.current,
-      activeNotes,
+      activeNotes, targetMeasure, activeMeasure,
       isMidiInitialized, isMicInitialized: isMicInitializedState,
       midiNotes, micNotes,
       loopState, partNames, timeSignature,
@@ -1143,7 +1358,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       handleMuteToggle, handleSoloToggle, handleVolumeChange,
       handleCollapseToggle, handleLoopStateChange, handleMidiExtracted,
       handlePartNamesExtracted: setPartNames,
-      setIsWaitMode, setIsWaitModeLenient, setPracticeTrackIds, setShowWaitModeMonitor, setIsAutoplayEnabled,
+      setPracticeModeType, setIsWaitModeLenient, setPracticeTrackIds, setShowWaitModeMonitor, setIsAutoplayEnabled,
       setMuteByTrackId, setSoloByTrackId, setLoopState,
       initializeMidi, disconnectMidi, initializeMic, disconnectMic,
       skipWaitNote

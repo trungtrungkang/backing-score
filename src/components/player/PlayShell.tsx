@@ -32,6 +32,13 @@ import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite/p
 import { GamificationCelebration } from "@/components/gamification/GamificationCelebration";
 import { toast } from "sonner";
 
+function midiToNoteName(midi: number) {
+  const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const octave = Math.floor(midi / 12) - 1;
+  const note = notes[midi % 12];
+  return `${note}${octave}`;
+}
+
 // Mobile-only consolidated actions menu for Play page header
 function MobileActionsMenu({ projectId, projectName }: { projectId: string; projectName: string }) {
   const { user } = useAuth();
@@ -155,6 +162,7 @@ export function PlayShell({
   const { isPremium, user } = useAuth();
   const tc = useTranslations("Classroom");
   const tPlay = useTranslations("PlayShell");
+  const tControls = useTranslations("PlayerControls");
   const [showUpgrade, setShowUpgrade] = useState<"playLimit" | "waitMode" | null>(null);
   const router = useRouter();
 
@@ -173,6 +181,7 @@ export function PlayShell({
   // --- Layout Toggles (Synced to LocalStorage) ---
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(true);
   const [isCompactHeader, setIsCompactHeader] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<'paged' | 'continuous'>('paged');
 
   useEffect(() => {
     try {
@@ -180,7 +189,14 @@ export function PlayShell({
       if (vk !== null) setShowVirtualKeyboard(vk === "true");
       const ch = localStorage.getItem("bs_compact_header");
       if (ch !== null) setIsCompactHeader(ch === "true");
+      const lm = localStorage.getItem("bs_layout_mode");
+      if (lm === "continuous" || lm === "paged") setLayoutMode(lm);
     } catch {}
+  }, []);
+
+  const handleLayoutModeChange = useCallback((mode: 'paged' | 'continuous') => {
+    setLayoutMode(mode);
+    try { localStorage.setItem("bs_layout_mode", mode); } catch {}
   }, []);
 
   const handleVirtualKeyboardToggle = useCallback((v: boolean) => {
@@ -265,8 +281,8 @@ export function PlayShell({
 
   // Auto-enable Wait Mode when forced by assignment
   useEffect(() => {
-    if (forceWaitMode && !state.isWaitMode) {
-      actions.setIsWaitMode(true);
+    if (forceWaitMode && state.practiceModeType !== 'wait') {
+      actions.setPracticeModeType('wait');
     }
   }, [forceWaitMode]);
 
@@ -361,12 +377,13 @@ export function PlayShell({
     incrementServerPlayCount(projectId); // fire-and-forget
   }, [actions, projectId, state.isWaitMode, state.isMidiInitialized, state.isMicInitialized, tPlay]);
 
-  // Gated Wait Mode toggle — 10/day for free users, unlimited for premium
-  const gatedWaitModeToggle = useCallback((enabled: boolean) => {
-    if (forceWaitMode && !enabled) {
-      toast.info(tPlay("listeningModePreview"), { position: "top-center", duration: 5000 });
+  // Gated Practice Mode toggle — 10/day for free users, unlimited for premium
+  const gatedPracticeModeToggle = useCallback((mode: 'none' | 'wait' | 'flow') => {
+    if (forceWaitMode && mode !== 'wait') {
+      toast.info(tPlay("listeningModePreview", { fallback: "Wait Mode is required for this assignment." }), { position: "top-center", duration: 5000 });
+      return; // prevent leaving wait mode if forced
     }
-    if (enabled && !isPremium) {
+    if (mode !== 'none' && !isPremium) {
       const { count } = getWaitModeCount();
       if (count >= FREE_DAILY_WAIT_MODE_LIMIT) {
         setShowUpgrade("waitMode");
@@ -374,8 +391,8 @@ export function PlayShell({
       }
       incrementWaitModeCount();
     }
-    actions.setIsWaitMode(enabled);
-  }, [forceWaitMode, isPremium, actions]);
+    actions.setPracticeModeType(mode);
+  }, [forceWaitMode, isPremium, actions, tPlay]);
 
   const scoreFileId = payload.notationData?.fileId;
 
@@ -431,6 +448,8 @@ export function PlayShell({
             isWaitMode={state.isWaitMode}
             isWaiting={state.isWaiting}
             practiceTrackIds={state.practiceTrackIds}
+            layoutMode={layoutMode}
+            assessmentResults={state.assessmentMeasureResults}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
@@ -488,8 +507,10 @@ export function PlayShell({
           onPrev={onPrev}
           isAutoplayEnabled={state.isAutoplayEnabled}
           onAutoplayToggle={actions.setIsAutoplayEnabled}
-          isWaitMode={state.isWaitMode}
-          onWaitModeToggle={gatedWaitModeToggle}
+          practiceModeType={state.practiceModeType}
+          onPracticeModeTypeChange={gatedPracticeModeToggle}
+          layoutMode={layoutMode}
+          onLayoutModeChange={handleLayoutModeChange}
           isPremium={isPremium}
           isWaitModeLenient={state.isWaitModeLenient}
           onWaitModeLenientToggle={actions.setIsWaitModeLenient}
@@ -567,6 +588,62 @@ export function PlayShell({
             activeNotes={state.activeNotes}
             className="flex-1 rounded-none border-none bg-transparent"
           />
+        </div>
+      )}
+
+      {/* Practice Monitor HUD (Hidden by default, enable for debugging) */}
+      {false && (state.isFlowMode || state.isWaitMode) && (
+        <div className={cn(
+          "fixed left-4 z-[120] animate-in fade-in zoom-in-95 duration-300",
+          (state.isWaitMode && showVirtualKeyboard) ? "bottom-[110px]" : "bottom-6 sm:bottom-8"
+        )}>
+          <div className="bg-white/95 dark:bg-[#1e1e24]/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[140px]">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-[10px] uppercase font-bold text-zinc-400">Flow Monitor</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            </div>
+            
+            <div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">{tControls("targetMeasure")}:</div>
+              <div className="flex flex-wrap gap-1">
+                {(state as any).targetMeasure !== null ? (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold tabular-nums">
+                    {(state as any).targetMeasure}
+                  </span>
+                ) : (
+                  <span className="text-xs text-zinc-400 italic">--</span>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">{tControls("activeMeasure")}:</div>
+              <div className="flex flex-wrap gap-1">
+                {(state as any).activeMeasure !== null ? (
+                  <span className="px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-semibold tabular-nums">
+                    {(state as any).activeMeasure}
+                  </span>
+                ) : (
+                  <span className="text-xs text-zinc-400 italic">--</span>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">Pressed Keys:</div>
+              <div className="flex flex-wrap gap-1">
+                {Array.from(state.activeNotes || []).length > 0 ? (
+                  Array.from(state.activeNotes || []).map((n: number) => (
+                    <span key={`active-${n}`} className="px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-semibold tabular-nums">
+                      {midiToNoteName(n)}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-400 italic">--</span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

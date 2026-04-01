@@ -9,6 +9,16 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        "float-up-fade-out": {
+          "0%": { transform: "translateY(0) scale(0.8)", opacity: "0" },
+          "20%": { transform: "translateY(-10px) scale(1.1)", opacity: "1" },
+          "100%": { transform: "translateY(-40px) scale(1)", opacity: "0" },
+        }
+      },
+      animation: {
+        "float-up-fade-out": "float-up-fade-out 1.5s ease-out forwards",
+      },
       colors: {
         border: "var(--border)",
         input: "var(--input)",

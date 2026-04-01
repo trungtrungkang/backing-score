@@ -749,8 +749,11 @@
     "off": "Tắt",
     "monitor": "Đèn báo",
     "freeDailyLimitTitle": "Giới hạn miễn phí:",
-    "freeDailyLimitDesc": " 10 lần/ngày. Nâng cấp Premium để tập luyện không giới hạn.",
-    "practiceMode": "Tập đàn (Practice)"
+    "freeDailyLimitDesc": " 10 lượt/ngày. Nâng cấp Premium để sử dụng Tập đàn không giới hạn.",
+    "practiceMode": "Chế độ luyện tập",
+    "layoutMode": "Giao diện",
+    "targetMeasure": "Ô nhịp hóng",
+    "activeMeasure": "Ô nhịp thực"
   },
   "PlayShell": {
     "connectInputForWaitMode": "Vui lòng bật Micro hoặc kết nối Đàn Piano MIDI để bắt đầu tính năng Luyện Tập.",

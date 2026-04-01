@@ -784,7 +784,10 @@
     "monitor": "Monitor",
     "freeDailyLimitTitle": "Free Daily Limit:",
     "freeDailyLimitDesc": " 10 uses/day. Upgrade to Premium for unlimited Practice Mode.",
-    "practiceMode": "Practice Mode"
+    "practiceMode": "Practice Mode",
+    "layoutMode": "Layout",
+    "targetMeasure": "Target Measure",
+    "activeMeasure": "Active Measure"
   },
   "PlayShell": {
     "connectInputForWaitMode": "Please enable Microphone or connect a MIDI Keyboard to use Wait Mode.",

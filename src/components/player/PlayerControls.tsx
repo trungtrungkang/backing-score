@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Settings2, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic, Check, Piano, X, Volume2 } from "lucide-react";
+import { Play, Pause, Repeat, SlidersHorizontal, Bell, Zap, ChevronDown, ChevronUp, Settings2, Square, SkipBack, SkipForward, PlaySquare, Keyboard, TrendingUp, Mic, Check, Piano, X, Volume2, BookOpen, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AudioTrack } from "@/lib/daw/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,10 +53,12 @@ interface PlayerControlsProps {
   onPrev?: () => void;
   isAutoplayEnabled?: boolean;
   onAutoplayToggle?: (enabled: boolean) => void;
-  isWaitMode?: boolean;
-  onWaitModeToggle?: (enabled: boolean) => void;
+  practiceModeType?: 'none' | 'wait' | 'flow';
+  onPracticeModeTypeChange?: (mode: 'none' | 'wait' | 'flow') => void;
   isWaitModeLenient?: boolean;
   onWaitModeLenientToggle?: (enabled: boolean) => void;
+  layoutMode?: 'paged' | 'continuous';
+  onLayoutModeChange?: (mode: 'paged' | 'continuous') => void;
   isSynthMuted?: boolean;
   onSynthMuteToggle?: (muted: boolean) => void;
   midiTracks?: { id: number, name: string }[];
@@ -115,8 +117,10 @@ export function PlayerControls({
   onVolumeChange,
   onMuteToggle,
   onSoloToggle,
-  isWaitMode,
-  onWaitModeToggle,
+  practiceModeType = 'none',
+  onPracticeModeTypeChange,
+  layoutMode = 'paged',
+  onLayoutModeChange,
   onInitializeMidi,
   onInitializeMic,
   onPracticeTrackChange,
@@ -263,40 +267,114 @@ export function PlayerControls({
           {/* RIGHT SETTINGS */}
           <div className="flex flex-1 items-center justify-start shrink-0 min-w-0 w-auto gap-0.5 sm:gap-1 flex-nowrap pr-2">
 
-            {/* Speed Option */}
-            <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("speed")}</span>
-              <select
-                value={playbackRate}
-                onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-                className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                <option value="0.5">.5x</option>
-                <option value="0.75">.75x</option>
-                <option value="0.9">.9x</option>
-                <option value="1">1x</option>
-                <option value="1.1">1.1x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2x</option>
-              </select>
+            {/* Desktop View Menu items */}
+            <div className="hidden sm:flex items-center gap-1">
+              {/* Layout Mode Toggle */}
+              {onLayoutModeChange && (
+                <button
+                  onClick={() => onLayoutModeChange(layoutMode === 'paged' ? 'continuous' : 'paged')}
+                  className={cn(
+                    "w-8 h-8 rounded shrink-0 flex items-center justify-center transition-colors border-none",
+                    "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+                  )}
+                  title={layoutMode === 'paged' ? "Switch to Continuous Scrolling" : "Switch to Paged Layout"}
+                >
+                  {layoutMode === 'paged' ? <BookOpen className="w-[18px] h-[18px]" strokeWidth={2} /> : <ScrollText className="w-[18px] h-[18px]" strokeWidth={2} />}
+                </button>
+              )}
+  
+              {/* Speed Option */}
+              <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("speed")}</span>
+                <select
+                  value={playbackRate}
+                  onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
+                  className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  <option value="0.5">.5x</option>
+                  <option value="0.75">.75x</option>
+                  <option value="0.9">.9x</option>
+                  <option value="1">1x</option>
+                  <option value="1.1">1.1x</option>
+                  <option value="1.25">1.25x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                </select>
+              </div>
+  
+              {/* Pitch Option */}
+              <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("pitch")}</span>
+                <select
+                  value={pitchShift}
+                  onChange={(e) => onPitchShiftChange(parseInt(e.target.value))}
+                  className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  {Array.from({ length: 25 }, (_, i) => i - 12).map(val => (
+                    <option key={val} value={val}>{val > 0 ? `+${val}` : val}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5" />
             </div>
 
-            {/* Pitch Option */}
-            <div className="flex items-center gap-1 bg-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 rounded px-1.5 h-8 transition-colors">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">{t("pitch")}</span>
-              <select
-                value={pitchShift}
-                onChange={(e) => onPitchShiftChange(parseInt(e.target.value))}
-                className="bg-transparent text-xs font-mono font-medium outline-none text-zinc-700 dark:text-zinc-300 cursor-pointer"
-              >
-                {Array.from({ length: 25 }, (_, i) => i - 12).map(val => (
-                  <option key={val} value={val}>{val > 0 ? `+${val}` : val}</option>
-                ))}
-              </select>
-            </div>
+            {/* Mobile Settings Drawer */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="sm:hidden h-8 px-2 rounded flex items-center gap-1 text-xs font-semibold bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-colors border-none"
+                  title="More Settings"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xl rounded-xl z-[200]">
+                <div className="flex flex-col gap-3">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Playback Settings</span>
+                  
+                  {onLayoutModeChange && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Layout</span>
+                      <select
+                        value={layoutMode}
+                        onChange={(e) => onLayoutModeChange(e.target.value as 'paged' | 'continuous')}
+                        className="bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-medium outline-none text-zinc-900 dark:text-zinc-100 cursor-pointer rounded px-2 py-1"
+                      >
+                        <option value="paged">Paged</option>
+                        <option value="continuous">Continuous</option>
+                      </select>
+                    </div>
+                  )}
 
-            <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Speed</span>
+                    <select
+                      value={playbackRate}
+                      onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
+                      className="bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-medium outline-none text-zinc-900 dark:text-zinc-100 cursor-pointer rounded px-2 py-1"
+                    >
+                      <option value="0.5">0.5x</option><option value="0.75">0.75x</option><option value="0.9">0.9x</option>
+                      <option value="1">1.0x</option><option value="1.1">1.1x</option><option value="1.25">1.25x</option>
+                      <option value="1.5">1.5x</option><option value="2">2.0x</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">Pitch Shift</span>
+                    <select
+                      value={pitchShift}
+                      onChange={(e) => onPitchShiftChange(parseInt(e.target.value))}
+                      className="bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-medium outline-none text-zinc-900 dark:text-zinc-100 cursor-pointer rounded px-2 py-1"
+                    >
+                      {Array.from({ length: 25 }, (_, i) => i - 12).map(val => (
+                        <option key={val} value={val}>{val > 0 ? `+${val}` : val}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Metronome */}
             <button
@@ -379,13 +457,13 @@ export function PlayerControls({
             <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-700 shrink-0 mx-0.5 sm:mx-1" />
 
             {/* Practice Mode */}
-            {onWaitModeToggle && (
+            {onPracticeModeTypeChange && (
               <Popover>
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
                       "h-8 px-2 flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded text-xs font-semibold tracking-wide transition-colors border-none",
-                      isWaitMode 
+                      practiceModeType !== 'none'
                         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" 
                         : "bg-transparent text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
                     )}
@@ -398,42 +476,48 @@ export function PlayerControls({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 bg-white dark:bg-[#1e1e24] border-zinc-200 dark:border-zinc-700 shadow-xl rounded-xl p-0 overflow-hidden z-[200]">
-                  <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="bg-zinc-50 dark:bg-[#25252b] px-4 py-3 border-b border-zinc-200 dark:border-zinc-700/50 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <Keyboard className="w-4 h-4 text-blue-500" />
-                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white">{t("practiceMode")}</h4>
+                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white">{t("practiceMode", { fallback: "Practice Mode" })}</h4>
                     </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={isWaitMode}
-                      id="wait-mode-toggle"
-                      onClick={() => {
-                        const nextState = !isWaitMode;
-                        if (nextState && !isMidiInitialized && onInitializeMidi) {
-                          onInitializeMidi();
-                        }
-                        onWaitModeToggle?.(nextState);
-                      }}
-                      className={cn(
-                        "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-                        isWaitMode ? "bg-blue-500" : "bg-zinc-200 dark:bg-zinc-700"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "pointer-events-none block h-4 w-4 rounded-full bg-white dark:bg-zinc-950 shadow-lg ring-0 transition-transform",
-                          isWaitMode ? "translate-x-4" : "translate-x-0"
-                        )}
-                      />
-                    </button>
+                    
+                    {/* Practice Mode Type Selector */}
+                    <div className="flex p-1 bg-zinc-200/50 dark:bg-black/20 rounded-lg">
+                      <button
+                        onClick={() => {
+                          onPracticeModeTypeChange('none');
+                        }}
+                        className={cn("flex-1 text-xs font-bold px-2 py-1.5 rounded-md transition-colors", practiceModeType === 'none' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400")}
+                      >
+                        Off
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!isMidiInitialized && onInitializeMidi) onInitializeMidi();
+                          onPracticeModeTypeChange('wait');
+                        }}
+                        className={cn("flex-1 text-xs font-bold px-2 py-1.5 rounded-md transition-colors", practiceModeType === 'wait' ? "bg-blue-500 text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400")}
+                      >
+                        Wait
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!isMidiInitialized && onInitializeMidi) onInitializeMidi();
+                          onPracticeModeTypeChange('flow');
+                        }}
+                        className={cn("flex-1 text-xs font-bold px-2 py-1.5 rounded-md transition-colors", practiceModeType === 'flow' ? "bg-green-500 text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400")}
+                      >
+                        Flow
+                      </button>
+                    </div>
                   </div>
 
                   <div className="px-4 py-3 flex flex-col gap-4">
-                    {isWaitMode && !isPremium && (
+                    {practiceModeType !== 'none' && !isPremium && (
                       <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border border-amber-500/20 rounded-lg p-2.5">
                         <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          <span className="font-bold">{t("freeDailyLimitTitle")}</span>{t("freeDailyLimitDesc")}
+                          <span className="font-bold">{t("freeDailyLimitTitle", { fallback: "Free limit reached" })}</span>{t("freeDailyLimitDesc", { fallback: " upgrade required." })}
                         </p>
                       </div>
                     )}
@@ -741,7 +825,7 @@ export function PlayerControls({
                   initPromise.then(() => {
                     localStorage.setItem("bs_preferred_instrument", "mic");
                     setShowMidiDialog(false);
-                    onWaitModeToggle?.(true);
+                    onPracticeModeTypeChange?.('wait');
                   }).catch(() => {
                     setShowMidiDialog(false);
                   });
@@ -761,7 +845,7 @@ export function PlayerControls({
                   if (success) {
                     localStorage.setItem("bs_preferred_instrument", "midi");
                     setShowMidiDialog(false);
-                    onWaitModeToggle?.(true);
+                    onPracticeModeTypeChange?.('wait');
                   } else {
                     setShowMidiDialog(false);
                   }

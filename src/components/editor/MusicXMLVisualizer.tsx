@@ -26,11 +26,14 @@ export interface MusicXMLVisualizerProps {
   defaultScale?: number;
   payloadTempo?: number;
   playbackRate?: number;
+  layoutMode?: 'paged' | 'continuous';
+  assessmentResults?: Record<number, AssessmentMeasureResult>;
 }
 
 import { getPhysicalMeasure } from "@/lib/score/math";
 import type { TimemapEntry } from "@/lib/daw/types";
 import { injectMidiInstruments } from "@/lib/score/midi-instruments";
+import type { AssessmentMeasureResult } from "@/hooks/useScoreEngine";
 
 export interface VerovioTimemapEntry {
   tstamp: number;
@@ -42,7 +45,8 @@ export interface VerovioTimemapEntry {
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, onPartNamesExtracted, isDarkMode = false,
-  isWaitMode = false, isWaiting = false, practiceTrackIds, timemapSource, className, defaultScale, payloadTempo, playbackRate = 1
+  isWaitMode = false, isWaiting = false, practiceTrackIds, timemapSource, className, defaultScale, payloadTempo, playbackRate = 1,
+  layoutMode = 'paged', assessmentResults
 }: MusicXMLVisualizerProps) {
   // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
   // If externalPositionMsRef is provided, use it directly (zero-rerender path from EditorShell)
@@ -331,8 +335,8 @@ export function MusicXMLVisualizer({
         if (!proxy) return;
 
         await proxy.setOptions({
-          pageHeight: 60000,
-          pageWidth: Math.round(debouncedWidth * (100 / scale)),
+          pageHeight: layoutMode === 'continuous' ? 60000 : 60000,
+          pageWidth: layoutMode === 'continuous' ? 60000 : Math.round(debouncedWidth * (100 / scale)),
           pageMarginLeft: 50,
           pageMarginRight: 50,
           pageMarginTop: 50,
@@ -341,7 +345,7 @@ export function MusicXMLVisualizer({
           spacingLinear: 0.25,
           spacingNonLinear: 0.6,
           adjustPageHeight: true,
-          breaks: "auto"
+          breaks: layoutMode === 'continuous' ? "none" : "auto"
         });
         if (canceled) return;
 
@@ -368,7 +372,7 @@ export function MusicXMLVisualizer({
     return () => {
       canceled = true;
     };
-  }, [processedXml, scale, debouncedWidth]);
+  }, [processedXml, scale, debouncedWidth, layoutMode]);
 
   // Write SVG string directly to DOM via ref (bypasses React reconciliation)
   // This ensures React never wipes CSS classes we add to SVG elements.
@@ -394,10 +398,23 @@ export function MusicXMLVisualizer({
       topSvg.removeAttribute('width');
       topSvg.removeAttribute('height');
       topSvg.style.display = 'block';
-      topSvg.style.width = '100%';
-      topSvg.style.height = 'auto';
+      
+      if (layoutMode === 'continuous') {
+         // Prevent fit-width crushing in continuous layout
+         // w is the viewBox width created by Verovio (which is roughly pageWidth).
+         // If pageWidth = debouncedWidth * (100 / scale), then actual width = debouncedWidth.
+         // Since pageWidth = 60000, actual width = 60000 / (100 / scale).
+         // We multiply by 2 (or 1.8) to make it visibly larger for continuous scrolling
+         // since horizontal flow doesn't need to abide by strict viewport width packing.
+         const pixelWidth = (w / (100 / scale)) * 2;
+         topSvg.style.width = `${pixelWidth}px`;
+         topSvg.style.height = 'auto';
+      } else {
+         topSvg.style.width = '100%';
+         topSvg.style.height = 'auto';
+      }
     }
-  }, [renderVersion]);
+  }, [renderVersion, scale, layoutMode]);
 
   // --- Magic Sync: Highlight & Auto-scroll ---
   const activeMeasureRef = useRef<number | string | null>(null);
@@ -415,7 +432,7 @@ export function MusicXMLVisualizer({
       }
       if (shouldScroll) {
         const systemEl = measureEl.closest('.system');
-        const targetEl = systemEl || measureEl;
+        const targetEl = layoutMode === 'continuous' ? measureEl : (systemEl || measureEl);
 
         if (targetEl !== scrollTargetRef.current) {
           scrollTargetRef.current = targetEl;
@@ -429,21 +446,28 @@ export function MusicXMLVisualizer({
               const bbox = targetEl.getBBox();
               const ctm = targetEl.getScreenCTM();
               if (ctm) {
-                const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
                 const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
                 const scrollTop = scrollContainerNode.scrollTop || 0;
+                const scrollLeft = scrollContainerNode.scrollLeft || 0;
 
-                // absoluteY is the distance from the top of the scrollable content
-                const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
-
-                // Target scroll offset: center the system vertically in the viewport
-                // We subtract a little extra to account for empty margins or fixed headers
-                const targetScrollTop = absoluteY - (scrollContainerNode.clientHeight / 2) + (bbox.height * ctm.d / 2);
-
-                scrollContainerNode.scrollTo({
-                  top: targetScrollTop,
-                  behavior: 'smooth'
-                });
+                if (layoutMode === 'continuous') {
+                    // Center Horizontally
+                    const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+                    const targetScrollLeft = (screenLeft - scrollContainerRect.left) + scrollLeft - (scrollContainerNode.clientWidth / 2) + (bbox.width * ctm.a / 2);
+                    scrollContainerNode.scrollTo({
+                      left: targetScrollLeft,
+                      behavior: 'smooth'
+                    });
+                } else {
+                    // Center Vertically
+                    const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+                    const absoluteY = (screenTop - scrollContainerRect.top) + scrollTop;
+                    const targetScrollTop = absoluteY - (scrollContainerNode.clientHeight / 2) + (bbox.height * ctm.d / 2);
+                    scrollContainerNode.scrollTo({
+                      top: targetScrollTop,
+                      behavior: 'smooth'
+                    });
+                }
                 return;
               }
             } catch (e) {
@@ -936,7 +960,7 @@ export function MusicXMLVisualizer({
       
       // If we explicitly sought to 0 (Stop), scroll the view back to the absolute top
       if (positionMsRef.current === 0 && containerRef.current) {
-         containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+         containerRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1300,6 +1324,17 @@ export function MusicXMLVisualizer({
             </div>
           </div>
         )}
+
+        {/* Flow Mode Gamification Overlays */}
+        {Object.keys(assessmentResults || {}).length > 0 && (
+          <GamificationOverlays 
+            measuresCacheRef={measuresCacheRef as any}
+            assessmentResults={assessmentResults!}
+              containerRef={containerRef}
+              renderVersion={renderVersion}
+              scale={scale}
+          />
+        )}
       </div>
 
       {/* Floating Zoom Controls */}
@@ -1334,6 +1369,115 @@ export function MusicXMLVisualizer({
           color: #f97316 !important;
         }
       ` }} />
+    </div>
+  );
+}
+
+// Sub-component to render the floating hit/miss feedback over measures
+function GamificationOverlays({
+  measuresCacheRef,
+  assessmentResults,
+  containerRef,
+  renderVersion,
+  scale
+}: {
+  measuresCacheRef: React.RefObject<NodeListOf<Element> | null>;
+  assessmentResults: Record<number, AssessmentMeasureResult>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  renderVersion: number;
+  scale: number;
+}) {
+  const [overlays, setOverlays] = useState<{ id: string; type: string; score: number; x: number; y: number }[]>([]);
+  
+  // Track previously seen assessments so we only spawn new animations once
+  const processedRef = useRef<Set<string>>(new Set());
+
+  // Wait for React to render before processing ref changes to SVG DOM
+  useEffect(() => {
+    if (!measuresCacheRef.current || renderVersion === 0) return;
+
+    const scrollContainerNode = containerRef.current;
+    if (!scrollContainerNode) return;
+
+    const scrollContainerRect = scrollContainerNode.getBoundingClientRect();
+    const scrollLeft = scrollContainerNode.scrollLeft || 0;
+    const scrollTop = scrollContainerNode.scrollTop || 0;
+
+    const newOverlays: typeof overlays = [];
+
+    for (const [latentMeasureId, resultObj] of Object.entries(assessmentResults)) {
+      if (!resultObj || (resultObj as any) === 'pending') continue;
+      
+      const { result, score, physicalMeasure } = resultObj;
+      const key = `${latentMeasureId}-${physicalMeasure}-${result}-${score}`;
+      if (processedRef.current.has(key)) {
+        // We already processed this animation
+        continue;
+      }
+      
+      // Try to find the SVGGElement for this physical measure
+      const measureIdx = physicalMeasure - 1; 
+      const measureEl = measuresCacheRef.current[measureIdx] as SVGGElement | undefined;
+      
+      if (measureEl) {
+        try {
+          const bbox = (measureEl as any)._bboxCache || ((measureEl as any)._bboxCache = measureEl.getBBox());
+          const ctm = measureEl.getScreenCTM();
+          if (ctm) {
+            const screenLeft = bbox.x * ctm.a + bbox.y * ctm.c + ctm.e;
+            const screenTop = bbox.x * ctm.b + bbox.y * ctm.d + ctm.f;
+            const screenWidth = bbox.width * ctm.a;
+            
+            const centerX = (screenLeft - scrollContainerRect.left) + scrollLeft + (screenWidth / 2);
+            const topY = (screenTop - scrollContainerRect.top) + scrollTop - 40; // 40px above measure
+            
+            // Clamp the coordinate so it doesn't fly out of the container boundary when zoomed out completely
+            const safeTopY = Math.max(scrollTop + 30, topY);
+            
+            newOverlays.push({
+              id: key,
+              type: result,
+              score,
+              x: centerX,
+              y: safeTopY
+            });
+            processedRef.current.add(key);
+          }
+        } catch (e) { }
+      }
+    }
+
+    if (newOverlays.length > 0) {
+      setOverlays(prev => [...prev, ...newOverlays]);
+      // Cleanup old overlays after animation finishes (1s)
+      setTimeout(() => {
+        setOverlays(prev => prev.filter(o => !newOverlays.find(n => n.id === o.id)));
+      }, 1500); 
+    }
+  }, [assessmentResults, renderVersion]);
+
+  return (
+    <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-[100]">
+      {overlays.map((overlay) => (
+        <div 
+          key={overlay.id}
+          className={cn(
+            "absolute flex items-center justify-center font-bold text-lg rounded-full shadow-lg border-2 animate-float-up-fade-out px-2 py-0.5 transform -translate-x-1/2 -translate-y-1/2 -mt-4",
+            overlay.type === 'hit' 
+              ? "bg-green-100 dark:bg-green-900 border-green-500 text-green-600 dark:text-green-400"
+              : overlay.type === 'partial'
+              ? "bg-orange-100 dark:bg-orange-900 border-orange-500 text-orange-600 dark:text-orange-400"
+              : "bg-red-100 dark:bg-red-900 border-red-500 text-red-600 dark:text-red-400"
+          )}
+          style={{ 
+            left: overlay.x, 
+            top: overlay.y,
+            animationFillMode: 'forwards',
+          }}
+        >
+          {overlay.type === 'hit' && overlay.score === 100 ? '100%' : `${overlay.score}%`}
+        </div>
+      ))}
     </div>
   );
 }

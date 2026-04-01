@@ -28,6 +28,7 @@ export function getPhysicalMeasure(latent: number, measureMap?: Record<number, n
  */
 export function getMeasureForTime(timemap: { timeMs: number; measure: number }[], timeMs: number): number {
   if (!timemap || timemap.length === 0) return 0;
+  if (timeMs < timemap[0].timeMs) return timemap[0].measure;
   for (let i = 0; i < timemap.length; i++) {
     if (i === timemap.length - 1) return timemap[i].measure;
     if (timeMs >= timemap[i].timeMs && timeMs < timemap[i + 1].timeMs) {
