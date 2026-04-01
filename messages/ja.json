@@ -35,7 +35,10 @@
     "footerCopy": "© 2026 Backing & Score. 音楽家のためのインタラクティブ楽譜。",
     "trackRhythmDrums": "リズムドラム",
     "trackLeadGuitar": "リードギター",
-    "trackBass": "ベース"
+    "trackBass": "ベース",
+    "f4Title": "インタラクティブ音楽百科事典。",
+    "f4Desc": "演奏者、楽器、ジャンル、作品を探索できます。Backing & Score は百科的な知識を再生可能なトラックや練習用楽譜につなぎます。",
+    "f4Link": "Wiki を見る"
   },
   "Discover": {
     "searchPlaceholder": "曲、作曲家、スタイルを検索...",
@@ -56,7 +59,10 @@
     "duplicateProject": "Duplicate Piece",
     "recentlyAdded": "Recently Added",
     "trending": "Trending",
-    "popularFavorites": "Popular Favorites"
+    "popularFavorites": "人気のお気に入り",
+    "greatComposers": "偉大な作曲家",
+    "beginnerPath": "初心者向けパス",
+    "romanticEra": "ロマン派ピアノ"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score アカデミー",
@@ -365,6 +371,37 @@
     "noResults": "結果が見つかりません。",
     "loading": "読み込み中..."
   },
+  "Pricing": {
+    "badge": "プレミアムプラン",
+    "title": "音楽の可能性を最大限に",
+    "subtitle": "すべての機能、コース、インタラクティブ練習ツールに無制限でアクセス。",
+    "monthly": "月額",
+    "yearly": "年額",
+    "savePercent": "33%お得",
+    "freeTier": "無料",
+    "freeDesc": "始めるのに最適",
+    "forever": "ずっと無料",
+    "freeFeature1": "閲覧・再生は無制限",
+    "freeFeature2": "Wait Mode — 1日10セッション",
+    "freeFeature3": "ソーシャル、フィード、コレクション",
+    "getStarted": "無料で始める",
+    "currentPlan": "現在のプラン",
+    "recommended": "一番人気",
+    "premiumTier": "プレミアム",
+    "premiumDesc": "楽器を極めるためのすべて",
+    "year": "年",
+    "month": "月",
+    "saveAmount": "年間20ドルお得",
+    "premiumFeature1": "Wait Mode — セッション無制限",
+    "premiumFeature2": "PDF・MusicXMLのエクスポート",
+    "premiumFeature3": "Academy フルアクセス",
+    "premiumFeature4": "優先サポートと先行機能",
+    "premiumFeature5": "広告なし",
+    "subscribe": "今すぐ登録",
+    "activePlan": "プレミアム有効",
+    "cancelledNote": "請求期間終了時に解約",
+    "guarantee": "お支払いは LemonSqueezy で安全に処理。いつでも解約可能 — 7日間返金保証。"
+  },
   "Subscription": {
     "title": "サブスクリプション",
     "freePlan": "無料",
@@ -372,7 +409,9 @@
     "activeStatus": "有効",
     "cancelledStatus": "キャンセル中",
     "cancelledNote": "請求期間終了までアクセスが継続されます",
-    "manageBilling": "請求管理"
+    "manageBilling": "請求管理",
+    "upgrade": "アップグレード",
+    "upgradeHint": "アップグレードで無制限再生、Wait Mode などを利用"
   },
   "UpgradePrompt": {
     "playLimitTitle": "本日の再生回数に達しました",
@@ -392,6 +431,9 @@
     "noNotifications": "通知はありません",
     "justNow": "たった今",
     "assignment_new": "{userName}が「{targetName}」を出題しました",
+    "material_new": "{userName}がPDF「{targetName}」を共有しました",
+    "classroom_join_request": "{userName}が「{targetName}」への参加をリクエストしました",
+    "classroom_join_approved": "{sourceUserName}が参加リクエストを承認しました",
     "submission_new": "{userName}が「{targetName}」を提出しました",
     "feedback_new": "{userName}が「{targetName}」を採点しました"
   },
@@ -644,6 +686,15 @@
     "allPdfs": "すべてのPDF",
     "favorites": "お気に入り",
     "recent": "最近",
+    "setlists": "セットリスト",
+    "noFavorites": "お気に入りはまだありません",
+    "noFavoritesDesc": "PDFをお気に入りに追加するとここに表示されます。",
+    "noRecent": "最近のPDFはありません",
+    "noRecentDesc": "最近開いたPDFがここに表示されます。",
+    "noSearchResults": "結果がありません",
+    "noSearchResultsDesc": "別のキーワードで試してください。",
+    "emptyFolder": "このフォルダは空です",
+    "emptyFolderDesc": "PDFを移動するか、新しくアップロードしてください。",
     "search": "検索...",
     "newFolder": "新しいフォルダ",
     "noPdfs": "PDFがありません",
@@ -710,7 +761,14 @@
     "shareNote": "メモ（任意）",
     "shareNotePlaceholder": "例：2〜3ページを練習",
     "selectClassroom": "クラスを選択",
-    "noClassrooms": "クラスなし"
+    "noClassrooms": "クラスなし",
+    "darkModePdf": "ダークモード",
+    "lightMode": "ライトモード",
+    "regeneratingThumbnail": "サムネイルを再生成中...",
+    "regenerateSuccess": "サムネイルを再生成しました",
+    "regenerateThumbnail": "サムネイルを再生成",
+    "deleteConfirmGroup": "選択した{count}件のPDFを削除しますか？元に戻せません。",
+    "deleteSuccessGroup": "選択したPDFを削除しました"
   },
   "PlayerControls": {
     "connectInstrument": "楽器を接続",
@@ -737,7 +795,10 @@
     "monitor": "モニター",
     "freeDailyLimitTitle": "1日の無料制限：",
     "freeDailyLimitDesc": " 1日10回。無制限の練習にはプレミアムにアップグレード。",
-    "practiceMode": "練習モード"
+    "practiceMode": "練習モード",
+    "layoutMode": "レイアウト",
+    "targetMeasure": "対象小節",
+    "activeMeasure": "現在の小節"
   },
   "PlayShell": {
     "copied": "コピーしました！",
@@ -745,7 +806,36 @@
     "addFavorite": "お気に入りに追加",
     "removeFavorite": "お気に入りから削除",
     "lightMode": "ライトモード",
-    "darkMode": "ダークモード"
+    "darkMode": "ダークモード",
+    "connectInputForWaitMode": "Wait Mode を使うにはマイクを有効にするか MIDI キーボードを接続してください。",
+    "listeningModePreview": "プレビューモードです。テストを受けるには Wait Mode を再度オンにしてください。",
+    "waitModeRequiredToRecord": "課題の録画には Wait Mode が必要です。",
+    "appleVoiceIsolationWarning": "Apple ユーザー：高音（E7 以上）が拾えない場合はコントロールセンターでマイクの「ボイスアイソレーション」をオフにしてください。",
+    "gamificationInvalidatedMicWarning": "スコアリング一時停止：マイク使用時はメイン楽器のオーディオトラックをミュートして正確な採点にしてください。",
+    "gamificationMicWarning": "マイク使用時はメイン楽器のオーディオトラックをミュートして正確な採点にしてください。"
+  },
+  "MicCalibrationWizard": {
+    "title": "AI マイクキャリブレーション",
+    "desc": "部屋環境と楽器に合わせてニューラルネットを調整します。",
+    "introDesc": "この15秒ウィザードは部屋の背景ノイズを測定し、楽器の周波数応答を解析して取りこぼしを減らします。",
+    "startBtn": "キャリブレーションを開始",
+    "step1Title": "ステップ1：完全な無音",
+    "step1Desc": "演奏や会話はしないでください。環境ノイズフロアを測定しています。",
+    "step2Title": "ステップ2：低音域",
+    "step2Desc": "楽器で最も低い音を、大きく繰り返し演奏する準備をしてください。",
+    "readyBtn": "準備できました（5秒録音）",
+    "recordingBass": "低音を録音中...",
+    "playLowNotes": "いま一番低い音を演奏してください！",
+    "step3Title": "ステップ3：高音域",
+    "step3Desc": "楽器で最も高い音を繰り返し演奏する準備をしてください。",
+    "recordingTreble": "高音を録音中...",
+    "playHighNotes": "いま一番高い音を演奏してください！",
+    "generatingProfile": "AIプロファイルを生成中...",
+    "calibrationComplete": "キャリブレーション完了！",
+    "successDesc": "カスタムMLプロファイルを保存しました。Wait Mode が楽器をより正確に追跡します。",
+    "closeBtn": "閉じて戻る",
+    "liveAiMonitor": "ライブAIモニター",
+    "signalDetected": "信号を検出しました！"
   },
   "JoinClassroom": {
     "title": "Join Classroom",

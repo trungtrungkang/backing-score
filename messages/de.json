@@ -35,7 +35,10 @@
     "footerCopy": "© 2026 Backing & Score. Interaktive Noten für Musiker.",
     "trackRhythmDrums": "Rhythmus-Schlagzeug",
     "trackLeadGuitar": "Lead-Gitarre",
-    "trackBass": "Bass"
+    "trackBass": "Bass",
+    "f4Title": "Interaktive Musik-Enzyklopädie.",
+    "f4Desc": "Entdecken Sie Musiker, Instrumente, Genres und Kompositionen. Backing & Score verbindet umfangreiches enzyklopädisches Wissen direkt mit spielbaren Stücken und Übungspartituren.",
+    "f4Link": "Wiki entdecken"
   },
   "Discover": {
     "searchPlaceholder": "Songs, Komponisten, Stile suchen...",
@@ -56,7 +59,10 @@
     "duplicateProject": "Duplicate Piece",
     "recentlyAdded": "Recently Added",
     "trending": "Trending",
-    "popularFavorites": "Popular Favorites"
+    "popularFavorites": "Beliebteste Favoriten",
+    "greatComposers": "Große Komponisten",
+    "beginnerPath": "Anfängerpfad",
+    "romanticEra": "Romantik am Klavier"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score Akademie",
@@ -365,6 +371,37 @@
     "noResults": "Keine Ergebnisse gefunden.",
     "loading": "Laden..."
   },
+  "Pricing": {
+    "badge": "Premium-Tarif",
+    "title": "Entfalten Sie Ihr musikalisches Potenzial",
+    "subtitle": "Unbegrenzter Zugang zu allen Funktionen, Kursen und interaktiven Übungstools.",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "savePercent": "33 % sparen",
+    "freeTier": "Kostenlos",
+    "freeDesc": "Ideal zum Einstieg",
+    "forever": "für immer",
+    "freeFeature1": "Unbegrenztes Stöbern und Abspielen",
+    "freeFeature2": "Wait Mode — 10 Sitzungen pro Tag",
+    "freeFeature3": "Social-Funktionen, Feed und Sammlungen",
+    "getStarted": "Kostenlos starten",
+    "currentPlan": "Ihr aktueller Tarif",
+    "recommended": "Am beliebtesten",
+    "premiumTier": "Premium",
+    "premiumDesc": "Alles, was Sie brauchen, um Ihr Instrument zu meistern",
+    "year": "Jahr",
+    "month": "Monat",
+    "saveAmount": "20 $/Jahr sparen",
+    "premiumFeature1": "Wait Mode — unbegrenzte Sitzungen",
+    "premiumFeature2": "PDF- und MusicXML-Export",
+    "premiumFeature3": "Voller Academy-Zugang",
+    "premiumFeature4": "Prioritäts-Support und früher Zugang zu Features",
+    "premiumFeature5": "Werbefrei",
+    "subscribe": "Jetzt abonnieren",
+    "activePlan": "Premium aktiv",
+    "cancelledNote": "Endet zum Ende des Abrechnungszeitraums",
+    "guarantee": "Zahlungen sicher über LemonSqueezy. Jederzeit kündbar — 7-Tage-Geld-zurück-Garantie."
+  },
   "Subscription": {
     "title": "Abonnement",
     "freePlan": "Kostenlos",
@@ -372,7 +409,9 @@
     "activeStatus": "Aktiv",
     "cancelledStatus": "Wird gekündigt",
     "cancelledNote": "Der Zugang bleibt bis zum Ende des Abrechnungszeitraums bestehen",
-    "manageBilling": "Abrechnung verwalten"
+    "manageBilling": "Abrechnung verwalten",
+    "upgrade": "Upgrade",
+    "upgradeHint": "Upgraden Sie für unbegrenzte Wiedergabe, Wait Mode und mehr"
   },
   "UpgradePrompt": {
     "playLimitTitle": "Tägliches Wiedergabelimit erreicht",
@@ -392,6 +431,9 @@
     "noNotifications": "Keine Benachrichtigungen",
     "justNow": "Gerade eben",
     "assignment_new": "{userName} hat \"{targetName}\" zugewiesen",
+    "material_new": "{userName} hat das PDF „{targetName}“ geteilt",
+    "classroom_join_request": "{userName} möchte „{targetName}“ beitreten",
+    "classroom_join_approved": "{sourceUserName} hat Ihre Beitrittsanfrage genehmigt",
     "submission_new": "{userName} hat \"{targetName}\" eingereicht",
     "feedback_new": "{userName} hat \"{targetName}\" bewertet"
   },
@@ -644,6 +686,15 @@
     "allPdfs": "Alle PDFs",
     "favorites": "Favoriten",
     "recent": "Kürzlich",
+    "setlists": "Setlists",
+    "noFavorites": "Noch keine Favoriten",
+    "noFavoritesDesc": "Markieren Sie PDFs als Favoriten, um sie hier zu sehen.",
+    "noRecent": "Keine kürzlichen PDFs",
+    "noRecentDesc": "Kürzlich geöffnete PDFs erscheinen hier.",
+    "noSearchResults": "Keine Ergebnisse",
+    "noSearchResultsDesc": "Versuchen Sie einen anderen Suchbegriff.",
+    "emptyFolder": "Dieser Ordner ist leer",
+    "emptyFolderDesc": "Verschieben Sie PDFs hierher oder laden Sie neue hoch.",
     "search": "Suchen...",
     "newFolder": "Neuer Ordner",
     "noPdfs": "Keine PDFs",
@@ -710,7 +761,14 @@
     "shareNote": "Notiz (optional)",
     "shareNotePlaceholder": "z.B. Seiten 2–3 üben",
     "selectClassroom": "Klasse wählen",
-    "noClassrooms": "Keine Klassen"
+    "noClassrooms": "Keine Klassen",
+    "darkModePdf": "Dunkelmodus",
+    "lightMode": "Hellmodus",
+    "regeneratingThumbnail": "Vorschaubild wird neu erzeugt...",
+    "regenerateSuccess": "Vorschaubild erfolgreich neu erzeugt",
+    "regenerateThumbnail": "Vorschaubild neu erzeugen",
+    "deleteConfirmGroup": "{count} ausgewählte PDFs löschen? Dies kann nicht rückgängig gemacht werden.",
+    "deleteSuccessGroup": "Ausgewählte PDFs wurden gelöscht"
   },
   "PlayerControls": {
     "connectInstrument": "Instrument verbinden",
@@ -737,7 +795,10 @@
     "monitor": "Monitor",
     "freeDailyLimitTitle": "Tageslimit:",
     "freeDailyLimitDesc": " 10 Nutzungen/Tag. Upgrade auf Premium für unbegrenztes Üben.",
-    "practiceMode": "Übungsmodus"
+    "practiceMode": "Übungsmodus",
+    "layoutMode": "Layout",
+    "targetMeasure": "Zieltakt",
+    "activeMeasure": "Aktiver Takt"
   },
   "PlayShell": {
     "copied": "Kopiert!",
@@ -745,7 +806,36 @@
     "addFavorite": "Zu Favoriten hinzufügen",
     "removeFavorite": "Favorit entfernen",
     "lightMode": "Heller Modus",
-    "darkMode": "Dunkler Modus"
+    "darkMode": "Dunkler Modus",
+    "connectInputForWaitMode": "Bitte Mikrofon aktivieren oder MIDI-Tastatur verbinden, um den Wait Mode zu nutzen.",
+    "listeningModePreview": "Vorschaumodus. Schalten Sie den Wait Mode wieder ein, um den Test abzulegen.",
+    "waitModeRequiredToRecord": "Für die Abgabe ist der Wait Mode erforderlich.",
+    "appleVoiceIsolationWarning": "Apple-Nutzer: Schalten Sie im Kontrollzentrum den Mikrofonmodus „Sprachisolierung“ aus, wenn hohe Noten (E7+) fehlen.",
+    "gamificationInvalidatedMicWarning": "Wertung vorübergehend deaktiviert: Stumm schalten Sie die Hauptinstrument-Spur bei Mikrofonnutzung für genaue Wertung.",
+    "gamificationMicWarning": "Bitte Hauptinstrument-Spur stumm schalten, wenn Sie das Mikrofon nutzen, für genaue Wertung."
+  },
+  "MicCalibrationWizard": {
+    "title": "KI-Mikrofon-Kalibrierung",
+    "desc": "Passen Sie das neuronale Netz an Raum und Instrument an.",
+    "introDesc": "Dieser 15-Sekunden-Assistent misst Hintergrundgeräusch und die Frequenzantwort Ihres Instruments, um verpasste Noten zu vermeiden.",
+    "startBtn": "Kalibrierung starten",
+    "step1Title": "Schritt 1: Vollständige Stille",
+    "step1Desc": "Spielen Sie keine Noten und sprechen Sie nicht. Wir messen das Umgebungsrauschen.",
+    "step2Title": "Schritt 2: Bässe",
+    "step2Desc": "Bereiten Sie sich vor, die tiefste Note Ihres Instruments wiederholt und laut zu spielen.",
+    "readyBtn": "Ich bin bereit (5 s Aufnahme)",
+    "recordingBass": "Aufnahme Bässe...",
+    "playLowNotes": "SPIELEN SIE JETZT IHRE TIEFSTE NOTE!",
+    "step3Title": "Schritt 3: Höhen",
+    "step3Desc": "Bereiten Sie sich vor, die höchste Note Ihres Instruments wiederholt zu spielen.",
+    "recordingTreble": "Aufnahme Höhen...",
+    "playHighNotes": "SPIELEN SIE JETZT IHRE HÖCHSTE NOTE!",
+    "generatingProfile": "KI-Profil wird erstellt...",
+    "calibrationComplete": "Kalibrierung abgeschlossen!",
+    "successDesc": "Ihr individuelles ML-Profil wurde gespeichert. Der Wait Mode erkennt Ihr Instrument jetzt deutlich genauer.",
+    "closeBtn": "Schließen und zurück",
+    "liveAiMonitor": "Live-KI-Monitor",
+    "signalDetected": "Signal erkannt!"
   },
   "JoinClassroom": {
     "title": "Join Classroom",

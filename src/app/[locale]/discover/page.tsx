@@ -629,7 +629,7 @@ export default function DiscoverPage() {
                   {greatComposers.map((artist) => (
                     <Link
                       key={artist.$id}
-                      href={`/wiki/artist/${artist.slug}`}
+                      href={`/wiki/artists/${artist.slug}`}
                       className="flex flex-col items-center gap-3 group shrink-0 w-[120px] sm:w-[140px]"
                     >
                       <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-full overflow-hidden border-2 border-transparent group-hover:border-violet-500 transition-colors shadow-lg">

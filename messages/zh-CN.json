@@ -35,7 +35,10 @@
     "footerCopy": "© 2026 Backing & Score. 音乐家的互动乐谱。",
     "trackRhythmDrums": "节奏鼓组",
     "trackLeadGuitar": "主吉他",
-    "trackBass": "贝斯"
+    "trackBass": "贝斯",
+    "f4Title": "互动音乐百科。",
+    "f4Desc": "探索音乐家、乐器、流派与作品。Backing & Score 将丰富的百科知识与可播放曲目、练习乐谱直接相连。",
+    "f4Link": "浏览 Wiki"
   },
   "Discover": {
     "searchPlaceholder": "搜索歌曲、作曲家、风格...",
@@ -56,7 +59,10 @@
     "duplicateProject": "Duplicate Piece",
     "recentlyAdded": "Recently Added",
     "trending": "Trending",
-    "popularFavorites": "Popular Favorites"
+    "popularFavorites": "热门收藏",
+    "greatComposers": "伟大作曲家",
+    "beginnerPath": "新手路径",
+    "romanticEra": "浪漫主义钢琴"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score 学院",
@@ -365,6 +371,37 @@
     "noResults": "未找到结果。",
     "loading": "加载中..."
   },
+  "Pricing": {
+    "badge": "高级方案",
+    "title": "释放您的音乐潜能",
+    "subtitle": "无限制使用全部功能、课程与互动练习工具。",
+    "monthly": "月付",
+    "yearly": "年付",
+    "savePercent": "节省 33%",
+    "freeTier": "免费",
+    "freeDesc": "入门之选",
+    "forever": "永久免费",
+    "freeFeature1": "无限浏览与播放",
+    "freeFeature2": "Wait Mode — 每日 10 次",
+    "freeFeature3": "社交、动态与曲集",
+    "getStarted": "免费开始",
+    "currentPlan": "当前方案",
+    "recommended": "最受欢迎",
+    "premiumTier": "高级版",
+    "premiumDesc": "精通乐器所需的一切",
+    "year": "年",
+    "month": "月",
+    "saveAmount": "每年节省 20 美元",
+    "premiumFeature1": "Wait Mode — 不限次数",
+    "premiumFeature2": "导出 PDF 与 MusicXML",
+    "premiumFeature3": "Academy 完整访问",
+    "premiumFeature4": "优先支持与抢先体验功能",
+    "premiumFeature5": "无广告",
+    "subscribe": "立即订阅",
+    "activePlan": "高级版已激活",
+    "cancelledNote": "在当前计费周期结束时取消",
+    "guarantee": "付款由 LemonSqueezy 安全处理。随时可取消 — 7 天退款保证。"
+  },
   "Subscription": {
     "title": "订阅",
     "freePlan": "免费",
@@ -372,7 +409,9 @@
     "activeStatus": "已激活",
     "cancelledStatus": "取消中",
     "cancelledNote": "您的访问权限将持续到计费周期结束",
-    "manageBilling": "管理账单"
+    "manageBilling": "管理账单",
+    "upgrade": "升级",
+    "upgradeHint": "升级以解锁无限播放、Wait Mode 等更多功能"
   },
   "UpgradePrompt": {
     "playLimitTitle": "已达到每日播放限制",
@@ -392,6 +431,9 @@
     "noNotifications": "暂无通知",
     "justNow": "刚刚",
     "assignment_new": "{userName} 布置了作业 \"{targetName}\"",
+    "material_new": "{userName} 分享了 PDF「{targetName}」",
+    "classroom_join_request": "{userName} 申请加入「{targetName}」",
+    "classroom_join_approved": "{sourceUserName} 已批准您的加入申请",
     "submission_new": "{userName} 提交了 \"{targetName}\"",
     "feedback_new": "{userName} 批改了 \"{targetName}\""
   },
@@ -644,6 +686,15 @@
     "allPdfs": "所有PDF",
     "favorites": "收藏",
     "recent": "最近",
+    "setlists": "演出曲目单",
+    "noFavorites": "暂无收藏",
+    "noFavoritesDesc": "将 PDF 标为收藏后即可在此查看。",
+    "noRecent": "暂无最近打开的 PDF",
+    "noRecentDesc": "您最近打开的 PDF 将显示在这里。",
+    "noSearchResults": "无结果",
+    "noSearchResultsDesc": "请尝试其他搜索词。",
+    "emptyFolder": "此文件夹为空",
+    "emptyFolderDesc": "将 PDF 移入此处或上传新文件。",
     "search": "搜索...",
     "newFolder": "新建文件夹",
     "noPdfs": "没有PDF",
@@ -710,7 +761,14 @@
     "shareNote": "备注（可选）",
     "shareNotePlaceholder": "如：练习第2-3页",
     "selectClassroom": "选择班级",
-    "noClassrooms": "没有班级"
+    "noClassrooms": "没有班级",
+    "darkModePdf": "深色模式",
+    "lightMode": "浅色模式",
+    "regeneratingThumbnail": "正在重新生成缩略图...",
+    "regenerateSuccess": "缩略图已重新生成",
+    "regenerateThumbnail": "重新生成缩略图",
+    "deleteConfirmGroup": "删除已选中的 {count} 个 PDF？此操作无法撤消。",
+    "deleteSuccessGroup": "所选 PDF 已删除"
   },
   "PlayerControls": {
     "connectInstrument": "连接乐器",
@@ -737,7 +795,10 @@
     "monitor": "监视器",
     "freeDailyLimitTitle": "每日免费限制：",
     "freeDailyLimitDesc": " 每天 10 次。升级至高级版可无限练习。",
-    "practiceMode": "练习模式"
+    "practiceMode": "练习模式",
+    "layoutMode": "版式",
+    "targetMeasure": "目标小节",
+    "activeMeasure": "当前小节"
   },
   "PlayShell": {
     "copied": "已复制！",
@@ -745,7 +806,36 @@
     "addFavorite": "添加到收藏",
     "removeFavorite": "取消收藏",
     "lightMode": "浅色模式",
-    "darkMode": "深色模式"
+    "darkMode": "深色模式",
+    "connectInputForWaitMode": "请启用麦克风或连接 MIDI 键盘以使用 Wait Mode。",
+    "listeningModePreview": "预览模式。请重新开启 Wait Mode 以进行测验。",
+    "waitModeRequiredToRecord": "提交作业录音需要开启 Wait Mode。",
+    "appleVoiceIsolationWarning": "Apple 用户：若高音（E7 及以上）丢失，请在控制中心关闭麦克风的「语音隔离」模式。",
+    "gamificationInvalidatedMicWarning": "评分已暂时停用：使用麦克风时请静音主奏乐器音轨以确保评分准确。",
+    "gamificationMicWarning": "使用麦克风时请静音主奏乐器音轨以确保评分准确。"
+  },
+  "MicCalibrationWizard": {
+    "title": "AI 麦克风校准",
+    "desc": "针对您的房间与乐器微调神经网络。",
+    "introDesc": "此 15 秒向导会测量环境噪声并分析乐器频率响应，减少漏检音符。",
+    "startBtn": "开始校准测试",
+    "step1Title": "第 1 步：完全安静",
+    "step1Desc": "请勿演奏或说话。我们正在测量环境本底噪声。",
+    "step2Title": "第 2 步：低音频率",
+    "step2Desc": "准备反复、大声演奏您乐器上最低的音。",
+    "readyBtn": "我准备好了（开始 5 秒录音）",
+    "recordingBass": "正在录制低音...",
+    "playLowNotes": "请立即演奏最低的音！",
+    "step3Title": "第 3 步：高音频率",
+    "step3Desc": "准备反复演奏您乐器上最高的音。",
+    "recordingTreble": "正在录制高音...",
+    "playHighNotes": "请立即演奏最高的音！",
+    "generatingProfile": "正在生成 AI 配置文件...",
+    "calibrationComplete": "校准完成！",
+    "successDesc": "已保存您的自定义 ML 配置文件。Wait Mode 将更准确地跟踪您的演奏。",
+    "closeBtn": "关闭并返回",
+    "liveAiMonitor": "实时 AI 监测",
+    "signalDetected": "已检测到信号！"
   },
   "JoinClassroom": {
     "title": "Join Classroom",
