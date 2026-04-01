@@ -5,7 +5,7 @@ import { processPracticeSession } from "@/lib/appwrite/gamification";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, projectId, durationMs, maxSpeed, waitModeScore } = body;
+    const { userId, projectId, durationMs, maxSpeed, waitModeScore, flowModeScore, inputType } = body;
 
     if (!userId || !projectId || typeof durationMs !== "number") {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       projectId,
       durationMs,
       maxSpeed: maxSpeed || 1.0,
-      waitModeScore
+      waitModeScore,
+      flowModeScore,
+      inputType
     });
 
     return NextResponse.json(result, { status: 200 });

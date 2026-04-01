@@ -56,3 +56,25 @@ Các thuật toán phức tạp đã được áp dụng để triệt tiêu vĩ
 2. **Polyphony Highlight History (Bộ lọc Đa âm):**
    Thay vì đọc mù quáng mảng `on` (chỉ xuất Nốt MỚI Gõ), thuật toán thiết lập 1 hàm quyét Lịch sử `for ( i = 0 to activeIdx )` tích luỹ các tín hiệu `on` (Gõ phím) và đào thải các tín hiệu `off` (Bỏ phím) để ra được một tập Hợp Âm Thực Mặc Định (`currentlySoundingIds` Set).
    Nhờ Set lịch sử đa âm này, các nốt đang được ngân dài (Held notes) sẽ giữ vững độ sáng màu cam kể cả khi có bè khác gõ chèn phím xen ngang, đồng thời hoạt động không khuyết điểm khi Tua lùi (Seek Backwards).
+
+## 6. Chế độ Flow-Mode (Gamification & Luyện tập liên tục)
+Flow-Mode là chế độ nâng cao của hệ thống để đánh giá phần trình diễn (Assessment) của người chơi trên thời gian thực.
+Hệ thống chấm điểm sử dụng hệ quy chiếu Tỷ lệ phần trăm (%) cho từng ô nhịp thay vì kiểm tra Nhạc lý Tuyệt đối (Pass/Fail) để cung cấp điểm số chính xác và cổ vũ người chơi.
+
+Thuật toán cấu trúc của Flow-Mode chứa đựng 2 trụ cột kỹ thuật phức tạp:
+
+### Trụ cột 1: Thuật toán Lưới Đồng bộ Đa Nhịp độ (Dynamic Measure Grid)
+Hệ thống MIDI thường chỉ có thông tin Nốt và Tick (ví dụ `1920 ticks = 1 ô nhịp`), dẫn đến hậu quả bị nát và trượt (Metric Drift) hoàn toàn khi bản nhạc chứa **Sự thay đổi Time Signature giữa chừng** hoặc chứa **Ô nhịp lấy đà (Anacrusis / Pickup Measures)** ở đầu bản nhạc.
+> [!TIP]
+> **Giải pháp `durationInQuarters` native:** 
+> Do Verovio MIDI generator không thường xuyên xuất thông tin "Nhịp khuyết" (Pickup) vào TimeSignature, hệ thống Score Engine sẽ trực tiếp parse Object Payload `timemap.durationInQuarters` được biên dịch trực tiếp từ bộ `AutoTimemapGenerator` (thứ parse thẳng cấu trúc MusicXML document root rễ trước đó). 
+> `useScoreEngine` sẽ tự động dựng một Vector lưới `measureGrid` sở hữu độ rộng Ticks hoàn hảo tương ứng với độ rộng Quarters toán học của TỪNG Ô NHỊP ĐƠN LẺ! Từ đó Ô Khuyết Nhịp ở đầu Bài (Measure 0) sẽ được gán đúng số đo (ví dụ: `480 Ticks`), giúp Ô số 1 tiếp theo không bị nuốt chửng vào khung hình, cứu sống hoàn toàn chỉ số đồng bộ của file.
+
+### Trụ cột 2: Giải quy luật Lặp Lại Cấu Trúc (Repeats & D.C al Fine)
+Khi 1 bài hát có vòng lặp (Ví dụ chơi lại Ô số 5 ở phút thứ 2), MIDI sẽ "trải dài thẳng tắp" bản nhạc ra. 
+Nếu hệ thống chấm điểm dùng Tên Giao diện (`physicalMeasure` ví dụ Ô số 5) làm Key Dictionary chấm điểm, mảng dữ liệu của Lần chơi thứ 2 sẽ bị cộng dồn và nén bẹp đứt quãng vào mảng của Lần chơi thứ 1! Kết quả dẫn đến bong bóng % của vòng lặp bị tịt ngòi 100%.
+
+> [!IMPORTANT]
+> **Latent vs Physical Splitting**
+> - **Chấm điểm:** `useScoreEngine` sử dụng một ID thứ nguyên bí mật gọi là `latentMeasure` (Chỉ số tịnh tiến tuyệt đối, vd 1, 2, 3... 90). Vòng số 1 sẽ được mã hóa vào ID 5. Vòng lặp số 2 sẽ được mã hóa vào ID 62. Khép kín và hoàn toàn cách ly mảng đối chiếu điểm số.
+> - **Hiển thị UI:** Engine gửi một Payload `AssessmentMeasureResult` nhét kèm ID `physicalMeasure` (Là số ID DOM thực tế ở trên màn hình, luôn là số 5). `MusicXMLVisualizer` sẽ đọc `physicalMeasure` (số 5) để tìm Bounding Box toạ độ trên màn hình. Kết quả sẽ tạo ra Bong bóng % Rực rỡ vòng 1. Và khi tua đến vòng 2, một Quả bong bóng % độc lập hoàn toàn mới sẽ tiếp tục được sinh ra và chèn đúng vào khoảng không gia đó mà không bị giẫm chân, lỗi gộp ID.

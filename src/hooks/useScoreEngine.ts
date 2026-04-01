@@ -21,12 +21,12 @@ export interface ScoreEngineParams {
   payload: DAWPayload;
   autoplayOnLoad?: boolean;
   onNext?: () => void;
-  onWaitModeComplete?: (score: number) => void;
+  onPracticeComplete?: (score?: number) => void;
   /** When provided, enables BPM/time-sig editing (EditorShell). */
   onPayloadChange?: (payload: DAWPayload) => void;
 }
 
-export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComplete, onPayloadChange }: ScoreEngineParams) {
+export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange }: ScoreEngineParams) {
   const engineId = useId();
   const audioManagerRef = useRef<AudioManager | null>(null);
   const endOfTrackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -166,6 +166,14 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
   const [isPreRollEnabled, setIsPreRollEnabled] = useState(false);
   const [timeSignature, setTimeSignature] = useState(payload.metadata?.timeSignature || "4/4");
   const positionMsRef = useRef(0);
+
+  // Gamification Anti-Cheat
+  // If Mic is currently being used, but the Score Guide track is not muted, acoustic loopback can echo perfect pitch back into the mic
+  const isGamificationInvalidated = (isWaitMode || isFlowMode) && isMicInitializedState && !isScoreSynthMuted;
+  const isGamificationInvalidatedRef = useRef(isGamificationInvalidated);
+  useEffect(() => {
+    isGamificationInvalidatedRef.current = isGamificationInvalidated;
+  }, [isGamificationInvalidated]);
   const [isAutoplayEnabled, setIsAutoplayEnabled] = useState(true);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState(false);
   const [partNames, setPartNames] = useState<string[]>([]);
@@ -916,7 +924,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
              endOfTrackTimeoutRef.current = setTimeout(() => {
                 handleStop(true);
                 endOfTrackTimeoutRef.current = null;
-                if (onWaitModeComplete) onWaitModeComplete(100);
+                if (onPracticeComplete) onPracticeComplete(100);
                 if (isAutoplayEnabled && onNext) onNext();
              }, 1500);
           }
@@ -1017,7 +1025,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
               let newStatus: AssessmentResultType | null = null;
               
               if (Math.abs(timeDiff) <= FLOW_WINDOW_MS) {
-                 if (pressed.size > 0) {
+                 if (pressed.size > 0 && !isGamificationInvalidatedRef.current) {
                     const { allMatched, isAllowedEarly } = evaluateWaitModeMatch(
                       pressed, chord.notes, isWaitModeLenientRef.current,
                       i > 0 ? practiceChordsRef.current[i - 1].notes : undefined,
@@ -1144,12 +1152,12 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
     });
 
     if (totalSongDurationMs > 0 && currentPos > totalSongDurationMs) {
-      if (isWaitModeRef.current) {
+      if (isWaitModeRef.current || isFlowModeRef.current) {
         if (!endOfTrackTimeoutRef.current) {
            endOfTrackTimeoutRef.current = setTimeout(() => {
               handleStop(true);
               endOfTrackTimeoutRef.current = null;
-              if (onWaitModeComplete) onWaitModeComplete(100);
+              if (onPracticeComplete) onPracticeComplete(100);
               if (isAutoplayEnabled && onNext) onNext();
            }, 1500);
         }
@@ -1342,6 +1350,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onWaitModeComp
       isWaiting: isWaitingRef.current,
       activeNotes, targetMeasure, activeMeasure,
       isMidiInitialized, isMicInitialized: isMicInitializedState,
+      isGamificationInvalidated,
       midiNotes, micNotes,
       loopState, partNames, timeSignature,
       correctedTimemap: correctedTimemapRef.current,

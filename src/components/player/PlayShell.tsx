@@ -172,6 +172,8 @@ export function PlayShell({
   const accumulatedTimeMsRef = useRef<number>(0);
   const userRef = useRef(user);
   const maxSpeedRef = useRef(1.0);
+  const gamificationWarningShownRef = useRef(false);
+  const scoreStateRef = useRef<any>(null);
 
   useEffect(() => { userRef.current = user; }, [user]);
   useEffect(() => { maxSpeedRef.current = sessionMaxSpeed; }, [sessionMaxSpeed]);
@@ -191,22 +193,22 @@ export function PlayShell({
       if (ch !== null) setIsCompactHeader(ch === "true");
       const lm = localStorage.getItem("bs_layout_mode");
       if (lm === "continuous" || lm === "paged") setLayoutMode(lm);
-    } catch {}
+    } catch { }
   }, []);
 
   const handleLayoutModeChange = useCallback((mode: 'paged' | 'continuous') => {
     setLayoutMode(mode);
-    try { localStorage.setItem("bs_layout_mode", mode); } catch {}
+    try { localStorage.setItem("bs_layout_mode", mode); } catch { }
   }, []);
 
   const handleVirtualKeyboardToggle = useCallback((v: boolean) => {
     setShowVirtualKeyboard(v);
-    try { localStorage.setItem("bs_show_virtual_keyboard", String(v)); } catch {}
+    try { localStorage.setItem("bs_show_virtual_keyboard", String(v)); } catch { }
   }, []);
 
   const handleCompactHeaderToggle = useCallback((v: boolean) => {
     setIsCompactHeader(v);
-    try { localStorage.setItem("bs_compact_header", String(v)); } catch {}
+    try { localStorage.setItem("bs_compact_header", String(v)); } catch { }
   }, []);
 
   const submitPracticeSession = useCallback(async (waitModeScore?: number): Promise<boolean> => {
@@ -220,6 +222,31 @@ export function PlayShell({
 
     if (finalDuration < 10000) return false; // avoid submitting spam
 
+    // Extract dynamic gamification variables from score engine state
+    const currentState = scoreStateRef.current;
+    let flowModeScore = 0;
+    let inputType = 'midi';
+
+    if (currentState) {
+      if (currentState.isMicInitialized) inputType = 'mic';
+
+      if (currentState.isFlowMode && currentState.assessmentResults) {
+        let total = 0;
+        let hits = 0;
+        for (const res of Object.values(currentState.assessmentResults as Record<string, { noteMatched: boolean }>)) {
+          total++;
+          if (res.noteMatched) hits++;
+        }
+        flowModeScore = total > 0 ? Math.round((hits / total) * 100) : 0;
+      }
+
+      // Enforcement of Acoustic Loopback Penalty
+      if (currentState.isGamificationInvalidated) {
+        flowModeScore = 0;
+        if (waitModeScore !== undefined) waitModeScore = 0;
+      }
+    }
+
     // Lock the time so we don't double count if we submit midway
     accumulatedTimeMsRef.current = 0;
 
@@ -232,7 +259,9 @@ export function PlayShell({
           projectId,
           durationMs: Math.round(finalDuration),
           maxSpeed: maxSpeedRef.current,
-          waitModeScore
+          waitModeScore,
+          flowModeScore,
+          inputType
         })
       });
       const data = await res.json();
@@ -272,8 +301,10 @@ export function PlayShell({
     payload,
     autoplayOnLoad,
     onNext,
-    onWaitModeComplete: (score) => { submitPracticeSession(score); }
+    onPracticeComplete: (score) => { submitPracticeSession(score); }
   });
+
+  useEffect(() => { scoreStateRef.current = state; }, [state]);
   const recorder = useAudioRecorder();
 
   const { profile, loading: profileLoading } = useMicProfile();
@@ -286,19 +317,28 @@ export function PlayShell({
     }
   }, [forceWaitMode]);
 
-  // Warn Apple users about Voice Isolation when Mic activates
+  // Gamification Anti-Cheat Warning Toast
   useEffect(() => {
-    if (state.isMicInitialized) {
-      // Basic check for macOS/iOS. Since navigator.platform is deprecated, using userAgent
-      const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isApple) {
-        toast.info("Apple Users: Please turn off 'Voice Isolation' Mic Mode in your Control Center if you lose high notes (E7+).", {
-          duration: 8000,
-          position: "top-center"
-        });
+    if (state.isMicInitialized && (state.isFlowMode || state.isWaitMode)) {
+      if (!gamificationWarningShownRef.current) {
+        gamificationWarningShownRef.current = true;
+
+        if (state.isGamificationInvalidated) {
+          toast.error("Chế độ chấm điểm tạm tắt: Vui lòng tắt âm thanh Nhạc cụ chính (Mute) khi dùng Mic để đảm bảo điểm số chính xác.", {
+            duration: 8000,
+            position: "top-center"
+          });
+        } else {
+          toast.info("Vui lòng tắt các Audio Track chứa Nhạc cụ chính khi dùng Mic để đảm bảo điểm số chính xác.", {
+            duration: 8000,
+            position: "top-center"
+          });
+        }
       }
+    } else {
+      gamificationWarningShownRef.current = false;
     }
-  }, [state.isMicInitialized, tc]);
+  }, [state.isMicInitialized, state.isFlowMode, state.isWaitMode, state.isGamificationInvalidated]);
 
   // Track playback time
   useEffect(() => {
@@ -348,14 +388,14 @@ export function PlayShell({
   const handleBackClick = useCallback(() => {
     if (isNavigatingBack) return;
     setIsNavigatingBack(true);
-    
+
     if (state.isPlaying) {
       actions.handlePause();
     }
 
     // Fire and forget to save XP immediately without making the user wait for animations
-    submitPracticeSession().catch(() => {});
-    
+    submitPracticeSession().catch(() => { });
+
     // Instant Navigation
     router.back();
   }, [isNavigatingBack, submitPracticeSession, state.isPlaying, actions, router]);
@@ -566,8 +606,8 @@ export function PlayShell({
                 <MobileActionsMenu projectId={projectId} projectName={projectName} />
               </div>
               <div className="w-[1px] h-6 bg-zinc-300 dark:bg-zinc-700 mx-1" />
-              <button 
-                onClick={() => handleCompactHeaderToggle(!isCompactHeader)} 
+              <button
+                onClick={() => handleCompactHeaderToggle(!isCompactHeader)}
                 title={isCompactHeader ? "Expand Header" : "Compact Header"}
                 className="p-1 sm:p-2 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all"
               >
@@ -602,7 +642,7 @@ export function PlayShell({
               <span className="text-[10px] uppercase font-bold text-zinc-400">Flow Monitor</span>
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
             </div>
-            
+
             <div>
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">{tControls("targetMeasure")}:</div>
               <div className="flex flex-wrap gap-1">
@@ -615,7 +655,7 @@ export function PlayShell({
                 )}
               </div>
             </div>
-            
+
             <div>
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">{tControls("activeMeasure")}:</div>
               <div className="flex flex-wrap gap-1">
@@ -628,7 +668,7 @@ export function PlayShell({
                 )}
               </div>
             </div>
-            
+
             <div>
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5">Pressed Keys:</div>
               <div className="flex flex-wrap gap-1">
@@ -701,7 +741,7 @@ export function PlayShell({
           "absolute right-4 sm:right-8 z-[120] animate-in fade-in zoom-in-95 duration-500 delay-1000 fill-mode-both",
           (state.isWaitMode && showVirtualKeyboard) ? "bottom-[115px]" : "bottom-6 sm:bottom-8"
         )}>
-          <button 
+          <button
             onClick={() => actions.skipWaitNote()}
             className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 dark:bg-zinc-100/90 dark:hover:bg-white backdrop-blur-md text-white dark:text-black px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 border border-white/10 dark:border-black/10 group"
             title="Press [Right Arrow] to skip"

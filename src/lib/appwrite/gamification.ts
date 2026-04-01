@@ -22,6 +22,8 @@ export interface GamificationRules {
   xpPerMinute: number;
   waitModeScore80Bonus: number;
   waitModeScore100Bonus: number;
+  flowModeScore80Bonus: number;
+  flowModeScore100Bonus: number;
   songCompleteBonus: number;
   streakMultiplier: number;
   dailyChallengeBonus: number;
@@ -32,6 +34,8 @@ export interface PracticeSessionPayload {
   durationMs: number;
   maxSpeed: number;
   waitModeScore?: number;
+  flowModeScore?: number;
+  inputType?: 'midi' | 'mic';
 }
 
 function calculateLevel(totalXP: number, thresholds: number[]): number {
@@ -70,9 +74,21 @@ export async function processPracticeSession(
     else if (payload.waitModeScore >= 80) baseXP += rules.waitModeScore80Bonus;
   }
 
-  // Daily challenge bonus (Anti-Cheat: requires >= 1 min practice OR WaitMode score >= 80)
+  // Additional bonuses based on Flow Mode performance
+  if (payload.flowModeScore !== undefined) {
+    // Graceful fallback for undefined config if rule doc hasn't flushed cache yet
+    const flow100 = rules.flowModeScore100Bonus || 200;
+    const flow80 = rules.flowModeScore80Bonus || 50;
+    
+    if (payload.flowModeScore === 100) baseXP += flow100;
+    else if (payload.flowModeScore >= 80) baseXP += flow80;
+  }
+
+  // Daily challenge bonus (Anti-Cheat: requires >= 1 min practice OR WaitMode/FlowMode score >= 80)
   if (isDailyChallenge) {
-    if (durationMins >= 1 || (payload.waitModeScore !== undefined && payload.waitModeScore >= 80)) {
+    if (durationMins >= 1 || 
+        (payload.waitModeScore !== undefined && payload.waitModeScore >= 80) ||
+        (payload.flowModeScore !== undefined && payload.flowModeScore >= 80)) {
       baseXP += (rules.dailyChallengeBonus || 30);
     }
   }
@@ -85,8 +101,17 @@ export async function processPracticeSession(
     completedAt: new Date().toISOString(),
     durationMs: payload.durationMs,
     maxSpeed: payload.maxSpeed,
-    waitModeScore: payload.waitModeScore || null
+    waitModeScore: payload.waitModeScore || null,
+    flowModeScore: payload.flowModeScore || null,
+    inputType: payload.inputType || null
   });
+
+  // 4b. Anti-Cheat: Hardware Penalty constraint
+  // Mic input is inherently prone to acoustic loopback noise (e.g. user listening to a piano recording). 
+  // Deduct 50% XP unless user is using a verified 'midi' device.
+  if (payload.inputType === 'mic') {
+    baseXP = Math.floor(baseXP * 0.5);
+  }
 
   // 4. Update or Create UserStats
   const todayStr = new Date().toISOString().slice(0, 10);
