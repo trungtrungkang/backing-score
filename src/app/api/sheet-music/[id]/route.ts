@@ -1,7 +1,7 @@
 /**
  * Server-side API to get sheet music metadata.
  * Uses API key so students (who don't own the PDF) can still view metadata.
- * Security: only returns metadata, not the file itself (file is served via /api/files/[fileId]).
+ * Security: only returns metadata, not the file itself (file is served via /api/r2/download/[fileId]).
  */
 
 import { NextResponse } from "next/server";

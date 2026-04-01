@@ -146,7 +146,7 @@ export default function SetlistViewerPage({ params }: { params: Promise<{ id: st
        <PdfViewer 
           key={`${activeSheet.$id}-${activeSongIndex}`} // Force totally clean re-mount on every song change
           sheetMusicId={activeSheet.$id}
-          pdfUrl={`/api/files/${activeSheet.fileId}?bucket=sheet_pdfs`}
+          pdfUrl={`/api/r2/download/${activeSheet.fileId}`}
           pageCount={activeSheet.pageCount}
           title={activeSheet.title}
           initialNavMap={activeSheet.navMap}

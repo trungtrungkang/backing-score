@@ -55,8 +55,8 @@ export default function PdfViewPage() {
         }
 
         setSheet(doc);
-        // Both modes use the API proxy for the actual PDF file
-        setPdfUrl(`/api/files/${doc.fileId}?bucket=sheet_pdfs`);
+        // Both modes use the R2 API for the actual PDF file
+        setPdfUrl(`/api/r2/download/${doc.fileId}`);
       } catch (err) {
         console.error("Failed to load PDF:", err);
         setError("not_found");
