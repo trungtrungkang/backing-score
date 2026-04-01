@@ -604,6 +604,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
 
   const teachItems = [
     { href: "/classroom", labelKey: "classroom", iconColor: "text-indigo-400", icon: GraduationCap },
+    { href: "/dashboard/classrooms", label: "Cohort Manager", iconColor: "text-amber-500", icon: GraduationCap },
     { href: "/dashboard/courses", icon: GraduationCap, labelKey: "creatorCourses", iconColor: "text-[#C8A856]" },
   ];
 
@@ -612,6 +613,10 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
     { action: "calibrate_mic", icon: Mic, label: "Mic Calibration", iconColor: "text-blue-400" },
     { href: "/guide", icon: Globe, labelKey: "userGuide", iconColor: "" },
     { href: "/pricing", icon: Crown, label: "Premium", iconColor: "text-[#C8A856]" },
+  ];
+
+  const adminItems = [
+    { href: "/dashboard/admin/cms", icon: FileText, label: "CMS Admin", iconColor: "text-red-400" },
   ];
 
   const [showMicWizard, setShowMicWizard] = useState(false);
@@ -742,6 +747,20 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
           {renderNavItems(otherItems)}
         </nav>
       </div>
+
+      {(user?.labels?.includes("admin") || user?.labels?.includes("curator")) && (
+        <>
+          <div className="border-t border-zinc-200 dark:border-zinc-800/50 my-4" />
+          <div>
+            <h2 className="text-[10px] uppercase tracking-widest text-red-400/80 font-bold mb-3 px-1">
+              ADMINISTRATION
+            </h2>
+            <nav className="flex flex-col gap-0.5">
+              {renderNavItems(adminItems)}
+            </nav>
+          </div>
+        </>
+      )}
     </>
   );
 

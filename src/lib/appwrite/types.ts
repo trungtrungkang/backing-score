@@ -72,8 +72,11 @@ export interface PostDocument {
   $updatedAt: string;
   authorId: string;
   content?: string;
-  attachmentType?: "project" | "playlist" | "none";
+  attachmentType?: "project" | "playlist" | "none" | "sheet_music" | "assignment" | "recording_score";
   attachmentId?: string;
+  visibility?: "public" | "followers" | "classroom";
+  classroomId?: string;
+  isPinned?: boolean;
 }
 
 export interface CommentDocument {
@@ -201,10 +204,12 @@ export interface ClassroomDocument {
   instrumentFocus?: string;
   /** Target level, e.g. "beginner" */
   level?: string;
-  /** 6-char code for students to join */
+  /** Associated Master curriculum course if applied */
+  courseId?: string;
+  /** 6-char generic code for students to join into Waiting Room */
   classCode: string;
   /** active, archived */
-  status: string;
+  status: "active" | "archived";
 }
 
 export interface ClassroomMemberDocument {
@@ -218,8 +223,22 @@ export interface ClassroomMemberDocument {
   /** "teacher" or "student" */
   role: string;
   joinedAt: string;
-  /** active, removed */
-  status: string;
+  /** pending (in waiting room), active, removed */
+  status: "pending" | "active" | "removed";
+}
+
+export interface ClassroomInviteDocument {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  code: string;
+  classroomId?: string;
+  courseId?: string;
+  teacherId: string;
+  studentName?: string;
+  expiresAt?: string;
+  status: "active" | "used" | "revoked";
+  usedById?: string;
 }
 
 export interface AssignmentDocument {

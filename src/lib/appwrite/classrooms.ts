@@ -15,13 +15,16 @@ import {
   APPWRITE_DATABASE_ID,
   APPWRITE_CLASSROOMS_COLLECTION_ID,
   APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID,
+  APPWRITE_CLASSROOM_INVITES_COLLECTION_ID,
 } from "./constants";
 import { buildClassroomPermissions } from "./permissions";
-import type { ClassroomDocument, ClassroomMemberDocument } from "./types";
+import type { ClassroomDocument, ClassroomMemberDocument, ClassroomInviteDocument } from "./types";
+import { createNotification } from "./notifications";
 
 const dbId = APPWRITE_DATABASE_ID;
 const classroomsCol = APPWRITE_CLASSROOMS_COLLECTION_ID;
 const membersCol = APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID;
+const invitesCol = APPWRITE_CLASSROOM_INVITES_COLLECTION_ID;
 
 /** Generate a random 6-character class code (uppercase letters + digits). */
 function generateClassCode(): string {
@@ -149,62 +152,176 @@ export async function deleteClassroom(classroomId: string): Promise<void> {
   await databases.deleteDocument(dbId, classroomsCol, classroomId);
 }
 
-/** Join a classroom via class code. Returns the classroom document. */
-export async function joinClassroom(classCode: string): Promise<ClassroomDocument> {
+export async function joinClassroom(code: string): Promise<ClassroomDocument> {
   const user = await account.get();
+  const normalizedCode = code.trim(); // Invites might be random case, classCode is usually uppercase
 
-  // Find classroom by code
+  // Branch B: Single-use Invite Ticket Check
+  let inviteDoc: ClassroomInviteDocument | null = null;
+  try {
+    const { documents } = await databases.listDocuments(dbId, invitesCol, [
+      Query.equal("code", normalizedCode),
+      Query.limit(1),
+    ]);
+    if (documents.length > 0) inviteDoc = documents[0] as unknown as ClassroomInviteDocument;
+  } catch (err) { /* ignore */ }
+
+  if (inviteDoc && inviteDoc.status === "active") {
+    // Check expiration
+    if (inviteDoc.expiresAt && new Date(inviteDoc.expiresAt) < new Date()) {
+      throw new Error("Invite ticket has expired");
+    }
+
+    // Bypass flow: Mark ticket as used and add student straight to class
+    if (!inviteDoc.classroomId) throw new Error("Invite ticket has no target classroom");
+    
+    const classroom = await getClassroom(inviteDoc.classroomId);
+
+    // Update invite status to used
+    await databases.updateDocument(dbId, invitesCol, inviteDoc.$id, {
+      status: "used",
+      usedById: user.$id
+    });
+
+    // Check if member already exists
+    const existing = await isClassroomMember(classroom.$id);
+    if (!existing.isMember) {
+      await databases.createDocument(dbId, membersCol, ID.unique(), {
+        classroomId: classroom.$id,
+        userId: user.$id,
+        userName: inviteDoc.studentName || user.name || user.email || "Student",
+        role: "student",
+        joinedAt: new Date().toISOString(),
+        status: "active", // <-- Magic: Active immediately
+      }, [
+        Permission.read(Role.users()),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id)),
+      ]);
+    }
+    return classroom;
+  }
+
+  // Branch A: Generic Class Code Check
   const { documents } = await databases.listDocuments(dbId, classroomsCol, [
-    Query.equal("classCode", classCode.toUpperCase()),
+    Query.equal("classCode", normalizedCode.toUpperCase()),
     Query.equal("status", "active"),
     Query.limit(1),
   ]);
 
   if (documents.length === 0) {
-    throw new Error("Classroom not found or inactive");
+    throw new Error("Mã tham gia không hợp lệ hoặc Lớp học đã đóng");
   }
 
   const classroom = documents[0] as unknown as ClassroomDocument;
 
-  // Check if already a member
-  const { documents: existing } = await databases.listDocuments(dbId, membersCol, [
+  // Check if existing
+  const { documents: existingMembers } = await databases.listDocuments(dbId, membersCol, [
     Query.equal("classroomId", classroom.$id),
     Query.equal("userId", user.$id),
     Query.limit(1),
   ]);
 
-  if (existing.length > 0) {
-    // Already a member, just return
+  if (existingMembers.length > 0) {
+    // Already in (or pending)
     return classroom;
   }
 
-  // Add as student member
-  await databases.createDocument(
-    dbId,
-    membersCol,
-    ID.unique(),
-    {
+  // Add to Waiting Room
+  await databases.createDocument(dbId, membersCol, ID.unique(), {
       classroomId: classroom.$id,
       userId: user.$id,
       userName: user.name || user.email || "Student",
       role: "student",
       joinedAt: new Date().toISOString(),
-      status: "active",
-    },
-    [
-      // Client-side SDK can only set permissions for self, users, or any
-      // Teacher removal handled via collection-level admin permissions
+      status: "pending", // <-- Pushed to waiting room
+    }, [
       Permission.read(Role.users()),
       Permission.update(Role.user(user.$id)),
       Permission.delete(Role.user(user.$id)),
     ]
   );
-
-  // Also grant the student read access to the classroom document
-  // by updating permissions to include this new student
-  // (For now, we'll rely on membership check instead of doc-level perms for students)
+  
+  // Notify Teacher
+  try {
+     await createNotification({
+        recipientId: classroom.teacherId,
+        type: "classroom_join_request",
+        sourceUserName: user.name || user.email || "Student",
+        sourceUserId: user.$id,
+        targetType: "classroom",
+        targetName: classroom.name,
+        targetId: classroom.$id
+     });
+  } catch (e) {
+     console.warn("Failed to notify teacher about join request", e);
+  }
 
   return classroom;
+}
+
+/** Create a single-use Invite Ticket for bypass onboarding (Teacher only) */
+export async function createInviteTicket(classroomId: string, studentName?: string, expiresInDays: number = 7): Promise<ClassroomInviteDocument> {
+  const user = await account.get();
+  const rawCode = ID.unique();
+  const ticketCode = `INV-${rawCode.substring(0,4).toUpperCase()}-${rawCode.substring(4,8).toUpperCase()}`;
+  
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+  const doc = await databases.createDocument(dbId, invitesCol, ID.unique(), {
+    code: ticketCode,
+    classroomId,
+    teacherId: user.$id,
+    studentName: studentName || "",
+    expiresAt: expiresAt.toISOString(),
+    status: "active",
+  });
+  return doc as unknown as ClassroomInviteDocument;
+}
+
+/** List all invite tickets for a classroom (Teacher only). */
+export async function listClassroomInvites(classroomId: string): Promise<ClassroomInviteDocument[]> {
+  const { documents } = await databases.listDocuments(dbId, invitesCol, [
+    Query.equal("classroomId", classroomId),
+    Query.orderDesc("$createdAt"),
+    Query.limit(100),
+  ]);
+  return documents as unknown as ClassroomInviteDocument[];
+}
+
+/** Revoke/Delete an invite ticket (Teacher only). */
+export async function deleteInviteTicket(inviteId: string): Promise<void> {
+  await databases.deleteDocument(dbId, invitesCol, inviteId);
+}
+
+
+/** Approve a student from the waiting room (Teacher only) */
+export async function approveMember(memberDocId: string): Promise<void> {
+  const result = await databases.updateDocument(dbId, membersCol, memberDocId, {
+    status: "active"
+  });
+  
+  try {
+     const member = result as unknown as ClassroomMemberDocument;
+     const classroom = await getClassroom(member.classroomId);
+     await createNotification({
+        recipientId: member.userId,
+        type: "classroom_join_approved",
+        sourceUserName: classroom.name, // The classroom itself acts as the sender
+        sourceUserId: classroom.teacherId, 
+        targetType: "classroom",
+        targetName: classroom.name,
+        targetId: classroom.$id
+     });
+  } catch(e) {
+     console.warn("Failed to notify student about approval", e);
+  }
+}
+
+/** Decline a student from the waiting room (Teacher only) */
+export async function declineMember(memberDocId: string): Promise<void> {
+  await databases.deleteDocument(dbId, membersCol, memberDocId);
 }
 
 /** Leave a classroom (student only). */
@@ -225,6 +342,17 @@ export async function listClassroomMembers(classroomId: string): Promise<Classro
   const { documents } = await databases.listDocuments(dbId, membersCol, [
     Query.equal("classroomId", classroomId),
     Query.equal("status", "active"),
+    Query.orderAsc("joinedAt"),
+    Query.limit(100),
+  ]);
+  return documents as unknown as ClassroomMemberDocument[];
+}
+
+/** List all PENDING members in the waiting room. */
+export async function listPendingMembers(classroomId: string): Promise<ClassroomMemberDocument[]> {
+  const { documents } = await databases.listDocuments(dbId, membersCol, [
+    Query.equal("classroomId", classroomId),
+    Query.equal("status", "pending"),
     Query.orderAsc("joinedAt"),
     Query.limit(100),
   ]);

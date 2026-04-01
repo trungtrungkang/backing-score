@@ -11,7 +11,11 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { joinClassroom, ClassroomDocument } from "@/lib/appwrite";
+import { 
+  joinClassroom,
+  isClassroomMember
+} from "@/lib/appwrite";
+import type { ClassroomDocument } from "@/lib/appwrite/types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link } from "@/i18n/routing";
@@ -24,9 +28,29 @@ export default function JoinClassroomPage() {
   const t = useTranslations("Classroom");
 
   const [joining, setJoining] = useState(false);
-  const [joined, setJoined] = useState(false);
+  const [joined, setJoined] = useState<"none" | "active" | "pending">("none");
   const [error, setError] = useState<string | null>(null);
   const [classroom, setClassroom] = useState<ClassroomDocument | null>(null);
+
+  // Auto polling to check if teacher approved
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (joined === "pending" && classroom) {
+      interval = setInterval(async () => {
+        try {
+          const membership = await isClassroomMember(classroom.$id);
+          if (membership.isMember) {
+            setJoined("active");
+            toast.success(`You have been approved to join "${classroom.name}"!`);
+            clearInterval(interval);
+          }
+        } catch {
+          // ignore silently in polling
+        }
+      }, 5000); // Check every 5s
+    }
+    return () => clearInterval(interval);
+  }, [joined, classroom]);
 
   const handleJoin = async () => {
     if (!code || joining) return;
@@ -35,8 +59,17 @@ export default function JoinClassroomPage() {
     try {
       const cr = await joinClassroom(code);
       setClassroom(cr);
-      setJoined(true);
-      toast.success(`${t("joinedMsg")} "${cr.name}"!`);
+      
+      // Determine if they bypassed directly into the class or are in waiting room
+      const isBypass = code.startsWith("INV-");
+      
+      if (isBypass) {
+         setJoined("active");
+         toast.success(`${t("joinedMsg")} "${cr.name}"!`);
+      } else {
+         setJoined("pending");
+         toast.success(`Requested to join "${cr.name}"`);
+      }
     } catch (err: any) {
       setError(err?.message || t("joinFailedDefault"));
     } finally {
@@ -62,7 +95,7 @@ export default function JoinClassroomPage() {
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center shadow-xl shadow-black/5">
-          {joined && classroom ? (
+          {joined === "active" && classroom ? (
             <>
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
@@ -76,6 +109,23 @@ export default function JoinClassroomPage() {
               <Link href={`/classroom/${classroom.$id}`}>
                 <Button className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 h-11 w-full">
                   {t("goToClassroom")}
+                </Button>
+              </Link>
+            </>
+          ) : joined === "pending" && classroom ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-8 h-8 text-amber-500" />
+              </div>
+              <h1 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">
+                Waiting for Approval
+              </h1>
+              <p className="text-zinc-400 mb-6">
+                You have joined the waiting room. Please wait for the teacher to grant you access to <span className="font-bold text-zinc-200">{classroom.name}</span>.
+              </p>
+              <Link href={`/classroom`}>
+                <Button variant="outline" className="border-indigo-500/20 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold px-8 h-11 w-full">
+                  Return to Dashboard
                 </Button>
               </Link>
             </>
@@ -111,8 +161,8 @@ export default function JoinClassroomPage() {
               <p className="text-zinc-400 mb-6">
                 {t("joinPrompt")}
               </p>
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl py-4 px-6 mb-6">
-                <span className="text-3xl font-mono font-black tracking-[0.3em] text-indigo-500">
+              <div className="flex bg-zinc-50 dark:bg-zinc-800 rounded-xl py-4 px-4 sm:px-6 mb-6 overflow-hidden justify-center items-center">
+                <span className={`font-mono font-black text-indigo-500 text-center ${code.length > 6 ? 'text-xl sm:text-2xl tracking-[0.15em] sm:tracking-[0.2em]' : 'text-3xl tracking-[0.3em]'}`}>
                   {code}
                 </span>
               </div>

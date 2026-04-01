@@ -59,7 +59,10 @@
     "duplicateProject": "Duplicate Piece",
     "recentlyAdded": "Recently Added",
     "trending": "Trending",
-    "popularFavorites": "Popular Favorites"
+    "popularFavorites": "Popular Favorites",
+    "greatComposers": "Great Composers",
+    "beginnerPath": "Beginner Path",
+    "romanticEra": "Romantic Era Piano"
   },
   "Academy": {
     "welcomeTitle": "Backing & Score Academy",
@@ -212,15 +215,15 @@
     "search": "Search"
   },
   "Feed": {
-    "socialNetwork": "Social Network",
-    "timelineFeed": "Timeline Feed",
-    "globalDiscover": "Global Discover",
-    "timeline": "Timeline",
-    "composerPlaceholder": "What are you working on right now?",
+    "socialNetwork": "Private Network",
+    "timelineFeed": "Cohort Feed",
+    "globalDiscover": "Global Archive",
+    "timeline": "Cohort Timeline",
+    "composerPlaceholder": "Share a performance or sheet music with your class...",
     "posting": "Posting...",
-    "post": "Post",
-    "emptyTitle": "Welcome to your Timeline!",
-    "emptySubtitle": "Follow composers on the Discover page to organically populate your streaming network.",
+    "post": "Publish",
+    "emptyTitle": "Welcome to your Cohort Timeline!",
+    "emptySubtitle": "Post your recordings or assignments to get feedback from teachers and classmates.",
     "sheetMusic": "Sheet Music",
     "defaultProjectDesc": "A beautiful musical piece available for interactive practice and playback.",
     "collection": "Collection",
@@ -428,6 +431,8 @@
     "justNow": "Just now",
     "assignment_new": "{userName} assigned \"{targetName}\"",
     "material_new": "{userName} shared a PDF \"{targetName}\"",
+    "classroom_join_request": "{userName} requested to join \"{targetName}\"",
+    "classroom_join_approved": "{sourceUserName} approved your join request",
     "submission_new": "{userName} submitted \"{targetName}\"",
     "feedback_new": "{userName} graded \"{targetName}\""
   },
@@ -830,5 +835,20 @@
     "closeBtn": "Close & Return",
     "liveAiMonitor": "Live AI Monitor",
     "signalDetected": "Signal Detected!"
+  },
+  "JoinClassroom": {
+    "title": "Join Classroom",
+    "description": "Enter your 6-digit Join Code or an Invite Ticket from your teacher.",
+    "placeholder": "e.g., A2B4C6 or INV-...",
+    "submit": "Join Now",
+    "processing": "Processing...",
+    "successBypassTitle": "Welcome!",
+    "successBypassDesc": "Valid Invite Ticket. Redirecting you to the classroom...",
+    "successPendingTitle": "Request Sent",
+    "successPendingDesc": "Your join request has been sent to the Teacher. Please complete any payments and wait for approval.",
+    "returnHome": "Return to Home",
+    "toastSuccessActive": "Joined classroom successfully!",
+    "toastSuccessPending": "Join request sent successfully!",
+    "toastError": "Invalid code or connection error"
   }
 }

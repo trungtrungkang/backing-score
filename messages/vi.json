@@ -59,7 +59,10 @@
     "duplicateProject": "Nhân bản tác phẩm",
     "recentlyAdded": "Mới thêm gần đây",
     "trending": "Thịnh hành",
-    "popularFavorites": "Được yêu thích nhất"
+    "popularFavorites": "Được yêu thích nhất",
+    "greatComposers": "Nhà Soạn Nhạc Vĩ Đại",
+    "beginnerPath": "Lộ Trình Cho Người Mới",
+    "romanticEra": "Nhạc Lãng Mạn (Romantic Era)"
   },
   "Academy": {
     "welcomeTitle": "Học viện Backing & Score",
@@ -796,5 +799,20 @@
     "closeBtn": "Đóng & Quay lại",
     "liveAiMonitor": "Hệ thống AI giám sát trực tiếp",
     "signalDetected": "Đã bắt được tín hiệu!"
+  },
+  "JoinClassroom": {
+    "title": "Gia nhập Lớp Học",
+    "description": "Nhập Mã Tham Gia (6 chữ số) hoặc Mã Vé (Invite Ticket) trực tiếp từ Giáo Viên.",
+    "placeholder": "Ví dụ: A2B4C6 hoặc INV-...",
+    "submit": "Tham Gia Ngay",
+    "processing": "Đang xử lý...",
+    "successBypassTitle": "Đã vào lớp!",
+    "successBypassDesc": "Vé tham gia (Invite Ticket) hợp lệ. Đang chuyển hướng bạn vào lớp học...",
+    "successPendingTitle": "Đã gửi yêu cầu",
+    "successPendingDesc": "Yêu cầu tham gia lớp học của bạn đã được chuyển đến Giáo Viên. Vui lòng thanh toán học phí (nếu có) và chờ được phê duyệt.",
+    "returnHome": "Trở về trang chủ",
+    "toastSuccessActive": "Tham gia lớp học thành công!",
+    "toastSuccessPending": "Yêu cầu tham gia đã gửi thành công!",
+    "toastError": "Mã không hợp lệ hoặc lỗi kết nối"
   }
 }

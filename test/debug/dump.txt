@@ -1,0 +1,51 @@
+{
+    "userId": "69c1689a0021acae53db",
+    "name": "Frédéric Chopin - Waltz in A MinorChopin",
+    "mode": "practice",
+    "payload": "{\"version\":2,\"metadata\":{\"name\":\"Frédéric Chopin - Waltz in A MinorChopin\",\"artist\":\"Frédéric Chopin\",\"keySignature\":\"C Maj\",\"syncToTimemap\":true,\"tempo\":120,\"timeSignature\":\"3\/4\"},\"type\":\"multi-stems\",\"audioTracks\":[],\"notationData\":{\"type\":\"music-xml\",\"fileId\":\"69c17faf002dbc06c248\",\"timemap\":[{\"measure\":0,\"timeMs\":0,\"durationInQuarters\":1,\"timeSignature\":\"3\/4\",\"tempo\":120},{\"measure\":1,\"timeMs\":500,\"durationInQuarters\":3},{\"measure\":2,\"timeMs\":2000,\"durationInQuarters\":3},{\"measure\":3,\"timeMs\":3500,\"durationInQuarters\":3},{\"measure\":4,\"timeMs\":5000,\"durationInQuarters\":3},{\"measure\":5,\"timeMs\":6500,\"durationInQuarters\":3},{\"measure\":6,\"timeMs\":8000,\"durationInQuarters\":3},{\"measure\":7,\"timeMs\":9500,\"durationInQuarters\":3},{\"measure\":8,\"timeMs\":11000,\"durationInQuarters\":3},{\"measure\":9,\"timeMs\":12500,\"durationInQuarters\":3},{\"measure\":10,\"timeMs\":14000,\"durationInQuarters\":3},{\"measure\":11,\"timeMs\":15500,\"durationInQuarters\":3},{\"measure\":12,\"timeMs\":17000,\"durationInQuarters\":3},{\"measure\":13,\"timeMs\":18500,\"durationInQuarters\":3},{\"measure\":14,\"timeMs\":20000,\"durationInQuarters\":3},{\"measure\":15,\"timeMs\":21500,\"durationInQuarters\":3},{\"measure\":16,\"timeMs\":23000,\"durationInQuarters\":3},{\"measure\":17,\"timeMs\":24500,\"durationInQuarters\":3},{\"measure\":18,\"timeMs\":26000,\"durationInQuarters\":3},{\"measure\":19,\"timeMs\":27500,\"durationInQuarters\":3},{\"measure\":20,\"timeMs\":29000,\"durationInQuarters\":3},{\"measure\":21,\"timeMs\":30500,\"durationInQuarters\":3},{\"measure\":22,\"timeMs\":32000,\"durationInQuarters\":3},{\"measure\":23,\"timeMs\":33500,\"durationInQuarters\":3},{\"measure\":24,\"timeMs\":35000,\"durationInQuarters\":3},{\"measure\":25,\"timeMs\":36500,\"durationInQuarters\":3},{\"measure\":26,\"timeMs\":38000,\"durationInQuarters\":3},{\"measure\":27,\"timeMs\":39500,\"durationInQuarters\":3},{\"measure\":28,\"timeMs\":41000,\"durationInQuarters\":3},{\"measure\":29,\"timeMs\":42500,\"durationInQuarters\":3},{\"measure\":30,\"timeMs\":44000,\"durationInQuarters\":3},{\"measure\":31,\"timeMs\":45500,\"durationInQuarters\":3},{\"measure\":32,\"timeMs\":47000,\"durationInQuarters\":3},{\"measure\":33,\"timeMs\":48500,\"durationInQuarters\":3},{\"measure\":34,\"timeMs\":50000,\"durationInQuarters\":3},{\"measure\":35,\"timeMs\":51500,\"durationInQuarters\":3},{\"measure\":36,\"timeMs\":53000,\"durationInQuarters\":3},{\"measure\":37,\"timeMs\":54500,\"durationInQuarters\":3},{\"measure\":38,\"timeMs\":56000,\"durationInQuarters\":3},{\"measure\":39,\"timeMs\":57500,\"durationInQuarters\":3},{\"measure\":40,\"timeMs\":59000,\"durationInQuarters\":3},{\"measure\":41,\"timeMs\":60500,\"durationInQuarters\":3},{\"measure\":42,\"timeMs\":62000,\"durationInQuarters\":3},{\"measure\":43,\"timeMs\":63500,\"durationInQuarters\":3},{\"measure\":44,\"timeMs\":65000,\"durationInQuarters\":3},{\"measure\":45,\"timeMs\":66500,\"durationInQuarters\":3},{\"measure\":46,\"timeMs\":68000,\"durationInQuarters\":3},{\"measure\":47,\"timeMs\":69500,\"durationInQuarters\":3},{\"measure\":48,\"timeMs\":71000,\"durationInQuarters\":3},{\"measure\":49,\"timeMs\":72500,\"durationInQuarters\":3},{\"measure\":50,\"timeMs\":74000,\"durationInQuarters\":3},{\"measure\":51,\"timeMs\":75500,\"durationInQuarters\":3},{\"measure\":52,\"timeMs\":77000,\"durationInQuarters\":3},{\"measure\":53,\"timeMs\":78500,\"durationInQuarters\":3},{\"measure\":54,\"timeMs\":80000,\"durationInQuarters\":3},{\"measure\":55,\"timeMs\":81500,\"durationInQuarters\":3},{\"measure\":56,\"timeMs\":83000,\"durationInQuarters\":3},{\"measure\":57,\"timeMs\":84500,\"durationInQuarters\":3},{\"measure\":58,\"timeMs\":86000,\"durationInQuarters\":3},{\"measure\":59,\"timeMs\":87500,\"durationInQuarters\":3},{\"measure\":60,\"timeMs\":89000,\"durationInQuarters\":3},{\"measure\":61,\"timeMs\":90500,\"durationInQuarters\":3},{\"measure\":62,\"timeMs\":92000,\"durationInQuarters\":3},{\"measure\":63,\"timeMs\":93500,\"durationInQuarters\":3},{\"measure\":64,\"timeMs\":95000,\"durationInQuarters\":3},{\"measure\":65,\"timeMs\":96500,\"durationInQuarters\":3},{\"measure\":66,\"timeMs\":98000,\"durationInQuarters\":3},{\"measure\":67,\"timeMs\":99500,\"durationInQuarters\":3},{\"measure\":68,\"timeMs\":101000,\"durationInQuarters\":3},{\"measure\":69,\"timeMs\":102500,\"durationInQuarters\":3},{\"measure\":70,\"timeMs\":104000,\"durationInQuarters\":3},{\"measure\":71,\"timeMs\":105500,\"durationInQuarters\":3},{\"measure\":72,\"timeMs\":107000,\"durationInQuarters\":3},{\"measure\":73,\"timeMs\":108500,\"durationInQuarters\":3},{\"measure\":74,\"timeMs\":110000,\"durationInQuarters\":3},{\"measure\":75,\"timeMs\":111500,\"durationInQuarters\":3},{\"measure\":76,\"timeMs\":113000,\"durationInQuarters\":3},{\"measure\":77,\"timeMs\":114500,\"durationInQuarters\":3},{\"measure\":78,\"timeMs\":116000,\"durationInQuarters\":3},{\"measure\":79,\"timeMs\":117500,\"durationInQuarters\":3},{\"measure\":80,\"timeMs\":119000,\"durationInQuarters\":3}],\"measureMap\":{\"0\":1,\"25\":18,\"49\":26}}}",
+    "payloadVersion": 2,
+    "published": true,
+    "publishedAt": "2026-03-23T18:00:16.341+00:00",
+    "coverUrl": null,
+    "description": null,
+    "creatorEmail": "system-import@backingscore.app",
+    "tags": [
+        "chopin",
+        "musicxml-import"
+    ],
+    "instruments": [],
+    "difficulty": 0,
+    "durationSec": 0,
+    "composerIds": [],
+    "performerIds": [],
+    "instrumentIds": [],
+    "genreId": null,
+    "compositionId": null,
+    "wikiGenreId": "",
+    "wikiInstrumentIds": [],
+    "wikiCompositionId": "",
+    "wikiComposerIds": [
+        "69c0ec890030b0aed0fe"
+    ],
+    "searchString": "frederic chopin - waltz in a minorchopin  frederic chopin chopin musicxml-import system-import@backingscore.app",
+    "playCount": 9,
+    "featured": true,
+    "featuredAt": "2026-03-26T13:41:44.701+00:00",
+    "favoriteCount": null,
+    "folderId": null,
+    "$sequence": 201,
+    "$id": "69c17fb000155c360641",
+    "$createdAt": "2026-03-23T18:00:16.418+00:00",
+    "$updatedAt": "2026-04-01T03:20:20.058+00:00",
+    "$permissions": [
+        "read(\"any\")",
+        "update(\"user:69c1689a0021acae53db\")",
+        "delete(\"user:69c1689a0021acae53db\")",
+        "update(\"label:admin\")",
+        "delete(\"label:admin\")",
+        "update(\"label:contentmanager\")",
+        "delete(\"label:contentmanager\")"
+    ],
+    "$databaseId": "backing_score_db",
+    "$collectionId": "projects"
+}

@@ -191,7 +191,7 @@ export default function CreatorCoursesPage() {
                         </td>
                         <td className="px-6 py-4">
                            <span className="font-medium text-zinc-900 dark:text-white">
-                             {course.priceCents > 0 ? `$${(course.priceCents / 100).toFixed(2)}` : "Free"}
+                             {(course.priceCents ?? 0) > 0 ? `$${((course.priceCents ?? 0) / 100).toFixed(2)}` : "Free"}
                            </span>
                         </td>
                         <td className="px-6 py-4">

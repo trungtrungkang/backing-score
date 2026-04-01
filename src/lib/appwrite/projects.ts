@@ -163,6 +163,19 @@ export async function getProject(projectId: string): Promise<ProjectDocument> {
   return doc as unknown as ProjectDocument;
 }
 
+/** List all projects (Admin only usually, assuming appropriate permissions). */
+export async function listProjects(limit = 100): Promise<{ documents: ProjectDocument[], total: number }> {
+  const queries = [
+    Query.orderDesc("$updatedAt"),
+    Query.limit(limit),
+  ];
+  const response = await databases.listDocuments(dbId, collId, queries);
+  return {
+    documents: response.documents as unknown as ProjectDocument[],
+    total: response.total,
+  };
+}
+
 /** List projects owned by the current user (My projects). */
 export async function listMyProjects(tagFilters?: string[]): Promise<ProjectDocument[]> {
   const user = await account.get();

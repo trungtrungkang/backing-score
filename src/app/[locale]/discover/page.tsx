@@ -22,7 +22,8 @@ import {
 } from "@/lib/appwrite";
 import { listInstruments } from "@/lib/appwrite/instruments";
 import { listGenres } from "@/lib/appwrite/genres";
-import type { InstrumentDocument, GenreDocument } from "@/lib/appwrite/types";
+import { listArtists, getArtistNamesByIds } from "@/lib/appwrite/artists";
+import type { InstrumentDocument, GenreDocument, ArtistDocument } from "@/lib/appwrite/types";
 import {
   Play,
   Bookmark,
@@ -35,11 +36,11 @@ import {
   Clock,
   Flame,
   Heart,
+  User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProjectActionsMenu } from "@/components/ProjectActionsMenu";
 import { ReportButton } from "@/components/ReportButton";
-import { getArtistNamesByIds } from "@/lib/appwrite/artists";
 import { HorizontalScroll } from "@/components/HorizontalScroll";
 
 const DIFFICULTY_OPTIONS = ["Beginner", "Intermediate", "Advanced"];
@@ -241,6 +242,11 @@ export default function DiscoverPage() {
   const [trendingProjects, setTrendingProjects] = useState<ProjectDocument[]>([]);
   const [favoritedProjects, setFavoritedProjects] = useState<ProjectDocument[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
+  
+  // Curated Shelves
+  const [romanticProjects, setRomanticProjects] = useState<ProjectDocument[]>([]);
+  const [beginnerProjects, setBeginnerProjects] = useState<ProjectDocument[]>([]);
+  const [greatComposers, setGreatComposers] = useState<ArtistDocument[]>([]);
 
   // All scores (filter/search section)
   const [allProjects, setAllProjects] = useState<ProjectDocument[]>([]);
@@ -274,7 +280,7 @@ export default function DiscoverPage() {
         const safe = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
           p.catch(() => fallback);
 
-        const [featured, recent, trending, popular, collections, myFavs] =
+        const [featured, recent, trending, popular, collections, myFavs, romantic, beginner, composers] =
           await Promise.all([
             safe(listFeatured(6), []),
             safe(listRecentlyPublished(12), []),
@@ -282,6 +288,9 @@ export default function DiscoverPage() {
             safe(listMostFavorited(12), []),
             safe(listPublishedPlaylists(), []),
             user ? safe(listMyFavorites("project"), []) : Promise.resolve([]),
+            safe(listPublished(["Romantic"]), []),
+            safe(listPublished(["Beginner"]), []),
+            safe(listArtists(15), [])
           ]);
 
         setFeaturedProjects(featured);
@@ -289,13 +298,16 @@ export default function DiscoverPage() {
         setTrendingProjects(trending);
         setFavoritedProjects(popular);
         setPlaylists(collections);
+        setRomanticProjects(romantic);
+        setBeginnerProjects(beginner);
+        setGreatComposers(composers);
 
         const favSet = new Set<string>();
         myFavs.forEach((f) => favSet.add(f.targetId));
         setFavoritedIds(favSet);
 
         // Batch-resolve composer names from all loaded projects
-        const allLoaded = [...featured, ...recent, ...trending, ...popular];
+        const allLoaded = [...featured, ...recent, ...trending, ...popular, ...romantic, ...beginner];
         const allComposerIds = allLoaded.flatMap((p) => p.wikiComposerIds || []);
         if (allComposerIds.length > 0) {
           getArtistNamesByIds(allComposerIds)
@@ -444,6 +456,14 @@ export default function DiscoverPage() {
     () => favoritedProjects.filter((p) => !featuredIds.has(p.$id)),
     [favoritedProjects, featuredIds]
   );
+  const dedupRomantic = useMemo(
+    () => romanticProjects.filter((p) => !featuredIds.has(p.$id)),
+    [romanticProjects, featuredIds]
+  );
+  const dedupBeginner = useMemo(
+    () => beginnerProjects.filter((p) => !featuredIds.has(p.$id)),
+    [beginnerProjects, featuredIds]
+  );
 
   // All scores sorting
   const sortedAllScores = useMemo(() => {
@@ -583,6 +603,91 @@ export default function DiscoverPage() {
                 />
                 <HorizontalScroll>
                   {dedupFavorited.map((p) => (
+                    <ScoreCard
+                      key={p.$id}
+                      project={p}
+                      composerName={getComposerName(p)}
+                      isFavorited={favoritedIds.has(p.$id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      togglingFavId={togglingFavId}
+                      user={user}
+                    />
+                  ))}
+                </HorizontalScroll>
+              </section>
+            )}
+
+            {/* 🎼 Nhạc Sĩ Vĩ Đại (Great Composers) */}
+            {greatComposers.length > 0 && (
+              <section className="mb-14">
+                <SectionHeader
+                  icon={<User className="w-5 h-5" />}
+                  title={t("greatComposers") || "Great Composers"}
+                  iconColor="text-violet-500"
+                />
+                <HorizontalScroll>
+                  {greatComposers.map((artist) => (
+                    <Link
+                      key={artist.$id}
+                      href={`/wiki/artist/${artist.slug}`}
+                      className="flex flex-col items-center gap-3 group shrink-0 w-[120px] sm:w-[140px]"
+                    >
+                      <div className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-full overflow-hidden border-2 border-transparent group-hover:border-violet-500 transition-colors shadow-lg">
+                        {artist.imageUrl ? (
+                          <img src={artist.imageUrl} alt={artist.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                             <User className="w-10 h-10 text-zinc-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-2 px-1 leading-tight group-hover:text-violet-500 transition-colors">
+                           {artist.name}
+                        </h3>
+                      </div>
+                    </Link>
+                  ))}
+                </HorizontalScroll>
+              </section>
+            )}
+
+            {/* 🌹 Khúc Cuồng Ca Lãng Mạn (Romantic Era) */}
+            {dedupRomantic.length > 0 && (
+              <section className="mb-14">
+                <SectionHeader
+                  icon={<Music4 className="w-5 h-5" />}
+                  title={t("romanticEra") || "Romantic Era Piano"}
+                  count={dedupRomantic.length}
+                  iconColor="text-rose-500"
+                />
+                <HorizontalScroll>
+                  {dedupRomantic.map((p) => (
+                    <ScoreCard
+                      key={p.$id}
+                      project={p}
+                      composerName={getComposerName(p)}
+                      isFavorited={favoritedIds.has(p.$id)}
+                      onToggleFavorite={handleToggleFavorite}
+                      togglingFavId={togglingFavId}
+                      user={user}
+                    />
+                  ))}
+                </HorizontalScroll>
+              </section>
+            )}
+
+            {/* 🎹 Luyện Ngón (Beginner Path) */}
+            {dedupBeginner.length > 0 && (
+              <section className="mb-14">
+                <SectionHeader
+                  icon={<Play className="w-5 h-5" />}
+                  title={t("beginnerPath") || "Beginner Path & Exercises"}
+                  count={dedupBeginner.length}
+                  iconColor="text-emerald-500"
+                />
+                <HorizontalScroll>
+                  {dedupBeginner.map((p) => (
                     <ScoreCard
                       key={p.$id}
                       project={p}

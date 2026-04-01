@@ -746,5 +746,20 @@
     "removeFavorite": "Eliminar favorito",
     "lightMode": "Modo claro",
     "darkMode": "Modo oscuro"
+  },
+  "JoinClassroom": {
+    "title": "Join Classroom",
+    "description": "Enter your 6-digit Join Code or an Invite Ticket from your teacher.",
+    "placeholder": "e.g., A2B4C6 or INV-...",
+    "submit": "Join Now",
+    "processing": "Processing...",
+    "successBypassTitle": "Welcome!",
+    "successBypassDesc": "Valid Invite Ticket. Redirecting you to the classroom...",
+    "successPendingTitle": "Request Sent",
+    "successPendingDesc": "Your join request has been sent to the Teacher. Please complete any payments and wait for approval.",
+    "returnHome": "Return to Home",
+    "toastSuccessActive": "Joined classroom successfully!",
+    "toastSuccessPending": "Join request sent successfully!",
+    "toastError": "Invalid code or connection error"
   }
 }

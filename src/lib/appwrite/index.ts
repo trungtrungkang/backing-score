@@ -31,6 +31,7 @@ export {
   createProject,
   updateProject,
   getProject,
+  listProjects,
   listMyProjects,
   listPublished,
   deleteProject,
@@ -100,6 +101,12 @@ export {
   listClassroomMembers,
   removeClassroomMember,
   isClassroomMember,
+  createInviteTicket,
+  listClassroomInvites,
+  deleteInviteTicket,
+  approveMember,
+  declineMember,
+  listPendingMembers,
 } from "./classrooms";
 export {
   createAssignment,
@@ -143,6 +150,7 @@ export type { SheetMusicDocument, SheetMusicFolderDocument } from "./types";
 export {
   uploadSheetPdf,
   listMySheetMusic,
+  listSheetMusic,
   getSheetMusic,
   updateSheetMusic,
   deleteSheetMusic,

@@ -139,6 +139,8 @@ export interface PlayShellProps {
   onRecordingReady?: (blob: Blob) => void;
   /** Force Wait Mode on (for assessments with waitModeRequired) */
   forceWaitMode?: boolean;
+  /** Active during Classroom Assignments: grant Halo Effect bypass */
+  isAssignmentContext?: boolean;
 }
 
 export function PlayShell({
@@ -156,10 +158,16 @@ export function PlayShell({
   enableRecording = false,
   onRecordingReady,
   forceWaitMode = false,
+  isAssignmentContext = false,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
-  const { isPremium, user } = useAuth();
+  const { serviceTier, user } = useAuth();
+  
+  // Rule 3: The Halo Effect (Bypass) 
+  // Free users instantly get Pro features while working on a Private LMS Assignment!
+  const hasProAccess = serviceTier === "pro" || serviceTier === "studio" || isAssignmentContext;
+
   const tc = useTranslations("Classroom");
   const tPlay = useTranslations("PlayShell");
   const tControls = useTranslations("PlayerControls");
@@ -423,7 +431,7 @@ export function PlayShell({
       toast.info(tPlay("listeningModePreview", { fallback: "Wait Mode is required for this assignment." }), { position: "top-center", duration: 5000 });
       return; // prevent leaving wait mode if forced
     }
-    if (mode !== 'none' && !isPremium) {
+    if (mode !== 'none' && !hasProAccess) {
       const { count } = getWaitModeCount();
       if (count >= FREE_DAILY_WAIT_MODE_LIMIT) {
         setShowUpgrade("waitMode");
@@ -432,7 +440,7 @@ export function PlayShell({
       incrementWaitModeCount();
     }
     actions.setPracticeModeType(mode);
-  }, [forceWaitMode, isPremium, actions, tPlay]);
+  }, [forceWaitMode, hasProAccess, actions, tPlay]);
 
   const scoreFileId = payload.notationData?.fileId;
 
@@ -551,7 +559,7 @@ export function PlayShell({
           onPracticeModeTypeChange={gatedPracticeModeToggle}
           layoutMode={layoutMode}
           onLayoutModeChange={handleLayoutModeChange}
-          isPremium={isPremium}
+          isPremium={hasProAccess}
           isWaitModeLenient={state.isWaitModeLenient}
           onWaitModeLenientToggle={actions.setIsWaitModeLenient}
           isSynthMuted={payload.metadata?.scoreSynthMuted ?? false}

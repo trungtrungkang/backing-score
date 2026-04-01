@@ -18,6 +18,7 @@ import {
 import { listMyClassrooms, ClassroomDocument } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { canCreate } from "@/lib/auth/roles";
 
 export default function ClassroomListPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function ClassroomListPage() {
   const [classrooms, setClassrooms] = useState<ClassroomDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -85,13 +87,15 @@ export default function ClassroomListPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.push("/classroom/create")}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 h-11 shadow-lg shadow-indigo-500/20"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                {t("createBtn")}
-              </Button>
+              {canCreate(user.labels) && (
+                <Button
+                  onClick={() => router.push("/classroom/create")}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 h-11 shadow-lg shadow-indigo-500/20"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  {t("createBtn")}
+                </Button>
+              )}
             </div>
           </header>
 
@@ -102,11 +106,13 @@ export default function ClassroomListPage() {
             <input
               type="text"
               placeholder={t("enterCode")}
-              maxLength={6}
+              maxLength={15}
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               className="flex-1 min-h-[48px] py-3 px-4 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-base sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 uppercase tracking-widest font-mono"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  const code = (e.target as HTMLInputElement).value.trim();
+                  const code = joinCode.trim();
                   if (code.length >= 4) {
                     router.push(`/classroom/join/${code}`);
                   }
@@ -116,10 +122,10 @@ export default function ClassroomListPage() {
             <Button
               variant="outline"
               className="min-h-[48px] sm:h-10 px-5 text-sm font-bold"
+              disabled={joinCode.trim().length < 4}
               onClick={() => {
-                const input = document.querySelector(`input[placeholder="${t("enterCode")}"]`) as HTMLInputElement;
-                const code = input?.value?.trim();
-                if (code && code.length >= 4) {
+                const code = joinCode.trim();
+                if (code.length >= 4) {
                   router.push(`/classroom/join/${code}`);
                 }
               }}
@@ -145,12 +151,14 @@ export default function ClassroomListPage() {
               <p className="text-zinc-400 max-w-sm mb-6">
                 {t("emptyDesc")}
               </p>
-              <Button
-                onClick={() => router.push("/classroom/create")}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
-              >
-                <Plus className="w-4 h-4 mr-2" /> {t("createFirst")}
-              </Button>
+              {canCreate(user.labels) && (
+                <Button
+                  onClick={() => router.push("/classroom/create")}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> {t("createFirst")}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid gap-4">

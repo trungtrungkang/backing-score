@@ -114,6 +114,7 @@ export default function ProjectPage() {
   }, [load]);
 
   const isOwner = user && project && (project.userId === user.$id || user.labels?.includes("admin"));
+  const isCurator = user && (user.labels?.includes("admin") || user.labels?.includes("curator"));
 
   const handleSave = useCallback(async () => {
     if (!project || !isOwner || saving || payload === null) return;
@@ -450,8 +451,8 @@ export default function ProjectPage() {
             saving={saving}
             publishing={publishing}
             onSave={handleSave}
-            onPublish={handlePublish}
-            onUnpublish={handleUnpublish}
+            onPublish={isCurator ? handlePublish : undefined}
+            onUnpublish={isCurator ? handleUnpublish : undefined}
             onPayloadChange={setPayload}
             onUploadTrackFile={handleUploadTrackFile}
             onNameChange={isOwner ? setName : undefined}

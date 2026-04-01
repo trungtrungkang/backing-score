@@ -22,13 +22,16 @@ import {
   PlaylistDocument,
   CommentDocument
 } from "@/lib/appwrite";
+import { listMyClassrooms } from "@/lib/appwrite/classrooms";
+import type { ClassroomDocument } from "@/lib/appwrite/types";
 import { deletePost } from "@/lib/appwrite/social";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { 
   Heart, MessageSquare, Share2, Music, ListMusic, 
-  Globe, Clock, PenTool, Image as ImageIcon, Send, X, Loader2, OctagonX, Trash2, MoreVertical
+  Globe, Clock, PenTool, Image as ImageIcon, Send, X, Loader2, OctagonX, Trash2, MoreVertical,
+  Users, KeyRound, Shield
 } from "lucide-react";
 import { Music4 } from "lucide-react";
 import { getPublicProfile } from "@/app/actions/user";
@@ -82,6 +85,11 @@ export default function FeedPage() {
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [myProjects, setMyProjects] = useState<ProjectDocument[]>([]);
   const [loadingAttach, setLoadingAttach] = useState(false);
+
+  // Visibility & Classroom
+  const [visibility, setVisibility] = useState<"followers" | "classroom">("followers");
+  const [classroomId, setClassroomId] = useState<string>("");
+  const [myClassrooms, setMyClassrooms] = useState<ClassroomDocument[]>([]);
   
   const { prompt, confirm } = useDialogs();
 
@@ -148,6 +156,15 @@ export default function FeedPage() {
 
     loadFeed();
 
+    async function loadClasses() {
+      try {
+        const cls = await listMyClassrooms();
+        setMyClassrooms(cls);
+        if (cls.length > 0) setClassroomId(cls[0].$id);
+      } catch (e) {}
+    }
+    loadClasses();
+
     return () => { cancelled = true; };
   }, [user, authLoading, router]);
 
@@ -158,7 +175,9 @@ export default function FeedPage() {
       const newPost = await createPost({
         content: composeText.trim(),
         attachmentType: selectedAttachment ? selectedAttachment.type : "none",
-        attachmentId: selectedAttachment ? selectedAttachment.id : ""
+        attachmentId: selectedAttachment ? selectedAttachment.id : "",
+        visibility: visibility === "classroom" ? "classroom" : "followers",
+        classroomId: visibility === "classroom" ? classroomId : undefined
       });
       // Pushing optimistic feed
       let projObj: ProjectDocument | undefined = undefined;
@@ -310,19 +329,70 @@ export default function FeedPage() {
                  )}
 
                  <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-white/5">
-                    <div className="flex gap-1">
-                       <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => {
-                             setShowAttachModal(true);
-                             setLoadingAttach(true);
-                             listMyProjects().then(setMyProjects).finally(() => setLoadingAttach(false));
-                          }}
-                          className="w-8 h-8 rounded-full text-zinc-400 hover:text-blue-500 hover:bg-blue-500/10"
-                       >
-                          <Music className="w-4 h-4" />
-                       </Button>
+                    <div className="flex gap-3 items-center">
+                       <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                             <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-8 rounded-full text-zinc-500 hover:text-indigo-500 hover:bg-indigo-500/10 font-medium px-3"
+                             >
+                                <span className="flex items-center gap-1.5"><Music4 className="w-4 h-4" /> Attach</span>
+                             </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-48 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-white/10 rounded-xl">
+                             <DropdownMenuItem onClick={() => {
+                               setShowAttachModal(true);
+                               setLoadingAttach(true);
+                               listMyProjects().then(setMyProjects).finally(() => setLoadingAttach(false));
+                             }} className="cursor-pointer font-medium py-2">
+                                <Music className="w-4 h-4 mr-2 text-indigo-500" /> Interactive Score
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => toast.info("Coming soon: PDF Sheet Music support")} className="cursor-pointer font-medium py-2">
+                                <ImageIcon className="w-4 h-4 mr-2 text-amber-500" /> Sheet Music PDF
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => toast.info("Coming soon: Video & Audio recording")} className="cursor-pointer font-medium py-2">
+                                <span className="w-4 h-4 mr-2 text-rose-500 bg-rose-500/20 rounded-full flex items-center justify-center shrink-0"><span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span></span> Performance Record
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => toast.info("Coming soon: Classroom Assignments")} className="cursor-pointer font-medium py-2">
+                                <PenTool className="w-4 h-4 mr-2 text-blue-500" /> Assignment
+                             </DropdownMenuItem>
+                          </DropdownMenuContent>
+                       </DropdownMenu>
+
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                           <Button variant="outline" size="sm" className="h-8 rounded-full border-zinc-200 dark:border-white/10 bg-transparent text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 font-medium px-3 flex items-center gap-1.5">
+                             {visibility === "followers" ? <Users className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5 text-amber-500" />}
+                             {visibility === "followers" ? "Followers" : "Classroom"}
+                           </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="start" className="w-48 bg-white dark:bg-[#1A1A1E] border-zinc-200 dark:border-white/10 rounded-xl">
+                           <DropdownMenuItem onClick={() => setVisibility("followers")} className="cursor-pointer font-medium py-2">
+                             <Users className="w-4 h-4 mr-2 text-zinc-500" /> Followers Only
+                           </DropdownMenuItem>
+                           {myClassrooms.length > 0 && (
+                             <DropdownMenuItem onClick={() => setVisibility("classroom")} className="cursor-pointer font-medium py-2">
+                               <Shield className="w-4 h-4 mr-2 text-amber-500" /> Classroom Group
+                             </DropdownMenuItem>
+                           )}
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+
+                       {visibility === "classroom" && myClassrooms.length > 0 && (
+                         <div className="relative">
+                           <select 
+                             value={classroomId}
+                             onChange={(e) => setClassroomId(e.target.value)}
+                             className="appearance-none bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-full pl-3 pr-8 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer truncate max-w-[140px]"
+                           >
+                             {myClassrooms.map(c => <option key={c.$id} value={c.$id}>{c.name}</option>)}
+                           </select>
+                           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-amber-700 dark:text-amber-400">
+                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
+                           </div>
+                         </div>
+                       )}
                     </div>
                     
                     <Button 
@@ -371,6 +441,14 @@ export default function FeedPage() {
                               <Link href={`/u/${post.authorId}`} className="font-bold text-zinc-900 dark:text-zinc-100 hover:underline hover:text-[#C8A856] truncate">
                                 {post.authorProfile?.name || `User ${post.authorId.substring(0, 8)}`}
                               </Link>
+                              
+                              {post.visibility === "followers" && (
+                                <span title="Followers Only"><Shield className="w-3.5 h-3.5 text-green-500 inline-block mx-1" /></span>
+                              )}
+                              {post.visibility === "classroom" && (
+                                <span title="Classroom Only"><Users className="w-3.5 h-3.5 text-amber-500 inline-block mx-1" /></span>
+                              )}
+
                               <span className="text-zinc-400 dark:text-zinc-600 text-sm shrink-0">·</span>
                               <span className="text-zinc-400 dark:text-zinc-500 text-sm hover:underline cursor-pointer shrink-0">
                                 {formatTimeAgo(post.$createdAt)}

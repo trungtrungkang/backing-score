@@ -30,8 +30,11 @@ import type {
 
 export async function createPost(payload: {
   content?: string;
-  attachmentType?: "project" | "playlist" | "none";
+  attachmentType?: "project" | "playlist" | "none" | "sheet_music" | "assignment" | "recording_score";
   attachmentId?: string;
+  visibility?: "public" | "followers" | "classroom";
+  classroomId?: string;
+  isPinned?: boolean;
 }): Promise<PostDocument> {
   if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
   const user = await account.get();
@@ -45,6 +48,9 @@ export async function createPost(payload: {
       content: payload.content || "",
       attachmentType: payload.attachmentType || "none",
       attachmentId: payload.attachmentId || "",
+      visibility: payload.visibility || "public",
+      classroomId: payload.classroomId || "",
+      isPinned: payload.isPinned || false,
     },
     [
       clientPermission.read(clientRole.any()), // Public timeline
@@ -65,14 +71,14 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 /**
- * Gets the chronological timeline of posts from people the user follows AND themselves.
+ * Gets the dual-path aggregated timeline: (1) Followers and (2) Active Classrooms.
  */
 export async function getTimeline(limit = 20, cursor?: string): Promise<PostDocument[]> {
   if (!isAppwriteConfigured()) return [];
   try {
     const user = await account.get();
     
-    // First, find who we follow
+    // Luồng 1 (Bạn bè):
     const followsReq = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_FOLLOWS_COLLECTION_ID,
@@ -81,31 +87,60 @@ export async function getTimeline(limit = 20, cursor?: string): Promise<PostDocu
         clientQuery.limit(500)
       ]
     );
-    
-    // Extrapolate list of authors we want to see (ourselves + following)
     const authorIds = [user.$id, ...followsReq.documents.map(d => d.followingId)];
-    
-    // If the list of authorIds is huge, Appwrite limits equal array queries to 100 max usually.
-    // For MVP, we pass the first 100.
-    const queryAuthors = authorIds.slice(0, 100);
+    const queryAuthors = authorIds.slice(0, 50);
 
-    const queries = [
+    const queries1 = [
       clientQuery.equal("authorId", queryAuthors),
       clientQuery.orderDesc("$createdAt"),
       clientQuery.limit(limit)
     ];
+    if (cursor) queries1.push(clientQuery.cursorAfter(cursor));
 
-    if (cursor) {
-      queries.push(clientQuery.cursorAfter(cursor));
+    // Luồng 2 (Cộng đồng Lớp):
+    const { listMyClassrooms } = await import("./classrooms");
+    const myClasses = await listMyClassrooms();
+    const classIds = myClasses.map(c => c.$id).slice(0, 50);
+
+    let queries2: string[] = [];
+    if (classIds.length > 0) {
+      queries2 = [
+        clientQuery.equal("classroomId", classIds),
+        clientQuery.orderDesc("$createdAt"),
+        clientQuery.limit(limit)
+      ];
+      if (cursor) queries2.push(clientQuery.cursorAfter(cursor));
     }
 
-    const { documents } = await databases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_POSTS_COLLECTION_ID,
-      queries
-    );
+    // Call both queries concurrently (Dual Feed Aggregator)
+    const [res1, res2] = await Promise.all([
+      databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_POSTS_COLLECTION_ID, queries1),
+      classIds.length > 0 
+        ? databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_POSTS_COLLECTION_ID, queries2)
+        : Promise.resolve({ documents: [] })
+    ]);
 
-    return documents as unknown as PostDocument[];
+    const allDocs = [...res1.documents, ...res2.documents] as unknown as PostDocument[];
+
+    // Merge and dedup
+    const dedupedMap = new Map<string, PostDocument>();
+    for (const doc of allDocs) {
+      if (doc.visibility === "classroom") {
+        if (!doc.classroomId || !classIds.includes(doc.classroomId)) {
+           continue; // We follow them, but this post is restricted to a classroom we are not inside
+        }
+      }
+      dedupedMap.set(doc.$id, doc);
+    }
+
+    // Sort: Pinned first, then by date descending
+    const merged = Array.from(dedupedMap.values()).sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+    });
+
+    return merged.slice(0, limit);
   } catch (e) {
     if (e && typeof e === 'object' && 'code' in e && e.code === 401) {
        return [];

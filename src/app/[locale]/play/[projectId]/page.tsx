@@ -156,6 +156,7 @@ export default function PlayProjectPage() {
         enableRecording={!!assignmentId && !!classroomId}
         onRecordingReady={handleRecordingReady}
         forceWaitMode={waitModeRequired}
+        isAssignmentContext={!!assignmentId && !!classroomId}
       />
     </main>
   );

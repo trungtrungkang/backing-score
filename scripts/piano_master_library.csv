@@ -1,0 +1,4 @@
+music_xml_path,pdf_path,title,composer,period,difficulty,technicalTags,playlist_paths
+scripts/raw_data/chopin.musicxml,scripts/raw_data/chopin.pdf,Nocturne in E-flat major Op. 9 No. 2,Frederic Chopin,Romantic,65,"Cantabile, Legato, Arpeggio, Polyphony",Chopin Highlights
+scripts/raw_data/chopin.musicxml,,Etude Op. 10 No. 4,Frederic Chopin,Romantic,88,"Presto, Virtuoso, Arpeggio",Chopin Highlights
+,scripts/raw_data/chopin.pdf,Waltz in C-sharp minor Op. 64 No. 2,Frederic Chopin,Romantic,55,"Waltz, Rubato",Chopin Highlights

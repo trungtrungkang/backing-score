@@ -8,7 +8,8 @@ import { useState } from "react";
 
 export default function SubscriptionCard() {
   const t = useTranslations("Subscription");
-  const { user, isPremium, subscriptionStatus, refreshSubscription } = useAuth();
+  const { user, serviceTier, subscriptionStatus, refreshSubscription } = useAuth();
+  const isPremium = serviceTier === "pro" || serviceTier === "studio";
   const [cancelling, setCancelling] = useState(false);
 
   if (!user) return null;

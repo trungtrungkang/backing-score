@@ -9,9 +9,11 @@ export interface CourseDoc extends Models.Document {
   creatorId: string;
   title: string;
   description?: string;
-  priceCents: number;
+  priceCents?: number; // Deprecated: Kept for legacy compatibility
   coverUrl?: string;
   published: boolean;
+  visibility: "public" | "private";
+  courseCode: string;
   createdAt?: string;
   category?: string;    // e.g. "Music Theory", "Piano", "Guitar"
   difficulty?: string;  // e.g. "Beginner", "Intermediate", "Advanced"
@@ -20,6 +22,8 @@ export interface CourseDoc extends Models.Document {
 export interface EnrollmentDoc extends Models.Document {
   userId: string;
   courseId: string;
+  status: "pending" | "active" | "removed";
+  userName?: string;
   enrolledAt: string;
 }
 

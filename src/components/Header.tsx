@@ -155,7 +155,6 @@ export function Header() {
             <NavTab href="/" icon={Home} label={t("home")} active={pathname === "/"} />
             <NavTab href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} />
             <NavTab href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} />
-            <NavTab href="/academy" icon={GraduationCap} label={t("academy")} active={pathname.startsWith("/academy")} />
             <NavTab href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} />
             {user && (
               <NavTab href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} />
@@ -273,7 +272,6 @@ export function Header() {
           <SidebarItem href="/" icon={Home} label={t("home")} active={pathname === "/"} onClick={closeSidebar} />
           <SidebarItem href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} onClick={closeSidebar} />
           <SidebarItem href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} onClick={closeSidebar} />
-          <SidebarItem href="/academy" icon={GraduationCap} label={t("academy")} active={pathname.startsWith("/academy")} onClick={closeSidebar} />
           <SidebarItem href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} onClick={closeSidebar} />
           {user && (
             <SidebarItem href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} onClick={closeSidebar} />

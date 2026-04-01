@@ -58,7 +58,7 @@ export default function CurriculumManagerPage() {
         if (courseData) {
            setEditTitle(courseData.title);
            setEditDesc(courseData.description || "");
-           setEditPrice((courseData.priceCents / 100).toString());
+           setEditPrice(( (courseData.priceCents ?? 0) / 100).toString());
            setEditPublished(courseData.published || false);
            setEditCategory(courseData.category || "");
            setEditDifficulty(courseData.difficulty || "");
@@ -219,7 +219,7 @@ export default function CurriculumManagerPage() {
             )}
             <p className="text-zinc-500 mt-2">
                <span className="font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-200/50 dark:bg-zinc-800/50 px-2 py-0.5 rounded mr-2">
-                  {course.priceCents > 0 ? `$${(course.priceCents / 100).toFixed(2)}` : "Free"}
+                  {(course.priceCents ?? 0) > 0 ? `$${((course.priceCents ?? 0) / 100).toFixed(2)}` : "Free"}
                </span>
                Curriculum Manager
             </p>

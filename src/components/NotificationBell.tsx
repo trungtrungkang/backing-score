@@ -97,6 +97,12 @@ export function NotificationBell() {
         }
         return null;
       }
+      case "classroom_join_request":
+        if (n.targetId) return `/${locale}/dashboard/classrooms/${n.targetId}/manage`;
+        return null;
+      case "classroom_join_approved":
+        if (n.targetId) return `/${locale}/classroom/${n.targetId}`;
+        return null;
       default:
         return null;
     }

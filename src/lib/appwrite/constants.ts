@@ -31,6 +31,7 @@ export const APPWRITE_WIKI_TRANSLATIONS_COLLECTION_ID = "wiki_translations";
 // Classroom collections
 export const APPWRITE_CLASSROOMS_COLLECTION_ID = "classrooms";
 export const APPWRITE_CLASSROOM_MEMBERS_COLLECTION_ID = "classroom_members";
+export const APPWRITE_CLASSROOM_INVITES_COLLECTION_ID = "classroom_invites";
 export const APPWRITE_ASSIGNMENTS_COLLECTION_ID = "assignments";
 export const APPWRITE_SUBMISSIONS_COLLECTION_ID = "submissions";
 export const APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID = "submission_feedback";

@@ -12,11 +12,13 @@ import { Models, OAuthProvider } from "appwrite";
 
 type User = Models.User<Models.Preferences>;
 
+export type ServiceTier = "free" | "pro" | "studio";
+
 interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
-  isPremium: boolean;
+  serviceTier: ServiceTier;
   subscriptionStatus: string | null;
 }
 
@@ -38,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [serviceTier, setServiceTier] = useState<ServiceTier>("free");
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
 
   const checkSubscription = useCallback(async (userId: string) => {
@@ -46,14 +48,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`/api/subscription?userId=${userId}`);
       if (res.ok) {
         const data = await res.json();
-        setIsPremium(data.isPremium);
+        const apiTier = data.tier || (data.isPremium ? "pro" : "free");
+        
+        // Safeguard enum values
+        if (["pro", "studio"].includes(apiTier)) {
+           setServiceTier(apiTier as ServiceTier);
+        } else {
+           setServiceTier("free");
+        }
+        
         setSubscriptionStatus(data.status || null);
       } else {
-        setIsPremium(false);
+        setServiceTier("free");
         setSubscriptionStatus(null);
       }
     } catch {
-      setIsPremium(false);
+      setServiceTier("free");
       setSubscriptionStatus(null);
     }
   }, []);
@@ -65,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await checkSubscription(u.$id);
     } catch {
       setUser(null);
-      setIsPremium(false);
+      setServiceTier("free");
       setSubscriptionStatus(null);
     } finally {
       setLoading(false);
@@ -195,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     error,
-    isPremium,
+    serviceTier,
     subscriptionStatus,
     login,
     signup,

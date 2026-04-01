@@ -8,7 +8,8 @@ import Link from "next/link";
 
 export default function PricingPage() {
   const t = useTranslations("Pricing");
-  const { user, isPremium, subscriptionStatus, getJWT } = useAuth();
+  const { user, serviceTier, subscriptionStatus, getJWT } = useAuth();
+  const isPremium = serviceTier === "pro" || serviceTier === "studio";
   const [isYearly, setIsYearly] = useState(true);
   const [loading, setLoading] = useState(false);
 

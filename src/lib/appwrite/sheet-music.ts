@@ -187,6 +187,19 @@ export async function listMySheetMusic(
   };
 }
 
+/** List all sheet music (Admin only usually, assuming appropriate permissions). */
+export async function listSheetMusic(limit = 100): Promise<{ documents: SheetMusicDocument[], total: number }> {
+  const queries = [
+    Query.orderDesc("$createdAt"),
+    Query.limit(limit),
+  ];
+  const response = await databases.listDocuments(dbId, collId, queries);
+  return {
+    documents: response.documents as unknown as SheetMusicDocument[],
+    total: response.total,
+  };
+}
+
 /** Get a single sheet music document by ID. */
 export async function getSheetMusic(id: string): Promise<SheetMusicDocument> {
   const doc = await databases.getDocument(dbId, collId, id);
