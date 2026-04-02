@@ -234,10 +234,19 @@ export default function ProjectPage() {
     }
   };
 
+  const MAX_AUDIO_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
   const handleAddAudioTrack = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !project || !isOwner || payload === null || uploadingAudio) return;
     e.target.value = "";
+
+    if (file.size > MAX_AUDIO_FILE_SIZE) {
+      setUploadError(`File too large. Maximum size is 10MB.`);
+      toast.error(`File too large. Maximum size is 10MB.`);
+      return;
+    }
+
     setUploadingAudio(true);
     setUploadError(null);
     try {
@@ -297,6 +306,13 @@ export default function ProjectPage() {
   const handleUploadTrackFile = useCallback(
     async (trackId: string, file: File) => {
       if (!project || !isOwner || payload === null || uploadingAudio) return;
+
+      if (file.size > MAX_AUDIO_FILE_SIZE) {
+        setUploadError(`File too large. Maximum size is 10MB.`);
+        toast.error(`File too large. Maximum size is 10MB.`);
+        return;
+      }
+
       setUploadingAudio(true);
       setUploadError(null);
       try {

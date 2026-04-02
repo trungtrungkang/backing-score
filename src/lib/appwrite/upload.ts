@@ -4,8 +4,9 @@
  * Store returned fileId in project payload (track.scoreFileId, midiFileId, or storageFileId).
  */
 
-// Appwrite client imports removed since we now use Cloudflare R2 via Next.js BFF API.
-import { getAuthToken } from "./client";
+import { getAuthToken, databases, account, ID } from "./client";
+import { buildStandardPermissions } from "./permissions";
+import { APPWRITE_DATABASE_ID, APPWRITE_DRIVE_ASSETS_COLLECTION_ID } from "./constants";
 // export { ALLOWED_EXTENSIONS } if needed elsewhere.
 
 /** Music/score: Instrument track. Audio: Audio track. */
@@ -21,10 +22,12 @@ const ALLOWED_EXTENSIONS = [
   "webm",
   "aac",
   "m4a",
+  "flac",
   "png",
   "jpg",
   "jpeg",
-  "webp"
+  "webp",
+  "pdf"
 ];
 
 function getExtension(filename: string): string {
@@ -59,6 +62,8 @@ export async function uploadProjectFile(
       filename: file.name,
       contentType: file.type || "application/octet-stream",
       fileSize: file.size,
+      contextType: projectId === "new" || !projectId ? "uploads" : "projects",
+      contextId: projectId === "new" || !projectId ? "raw" : projectId,
     }),
   });
 
@@ -67,7 +72,7 @@ export async function uploadProjectFile(
     throw new Error(errorData.error || "Failed to get upload URL");
   }
 
-  const { fileId, uploadUrl } = await res.json();
+  const { fileId, uploadUrl, userId } = await res.json();
 
   // Upload file directly to Cloudflare R2
   const uploadRes = await fetch(uploadUrl, {
@@ -80,6 +85,26 @@ export async function uploadProjectFile(
 
   if (!uploadRes.ok) {
     throw new Error("Failed to upload file to storage.");
+  }
+
+  // Register Asset in Database (Storage Management V4)
+  try {
+    const uid = userId || (await account.get()).$id;
+    await databases.createDocument(
+      APPWRITE_DATABASE_ID, 
+      APPWRITE_DRIVE_ASSETS_COLLECTION_ID, 
+      ID.unique(), 
+      {
+        userId: uid,
+        originalName: file.name,
+        sizeBytes: file.size,
+        contentType: file.type || "application/octet-stream",
+        r2Key: fileId,
+        usedCount: 0
+    },
+    buildStandardPermissions(uid));
+  } catch (e) {
+    console.error("Failed to register asset in DB (Drive V4):", e);
   }
 
   const viewUrl = `/api/r2/download/${fileId}`;

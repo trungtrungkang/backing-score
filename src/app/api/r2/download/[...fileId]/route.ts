@@ -9,9 +9,10 @@ const PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!;
 const BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_UPLOADS_BUCKET_ID || "uploads";
 const DB_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string | string[] }> }) {
   try {
-    const fileId = (await params).fileId;
+    const fileIdParam = (await params).fileId;
+    const fileId = Array.isArray(fileIdParam) ? fileIdParam.join("/") : fileIdParam;
     const searchParams = req.nextUrl.searchParams;
     const context = searchParams.get("context"); // e.g., "classroom_abc123"
 

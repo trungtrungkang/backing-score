@@ -6,6 +6,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ArrowRight, Music, MoreVertical, Share2, Bookmark, Sun, Moon, Link2, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { MusicXMLVisualizer } from "@/components/editor/MusicXMLVisualizer";
+import PdfViewer from "@/components/pdf/PdfViewer";
 import type { DAWPayload } from "@/lib/daw/types";
 import { cn } from "@/lib/utils";
 import { PlayerControls } from "./PlayerControls";
@@ -482,23 +483,42 @@ export function PlayShell({
         )}
 
         {scoreFileId ? (
-          <MusicXMLVisualizer
-            scoreFileId={scoreFileId}
-            positionMs={state.positionMs}
-            isPlaying={state.isPlaying}
-            timemap={(state.isWaitMode && state.correctedTimemap) ? state.correctedTimemap : (payload.notationData?.timemap || [])}
-            timemapSource={payload.notationData?.timemapSource}
-            payloadTempo={payload.metadata?.tempo || 120}
-            measureMap={payload.notationData?.measureMap}
-            onSeek={actions.handleSeek}
-            onMidiExtracted={actions.handleMidiExtracted}
-            isDarkMode={isDarkMode}
-            isWaitMode={state.isWaitMode}
-            isWaiting={state.isWaiting}
-            practiceTrackIds={state.practiceTrackIds}
-            layoutMode={layoutMode}
-            assessmentResults={state.assessmentMeasureResults}
-          />
+          payload.notationData?.type === "pdf" ? (
+             <div className="w-full h-full p-2 relative overflow-hidden bg-zinc-100 dark:bg-[#1A1A1E]">
+                <PdfViewer
+                  sheetMusicId={projectId}
+                  pdfUrl={`/api/r2/download/${scoreFileId}?context=project_${projectId}`}
+                  pageCount={payload.notationData?.pageCount || 1}
+                  title={projectName}
+                  initialNavMap={payload.notationData?.navMap}
+                  readOnlyMap={true}
+                  onNextSong={onNext}
+                  onPrevSong={onPrev}
+                  hasNextSong={!!nextProjectId}
+                  hasPrevSong={!!prevProjectId}
+                />
+                {/* Che khuất Header của PdfViewer để nhường sân cho PlayerControls */}
+                <div className="absolute top-0 left-0 w-full h-[56px] bg-black pointer-events-none z-[100] opacity-0" />
+             </div>
+          ) : (
+            <MusicXMLVisualizer
+              scoreFileId={scoreFileId}
+              positionMs={state.positionMs}
+              isPlaying={state.isPlaying}
+              timemap={(state.isWaitMode && state.correctedTimemap) ? state.correctedTimemap : (payload.notationData?.timemap || [])}
+              timemapSource={payload.notationData?.timemapSource}
+              payloadTempo={payload.metadata?.tempo || 120}
+              measureMap={payload.notationData?.measureMap}
+              onSeek={actions.handleSeek}
+              onMidiExtracted={actions.handleMidiExtracted}
+              isDarkMode={isDarkMode}
+              isWaitMode={state.isWaitMode}
+              isWaiting={state.isWaiting}
+              practiceTrackIds={state.practiceTrackIds}
+              layoutMode={layoutMode}
+              assessmentResults={state.assessmentMeasureResults}
+            />
+          )
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
             <Music className="w-16 h-16 mb-4 opacity-20" />

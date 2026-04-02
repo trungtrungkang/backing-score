@@ -61,7 +61,7 @@ export interface TimemapEntry {
 }
 
 export interface NotationData {
-  type: "music-xml";
+  type: "music-xml" | "pdf" | "none";
   /** Appwrite storage file ID for the score */
   fileId?: string;
   /** Mapping of audio time (ms) to MusicXML measure numbers */
@@ -71,6 +71,10 @@ export interface NotationData {
   timemapSource?: "auto" | "manual";
   /** Optional mapping from latent playback measure index to physical printed measure index */
   measureMap?: Record<number, number>;
+  /** PDF specific fields, ported from legacy SheetMusicDocument */
+  pageCount?: number;
+  thumbnailId?: string | null;
+  navMap?: any; // ParsedSheetNavMap
 }
 
 /** 

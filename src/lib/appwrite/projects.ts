@@ -64,6 +64,7 @@ export async function createProject(params: {
   wikiInstrumentIds?: string[];
   wikiCompositionId?: string;
   wikiComposerIds?: string[];
+  folderId?: string;
 }): Promise<ProjectDocument> {
   const user = await account.get();
   const searchString = await buildSearchString(
@@ -93,6 +94,7 @@ export async function createProject(params: {
       ...(params.wikiInstrumentIds?.length && { wikiInstrumentIds: params.wikiInstrumentIds }),
       ...(params.wikiCompositionId && { wikiCompositionId: params.wikiCompositionId }),
       ...(params.wikiComposerIds?.length && { wikiComposerIds: params.wikiComposerIds }),
+      ...(params.folderId && { folderId: params.folderId }),
     },
     buildStandardPermissions(user.$id)
   );

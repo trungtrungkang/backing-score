@@ -55,12 +55,16 @@ export async function listProjectFolders(): Promise<ProjectFolderDocument[]> {
   return documents as unknown as ProjectFolderDocument[];
 }
 
-/** Update a folder name. */
+/** Update a folder name or parentFolderId. */
 export async function updateProjectFolder(
   folderId: string,
-  name: string
+  name?: string,
+  parentFolderId?: string | null
 ): Promise<ProjectFolderDocument> {
-  const doc = await databases.updateDocument(dbId, collId, folderId, { name });
+  const payload: Record<string, any> = {};
+  if (name !== undefined) payload.name = name;
+  if (parentFolderId !== undefined) payload.parentFolderId = parentFolderId;
+  const doc = await databases.updateDocument(dbId, collId, folderId, payload);
   return doc as unknown as ProjectFolderDocument;
 }
 

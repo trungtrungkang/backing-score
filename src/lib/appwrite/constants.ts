@@ -39,11 +39,15 @@ export const APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID = "classroom_recordings";
 export const APPWRITE_CLASSROOM_MATERIALS_COLLECTION_ID = "classroom_materials";
 export const APPWRITE_PROJECT_FOLDERS_COLLECTION_ID = "project_folders";
 
-// Sheet Music (PDF) collections & bucket
+// Sheet Music (PDF) collections & bucket - NGỪNG HOẠT ĐỘNG
 export const APPWRITE_SHEET_MUSIC_COLLECTION_ID = "sheet_music";
 export const APPWRITE_SHEET_MUSIC_FOLDERS_COLLECTION_ID = "sheet_music_folders";
 export const APPWRITE_SHEET_PDFS_BUCKET_ID = "sheet_pdfs";
 export const APPWRITE_SETLISTS_COLLECTION_ID = "setlists";
+
+// V4 Drive/Asset Storage System
+export const APPWRITE_DRIVE_ASSETS_COLLECTION_ID = "v4_drive_assets";
+export const APPWRITE_DRIVE_FOLDERS_COLLECTION_ID = "v4_drive_folders";
 
 // Monetization & Marketplace collections
 export const APPWRITE_PRODUCTS_COLLECTION_ID = "products";
