@@ -88,8 +88,8 @@ export default function DashboardPage() {
   // Load playlists + folders once
   useEffect(() => {
     if (user) {
-      listMyPlaylists().then(setPlaylists).catch(() => {});
-      listProjectFolders().then(setFolders).catch(() => {});
+      listMyPlaylists().then(setPlaylists).catch(() => { });
+      listProjectFolders().then(setFolders).catch(() => { });
     }
   }, [user]);
 
@@ -270,15 +270,28 @@ export default function DashboardPage() {
             <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
           </button>
 
+          {!user.emailVerification && (
+            <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  {t("verifyEmailPrompt", { email: user.email })}
+                </p>
+              </div>
+              <Button
+                onClick={() => sendVerification().then(() => toast.success("Verification email sent!"))}
+                variant="outline"
+                size="sm"
+                className="shrink-0 bg-white dark:bg-zinc-900"
+              >
+                {t("resendEmail")}
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-8 xl:gap-12 items-start">
             {/* LEFT COLUMN: Main Workspace */}
             <div className="flex flex-col gap-8 min-w-0">
-              <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
-                  <p className="text-zinc-400">{t("manageProjects")}</p>
-                </div>
-              </header>
 
               {/* Stats Summary */}
               {!loading && projects.length > 0 && (
@@ -315,33 +328,14 @@ export default function DashboardPage() {
 
               {/* Drive Manager Workspace */}
               <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950/50 shadow-sm">
-                 <DriveManager />
+                <DriveManager />
               </div>
             </div>
 
             {/* RIGHT COLUMN: Widgets & Gamification */}
             <aside className="flex flex-col gap-6 w-full lg:sticky lg:top-12">
-              {!user.emailVerification && (
-                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col gap-4">
-                  <div className="flex items-start gap-3">
-                    <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-800 dark:text-blue-300">
-                      {t("verifyEmailPrompt", { email: user.email })}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={() => sendVerification().then(() => toast.success("Verification email sent!"))} 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full bg-white dark:bg-zinc-900"
-                  >
-                    {t("resendEmail")}
-                  </Button>
-                </div>
-              )}
-
-              <SubscriptionCard />
               <DailyChallengeCard />
+              <SubscriptionCard />
             </aside>
           </div>
         </div>
@@ -371,9 +365,8 @@ function FolderTreeNode({
   return (
     <div>
       <div
-        className={`flex items-center gap-1 rounded-lg transition-colors ${
-          isCurrent ? "bg-blue-500/10" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        }`}
+        className={`flex items-center gap-1 rounded-lg transition-colors ${isCurrent ? "bg-blue-500/10" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {children.length > 0 ? (
@@ -389,11 +382,10 @@ function FolderTreeNode({
         <button
           onClick={() => onSelect(folder.$id)}
           disabled={isCurrent}
-          className={`flex-1 flex items-center gap-2 py-2 pr-3 text-sm font-medium text-left transition-colors ${
-            isCurrent
+          className={`flex-1 flex items-center gap-2 py-2 pr-3 text-sm font-medium text-left transition-colors ${isCurrent
               ? "text-blue-500 cursor-default"
               : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-          }`}
+            }`}
         >
           <Folder className="w-4 h-4 text-amber-500 shrink-0" />
           {folder.name}
