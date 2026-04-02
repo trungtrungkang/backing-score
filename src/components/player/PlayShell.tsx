@@ -14,6 +14,7 @@ import { MicCalibrationWizard } from "./MicCalibrationWizard";
 import { VirtualKeyboard } from "./VirtualKeyboard";
 import { useMicProfile } from "@/hooks/useMicProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import type { Bookmark as NavMapBookmark, NavigationSequence } from "@/lib/appwrite/nav-maps";
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -142,6 +143,8 @@ export interface PlayShellProps {
   forceWaitMode?: boolean;
   /** Active during Classroom Assignments: grant Halo Effect bypass */
   isAssignmentContext?: boolean;
+  isOwner?: boolean;
+  onSaveNavMap?: (bookmarks: NavMapBookmark[], sequence: NavigationSequence) => Promise<void>;
 }
 
 export function PlayShell({
@@ -160,6 +163,8 @@ export function PlayShell({
   onRecordingReady,
   forceWaitMode = false,
   isAssignmentContext = false,
+  isOwner = false,
+  onSaveNavMap,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
@@ -491,7 +496,8 @@ export function PlayShell({
                   pageCount={payload.notationData?.pageCount || 1}
                   title={projectName}
                   initialNavMap={payload.notationData?.navMap}
-                  readOnlyMap={true}
+                  readOnlyMap={!isOwner}
+                  onSaveNavMap={onSaveNavMap}
                   onNextSong={onNext}
                   onPrevSong={onPrev}
                   hasNextSong={!!nextProjectId}

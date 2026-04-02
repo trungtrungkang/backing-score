@@ -598,7 +598,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
   };
 
   const libraryItems = [
-    { href: "/dashboard/collections", icon: FolderOpen, labelKey: "collections", iconColor: "" },
+    { href: "/dashboard/collections", icon: ListMusic, labelKey: "collections", iconColor: "" },
     { href: "/dashboard/favorites", icon: Bookmark, labelKey: "favorites", iconColor: "" },
   ];
 
@@ -712,7 +712,6 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
             isActive={isActive("/dashboard/pdfs")}
             specialNodes={[
               { key: "favorites", label: tPdfs("favorites"), icon: Bookmark, href: "/dashboard/pdfs?filter=favorites" },
-              { key: "recent", label: tPdfs("recent"), icon: Clock, href: "/dashboard/pdfs?filter=recent" },
               { key: "setlists", label: tPdfs("setlists") || "Setlists", icon: ListMusic, href: "/dashboard/pdfs/setlists" },
             ]}
             onDropSheet={onDropSheet}

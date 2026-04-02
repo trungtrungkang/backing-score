@@ -133,3 +133,28 @@ export async function listPublishedPlaylists(ownerId?: string): Promise<Playlist
 export async function deletePlaylist(playlistId: string): Promise<void> {
   await databases.deleteDocument(dbId, collId, playlistId);
 }
+
+/** Internal cleanup helper: Sweeps through all user's playlists to remove a deleted project */
+export async function removeProjectFromAllMyPlaylists(projectId: string): Promise<void> {
+  try {
+    const user = await account.get();
+    
+    const { documents } = await databases.listDocuments(dbId, collId, [
+      Query.equal("ownerId", user.$id),
+      Query.contains("projectIds", [projectId]),
+      Query.limit(100)
+    ]);
+
+    for (const doc of documents) {
+      const currentArr: string[] = doc.projectIds || [];
+      const newArr = currentArr.filter(id => id !== projectId);
+      if (newArr.length !== currentArr.length) {
+        await databases.updateDocument(dbId, collId, doc.$id, {
+          projectIds: newArr
+        });
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
+}

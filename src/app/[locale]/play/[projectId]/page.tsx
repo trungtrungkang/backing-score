@@ -8,9 +8,12 @@ import {
   getProject,
   getPlaylist,
   submitAssignment,
+  updateProject,
   type ProjectDocument,
 } from "@/lib/appwrite";
 import { PlayShell } from "@/components/player/PlayShell";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Bookmark, NavigationSequence } from "@/lib/appwrite/nav-maps";
 import {
   normalizePayload,
   defaultDAWPayload,
@@ -39,6 +42,9 @@ export default function PlayProjectPage() {
   // Playlist Context
   const [nextProjectId, setNextProjectId] = useState<string | null>(null);
   const [prevProjectId, setPrevProjectId] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const isOwner = !!(user && project && user.$id === project.userId);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -115,6 +121,31 @@ export default function PlayProjectPage() {
     }
   }, [assignmentId, classroomId]);
 
+  const handleSaveNavMap = useCallback(async (bookmarks: Bookmark[], sequence: NavigationSequence) => {
+    if (!project || !payload) return;
+    try {
+      // Create new payload copy
+      const newPayload = JSON.parse(JSON.stringify(payload)) as DAWPayload;
+      if (!newPayload.notationData) return;
+      
+      newPayload.notationData.navMap = {
+        $id: projectId,
+        sheetMusicId: projectId,
+        bookmarks,
+        sequence,
+      };
+      setPayload(newPayload);
+
+      // Save to Appwrite
+      await updateProject(projectId, {
+        payload: JSON.stringify(newPayload),
+      });
+      toast.success("Navigation Map saved");
+    } catch {
+      toast.error("Failed to save map");
+    }
+  }, [project, payload, projectId]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 h-[100dvh] w-full bg-[#fdfdfc] dark:bg-[#151518]">
@@ -157,6 +188,8 @@ export default function PlayProjectPage() {
         onRecordingReady={handleRecordingReady}
         forceWaitMode={waitModeRequired}
         isAssignmentContext={!!assignmentId && !!classroomId}
+        isOwner={isOwner}
+        onSaveNavMap={handleSaveNavMap}
       />
     </main>
   );

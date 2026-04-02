@@ -102,6 +102,26 @@ export async function checkIsFavorited(
   }
 }
 
+/** Internal cleanup helper: Removes all favorites tied to a target when it is deleted. */
+export async function removeAllFavoritesByTarget(
+  targetType: FavoriteDocument["targetType"],
+  targetId: string
+): Promise<void> {
+  try {
+    const user = await account.get();
+    const { documents } = await databases.listDocuments(dbId, collId, [
+      Query.equal("targetType", targetType),
+      Query.equal("targetId", targetId),
+      Query.equal("userId", user.$id)
+    ]);
+    for (const doc of documents) {
+      await databases.deleteDocument(dbId, collId, doc.$id);
+    }
+  } catch {
+    // Fail silently, this is a best-effort cleanup
+  }
+}
+
 /** List private favorites owned by the authenticated user */
 export async function listMyFavorites(targetType?: FavoriteDocument["targetType"]): Promise<FavoriteDocument[]> {
   const user = await account.get();

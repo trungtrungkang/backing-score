@@ -10,6 +10,7 @@ import {
   Query,
   Permission,
   Role,
+  getAuthToken
 } from "./client";
 import {
   APPWRITE_DATABASE_ID,
@@ -18,6 +19,9 @@ import {
 import { buildStandardPermissions, buildPublishedPermissions } from "./permissions";
 import type { ProjectDocument, ProjectPayload } from "./types";
 import { getArtistNamesByIds } from "./artists";
+import { removeProjectFromAllMyPlaylists } from "./playlists";
+import { removeProjectFromAllSetlists } from "./setlists";
+import { removeAllFavoritesByTarget } from "./favorites";
 
 function removeDiacritics(str: string): string {
   if (!str) return "";
@@ -65,6 +69,7 @@ export async function createProject(params: {
   wikiCompositionId?: string;
   wikiComposerIds?: string[];
   folderId?: string;
+  coverUrl?: string;
 }): Promise<ProjectDocument> {
   const user = await account.get();
   const searchString = await buildSearchString(
@@ -95,6 +100,7 @@ export async function createProject(params: {
       ...(params.wikiCompositionId && { wikiCompositionId: params.wikiCompositionId }),
       ...(params.wikiComposerIds?.length && { wikiComposerIds: params.wikiComposerIds }),
       ...(params.folderId && { folderId: params.folderId }),
+      ...(params.coverUrl && { coverUrl: params.coverUrl }),
     },
     buildStandardPermissions(user.$id)
   );
@@ -226,8 +232,54 @@ export async function listPublished(
   return documents as unknown as ProjectDocument[];
 }
 
-/** Delete a project. Caller must be owner. */
+/** Delete a project and perform True Delete (cleanup R2 and relationships). Caller must be owner. */
 export async function deleteProject(projectId: string): Promise<void> {
+  const r2KeysToDelete: string[] = [];
+  
+  try {
+    const doc = await getProject(projectId);
+    
+    if (doc.payload) {
+      try {
+        const pl = JSON.parse(doc.payload);
+        if (pl?.notationData?.fileId) {
+          r2KeysToDelete.push(pl.notationData.fileId);
+        }
+      } catch { }
+    }
+    
+    if (doc.coverUrl) {
+      const match = doc.coverUrl.match(/\/download\/([^?]+)/);
+      if (match) r2KeysToDelete.push(match[1]);
+    }
+  } catch (err) {
+    console.warn("Could not fetch project details for full cleanup, proceeding to forcefully delete document", err);
+  }
+
+  // Best-effort cleanup of references (Ghost data prevention)
+  await Promise.allSettled([
+    removeAllFavoritesByTarget("project", projectId),
+    removeProjectFromAllSetlists(projectId),
+    removeProjectFromAllMyPlaylists(projectId)
+  ]);
+
+  // Try to delete physical R2 files
+  if (r2KeysToDelete.length > 0) {
+     try {
+        const token = await getAuthToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        await fetch('/api/r2/delete', {
+           method: 'POST',
+           headers,
+           body: JSON.stringify({ r2Keys: r2KeysToDelete })
+        });
+     } catch (err) {
+        console.error("Failed to delete physical files from R2:", err);
+     }
+  }
+
   await databases.deleteDocument(dbId, collId, projectId);
 }
 

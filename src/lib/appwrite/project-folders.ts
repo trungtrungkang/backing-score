@@ -68,16 +68,16 @@ export async function updateProjectFolder(
   return doc as unknown as ProjectFolderDocument;
 }
 
-/** Delete a folder and all sub-folders recursively. Projects are unfiled, not deleted. */
+/** Delete a folder and all sub-folders recursively. Projects inside are also deleted. */
 export async function deleteProjectFolder(folderId: string): Promise<void> {
-  // Unfile projects in this folder
+  // Delete projects in this folder
   try {
     const { documents } = await databases.listDocuments(dbId, projectsCollId, [
       Query.equal("folderId", folderId),
       Query.limit(200),
     ]);
     await Promise.all(
-      documents.map(p => databases.updateDocument(dbId, projectsCollId, p.$id, { folderId: null }))
+      documents.map(p => databases.deleteDocument(dbId, projectsCollId, p.$id))
     );
   } catch { /* best-effort */ }
 

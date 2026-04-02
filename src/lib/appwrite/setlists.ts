@@ -73,3 +73,35 @@ export async function updateSetlist(
 export async function deleteSetlist(id: string): Promise<void> {
   await databases.deleteDocument(dbId, collId, id);
 }
+
+/** Internal cleanup helper: Sweeps through all setlists to remove a deleted project */
+export async function removeProjectFromAllSetlists(projectId: string): Promise<void> {
+  try {
+    const user = await account.get();
+    
+    // Fetch user's setlists
+    const { documents } = await databases.listDocuments(dbId, collId, [
+      Query.equal("userId", user.$id),
+      Query.limit(100), // Note: Hard limit 100, can paginate if realistically more
+    ]);
+
+    for (const doc of documents) {
+      if (doc.items && typeof doc.items === 'string') {
+        try {
+          const items: SetlistItem[] = JSON.parse(doc.items);
+          const newItems = items.filter(item => item.sheetMusicId !== projectId);
+          
+          if (newItems.length !== items.length) {
+            await databases.updateDocument(dbId, collId, doc.$id, {
+              items: JSON.stringify(newItems)
+            });
+          }
+        } catch {
+           // Skip if unparseable
+        }
+      }
+    }
+  } catch {
+    // Best-effort cleanup
+  }
+}

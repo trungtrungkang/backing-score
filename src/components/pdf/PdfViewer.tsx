@@ -47,6 +47,7 @@ interface PdfViewerProps {
   onPrevSong?: () => void;
   hasNextSong?: boolean;
   hasPrevSong?: boolean;
+  onSaveNavMap?: (bookmarks: Bookmark[], sequence: NavigationSequence) => Promise<void>;
 }
 
 export default function PdfViewer({ 
@@ -59,7 +60,8 @@ export default function PdfViewer({
   onNextSong,
   onPrevSong,
   hasNextSong,
-  hasPrevSong
+  hasPrevSong,
+  onSaveNavMap
 }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -533,8 +535,13 @@ export default function PdfViewer({
   const handleSaveNavMap = async (bookmarks: Bookmark[], sequence: NavigationSequence) => {
     setSavingNavMap(true);
     try {
-      const updated = await saveNavMap(sheetMusicId, bookmarks, sequence);
-      setNavMap(updated);
+      if (onSaveNavMap) {
+        await onSaveNavMap(bookmarks, sequence);
+        setNavMap({ $id: sheetMusicId, sheetMusicId, bookmarks, sequence });
+      } else {
+        const updated = await saveNavMap(sheetMusicId, bookmarks, sequence);
+        setNavMap(updated);
+      }
     } catch (err) {
       console.error(err);
       alert(t("saveFailed") || "Failed to save Nav Map");

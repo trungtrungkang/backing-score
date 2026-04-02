@@ -36,6 +36,7 @@ import {
   PlaylistDocument,
   ProjectPayload
 } from "@/lib/appwrite";
+import { getAuthToken } from "@/lib/appwrite/client";
 import { uploadProjectFile } from "@/lib/appwrite/upload";
 import {
   CloudUpload,
@@ -58,7 +59,9 @@ import {
   Check,
   Eye,
   EyeOff,
-  X
+  X,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -165,12 +168,40 @@ export function DriveManager() {
               notationData: { type, fileId, timemap: [], measureMap: [] }
             };
 
+            let coverUrl: string | undefined = undefined;
+            if (type === 'pdf') {
+              try {
+                const { extractPdfMetadata } = await import("@/lib/pdf-utils");
+                const { thumbnailBlob } = await extractPdfMetadata(file);
+
+                const thumbFile = new File([thumbnailBlob], `thumb_${fileId}.jpg`, { type: "image/jpeg" });
+                const token = await getAuthToken();
+                const headers: Record<string, string> = { "Content-Type": "application/json" };
+                if (token) headers["Authorization"] = `Bearer ${token}`;
+
+                const thumbRes = await fetch("/api/r2/upload", {
+                  method: "POST",
+                  headers,
+                  body: JSON.stringify({ filename: thumbFile.name, contentType: "image/jpeg", fileSize: thumbFile.size })
+                });
+
+                if (thumbRes.ok) {
+                  const { fileId: thumbId, uploadUrl: thumbUploadUrl } = await thumbRes.json();
+                  await fetch(thumbUploadUrl, { method: "PUT", body: thumbFile, headers: { "Content-Type": "image/jpeg" } });
+                  coverUrl = `/api/r2/download/${thumbId}`;
+                }
+              } catch (e) {
+                console.warn(`Failed to auto-generate thumbnail for PDF ${file.name}`, e);
+              }
+            }
+
             // Register Project
             const doc = await createProject({
               name: payload.name,
               mode: "practice",
               payload,
-              folderId: currentFolderId || undefined
+              folderId: currentFolderId || undefined,
+              coverUrl
             });
 
             setProjects(prev => [doc, ...prev]);
@@ -252,6 +283,37 @@ export function DriveManager() {
     } catch { toast.error("Failed to move"); }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!(await confirm({ title: "Delete Multiple Items", description: `Are you sure you want to delete ${selectedIds.size} items?` }))) return;
+    const loadingToast = toast.loading(`Deleting ${selectedIds.size} items...`);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => deleteProject(id)));
+      setProjects(prev => prev.filter(p => !selectedIds.has(p.$id)));
+      clearSelection();
+      toast.dismiss(loadingToast);
+      toast.success("Deleted successfully");
+    } catch { 
+      toast.dismiss(loadingToast);
+      toast.error("Failed to delete some items"); 
+    }
+  };
+
+  const handleBulkMove = async (targetFolderId: string | null) => {
+    if (selectedIds.size === 0) return;
+    const loadingToast = toast.loading(`Moving ${selectedIds.size} items...`);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => moveProjectToFolder(id, targetFolderId)));
+      setProjects(prev => prev.map(p => selectedIds.has(p.$id) ? { ...p, folderId: targetFolderId } : p));
+      clearSelection();
+      toast.dismiss(loadingToast);
+      toast.success("Moved successfully");
+    } catch { 
+      toast.dismiss(loadingToast);
+      toast.error("Failed to move some items"); 
+    }
+  };
+
   // --- HELPERS ---
   const getChildFolders = (parentId: string | null) => folders.filter(f => (f.parentFolderId || null) === parentId);
   const getBreadcrumb = (folderId: string | null): ProjectFolderDocument[] => {
@@ -271,6 +333,14 @@ export function DriveManager() {
     const matchesFolder = currentFolderId === null || p.folderId === currentFolderId;
     return matchesSearch && matchesFolder;
   });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredProjects.length && filteredProjects.length > 0) {
+      clearSelection();
+    } else {
+      setSelectedIds(new Set(filteredProjects.map(p => p.$id)));
+    }
+  };
 
   return (
     <div {...getRootProps()} className="w-full relative outline-none pb-20">
@@ -332,6 +402,13 @@ export function DriveManager() {
 
           {/* Search & View Modes */}
           <div className="flex items-center gap-2">
+            
+            {filteredProjects.length > 0 && (
+              <button onClick={toggleSelectAll} className="h-9 px-3 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">
+                {selectedIds.size === filteredProjects.length ? "Deselect All" : "Select All"}
+              </button>
+            )}
+
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
@@ -397,7 +474,12 @@ export function DriveManager() {
              viewMode === "grid" ? (
                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                      {filteredProjects.map(p => (
-                         <div key={p.$id} className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-blue-500/50 transition-colors shadow-sm cursor-pointer" onClick={() => router.push(`/play/${p.$id}`)}>
+                         <div key={p.$id} className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden hover:border-blue-500/50 transition-colors shadow-sm cursor-pointer relative" onClick={() => { if (isSelectionMode) { setSelectedIds(prev => { const next = new Set(prev); if (next.has(p.$id)) next.delete(p.$id); else next.add(p.$id); return next; }); } else { router.push(`/play/${p.$id}`); } }}>
+                             
+                             <button onClick={(e) => toggleSelection(e, p.$id)} className={`absolute top-2 left-2 z-10 w-6 h-6 rounded bg-black/60 flex items-center justify-center transition-opacity text-white ${selectedIds.has(p.$id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                 {selectedIds.has(p.$id) ? <CheckSquare className="w-4 h-4 text-blue-400" /> : <Square className="w-4 h-4" />}
+                             </button>
+
                              <div className="aspect-square bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center relative">
                                  {p.coverUrl ? (
                                      <img src={p.coverUrl} className="w-full h-full object-cover" />
@@ -410,7 +492,9 @@ export function DriveManager() {
                                  <div className="flex items-center justify-between mt-1">
                                     <span className="text-xs text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 rounded">{((typeof p.payload === 'string' ? JSON.parse(p.payload) : p.payload) as any)?.notationData?.type?.toUpperCase() || 'AUDIO'}</span>
                                     {/* Stop click propagation on menu */}
-                                    <ProjectContextMenu project={p} folders={folders} playlists={playlists} onDelete={handleDeleteProject} onMove={handleMoveToFolder} onFavorite={handleToggleFavorite} />
+                                    <div onClick={e => e.stopPropagation()}>
+                                       <ProjectContextMenu project={p} folders={folders} playlists={playlists} onDelete={handleDeleteProject} onMove={handleMoveToFolder} onFavorite={handleToggleFavorite} />
+                                    </div>
                                  </div>
                              </div>
                          </div>
@@ -419,8 +503,13 @@ export function DriveManager() {
              ) : (
                  <div className="flex flex-col gap-2">
                      {filteredProjects.map(p => (
-                         <div key={p.$id} className="flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 hover:border-blue-500/50 transition-colors cursor-pointer" onClick={() => router.push(`/play/${p.$id}`)}>
+                         <div key={p.$id} className="group flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 hover:border-blue-500/50 transition-colors cursor-pointer" onClick={() => { if (isSelectionMode) { setSelectedIds(prev => { const next = new Set(prev); if (next.has(p.$id)) next.delete(p.$id); else next.add(p.$id); return next; }); } else { router.push(`/play/${p.$id}`); } }}>
                              <div className="flex items-center gap-4 min-w-0">
+                                 
+                                 <button onClick={(e) => toggleSelection(e, p.$id)} className={`w-6 h-6 rounded flex items-center justify-center transition-opacity text-zinc-400 hover:text-zinc-600 ${selectedIds.has(p.$id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isSelectionMode && !selectedIds.has(p.$id) ? 'opacity-100' : ''}`}>
+                                     {selectedIds.has(p.$id) ? <CheckSquare className="w-5 h-5 text-blue-500" /> : <Square className="w-5 h-5" />}
+                                 </button>
+
                                  <div className="w-10 h-10 rounded bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center overflow-hidden shrink-0">
                                      {p.coverUrl ? <img src={p.coverUrl} className="w-full h-full object-cover" /> : <FileText className="w-5 h-5 text-zinc-300" />}
                                  </div>
@@ -429,7 +518,7 @@ export function DriveManager() {
                                      <span className="text-xs text-zinc-500">{((typeof p.payload === 'string' ? JSON.parse(p.payload) : p.payload) as any)?.notationData?.type?.toUpperCase() || 'AUDIO'}</span>
                                  </div>
                              </div>
-                             <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                                 <ProjectContextMenu project={p} folders={folders} playlists={playlists} onDelete={handleDeleteProject} onMove={handleMoveToFolder} onFavorite={handleToggleFavorite} />
                              </div>
                          </div>
@@ -438,6 +527,44 @@ export function DriveManager() {
              )
         )}
       </div>
+
+      {/* Floating Action Bar */}
+      {isSelectionMode && (
+         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-white rounded-full px-6 py-3 z-[60] flex items-center gap-6 animate-in slide-in-from-bottom-5">
+            <span className="font-semibold text-sm whitespace-nowrap">{selectedIds.size} Selected</span>
+            <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700" />
+            
+            <div className="flex items-center gap-1">
+               <button onClick={clearSelection} className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium">
+                  <X className="w-4 h-4" /> Cancel
+               </button>
+
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                     <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium text-blue-500">
+                        <Folder className="w-4 h-4" /> Move
+                     </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" side="top" className="w-48 mb-2">
+                     <DropdownMenuItem onClick={() => handleBulkMove(null)} className="cursor-pointer text-zinc-500">
+                        Drive Root
+                     </DropdownMenuItem>
+                     {folders.length > 0 && <DropdownMenuSeparator />}
+                     {folders.map(f => (
+                        <DropdownMenuItem key={f.$id} onClick={() => handleBulkMove(f.$id)} className="cursor-pointer">
+                           {f.name}
+                        </DropdownMenuItem>
+                     ))}
+                  </DropdownMenuContent>
+               </DropdownMenu>
+
+               <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm font-medium text-red-500">
+                  <Trash2 className="w-4 h-4" /> Delete
+               </button>
+            </div>
+         </div>
+      )}
+
     </div>
   );
 }
