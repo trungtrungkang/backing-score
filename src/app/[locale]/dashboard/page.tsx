@@ -64,12 +64,8 @@ export default function DashboardPage() {
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
-  const [editingProject, setEditingProject] = useState<ProjectDocument | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [playlists, setPlaylists] = useState<PlaylistDocument[]>([]);
   const { confirm } = useDialogs();
@@ -213,32 +209,6 @@ export default function DashboardPage() {
     };
   }, [user, authLoading, router, activeTags]);
 
-  const handleNewProject = async () => {
-    if (!user || creating) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const payload: ProjectPayload = {
-        version: 1,
-        name: "Untitled",
-        mode: "practice",
-        tempo: 120,
-        timeSignature: { numerator: 4, denominator: 4 },
-        tracks: [],
-      };
-      const doc = await createProject({
-        name: "Untitled",
-        mode: "practice",
-        payload,
-      });
-      router.push(`/p/${doc.$id}`);
-      router.refresh();
-    } catch (e) {
-      setError(e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Failed to create project");
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handlePublishToggle = async (e: React.MouseEvent, project: ProjectDocument) => {
     e.preventDefault();
@@ -293,113 +263,87 @@ export default function DashboardPage() {
       <DashboardSidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-12 relative bg-white dark:bg-zinc-950/30">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-10 xl:px-12 relative bg-white dark:bg-zinc-950/30">
+        <div className="max-w-[1400px] mx-auto">
           {/* Mobile sidebar toggle */}
-          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-4 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+          <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-6 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
             <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
           </button>
 
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-8 xl:gap-12 items-start">
+            {/* LEFT COLUMN: Main Workspace */}
+            <div className="flex flex-col gap-8 min-w-0">
+              <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
+                  <p className="text-zinc-400">{t("manageProjects")}</p>
+                </div>
+              </header>
 
-          {!user.emailVerification && (
-            <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-                <p className="text-sm text-blue-800 dark:text-blue-300">
-                  {t("verifyEmailPrompt", { email: user.email })}
-                </p>
-              </div>
-              <Button 
-                onClick={() => sendVerification().then(() => toast.success("Verification email sent!"))} 
-                variant="outline" 
-                size="sm" 
-                className="shrink-0 bg-white dark:bg-zinc-900"
-              >
-                {t("resendEmail")}
-              </Button>
-            </div>
-          )}
-
-          {/* Subscription Status */}
-          <SubscriptionCard />
-
-          {/* Daily Challenge Banner */}
-          <DailyChallengeCard />
-
-          {/* Header Row */}
-          <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12">
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">{t("myUploads")}</h1>
-              <p className="text-zinc-400">{t("manageProjects")}</p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0">
-              <Link href={`/u/${user.$id}`}>
-                <Button
-                  variant="outline"
-                  className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 shadow-sm"
-                >
-                  <Settings2 className="w-4 h-4 mr-2" />
-                  {t("editProfile") || "Edit Profile"}
-                </Button>
-              </Link>
-              
-              {canCreate(user.labels) && (
-                <Button
-                  onClick={handleNewProject}
-                  disabled={creating}
-                  className="bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-white font-bold px-6 h-11 shadow-lg shadow-black/10 dark:shadow-blue-500/20"
-                >
-                  {creating ? (
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="w-5 h-5 mr-2" />
-                      {t("createProject")}
-                    </>
-                  )}
-                </Button>
+              {/* Stats Summary */}
+              {!loading && projects.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <Music4 className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.length}</div>
+                      <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("totalProjects")}</div>
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+                      <Globe className="w-4 h-4 text-green-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.filter(p => p.published).length}</div>
+                      <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("publishedCount")}</div>
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+                      <Play className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.reduce((sum, p) => sum + ((p as any).playCount || 0), 0)}</div>
+                      <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("totalPlays")}</div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
-          </header>
 
-          {/* Stats Summary */}
-          {!loading && projects.length > 0 && (
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-                  <Music4 className="w-4 h-4 text-blue-500" />
-                </div>
-                <div>
-                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.length}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("totalProjects")}</div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-green-500" />
-                </div>
-                <div>
-                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.filter(p => p.published).length}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("publishedCount")}</div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
-                  <Play className="w-4 h-4 text-purple-500" />
-                </div>
-                <div>
-                  <div className="text-xl font-black text-zinc-900 dark:text-white">{projects.reduce((sum, p) => sum + ((p as any).playCount || 0), 0)}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{t("totalPlays")}</div>
-                </div>
+              {/* Drive Manager Workspace */}
+              <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950/50 shadow-sm">
+                 <DriveManager />
               </div>
             </div>
-          )}
-          
-          <div className="w-full border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950/50 shadow-sm">
-             <DriveManager />
+
+            {/* RIGHT COLUMN: Widgets & Gamification */}
+            <aside className="flex flex-col gap-6 w-full lg:sticky lg:top-12">
+              {!user.emailVerification && (
+                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                      {t("verifyEmailPrompt", { email: user.email })}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => sendVerification().then(() => toast.success("Verification email sent!"))} 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full bg-white dark:bg-zinc-900"
+                  >
+                    {t("resendEmail")}
+                  </Button>
+                </div>
+              )}
+
+              <SubscriptionCard />
+              <DailyChallengeCard />
+            </aside>
           </div>
-
         </div>
       </main>
     </div>
