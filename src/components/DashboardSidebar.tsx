@@ -42,6 +42,7 @@ import {
   type ProjectFolderDocument,
   type SheetMusicFolderDocument,
 } from "@/lib/appwrite";
+import SubscriptionCard from "@/components/SubscriptionCard";
 
 type FolderNode = { $id: string; name: string; parentFolderId?: string | null };
 
@@ -760,6 +761,11 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
           </div>
         </>
       )}
+
+      <div className="border-t border-zinc-200 dark:border-zinc-800/50 my-4" />
+      <div className="mt-auto">
+        <SubscriptionCard />
+      </div>
     </>
   );
 

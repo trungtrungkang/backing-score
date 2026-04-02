@@ -295,9 +295,6 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-8 min-w-0">
 
-              {/* Subscription Status */}
-              <SubscriptionCard />
-
               {/* Stats Summary */}
               {!loading && projects.length > 0 && (
                 <div className="grid grid-cols-3 gap-3 md:gap-4">

@@ -17,10 +17,10 @@ export default function SubscriptionCard() {
   // Free user — show upgrade prompt
   if (!isPremium) {
     return (
-      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 w-full">
+        <div className="flex flex-col items-start gap-4">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-zinc-400" />
             </div>
             <div>
@@ -30,7 +30,7 @@ export default function SubscriptionCard() {
           </div>
           <Link
             href="/pricing"
-            className="px-4 py-2 rounded-lg bg-[#C8A856] text-zinc-900 text-sm font-bold hover:bg-[#d4b85f] transition-colors flex items-center gap-2"
+            className="w-full justify-center px-4 py-2 rounded-lg bg-[#C8A856] text-zinc-900 text-sm font-bold hover:bg-[#d4b85f] transition-colors flex items-center gap-2"
           >
             <Crown className="w-4 h-4" />
             {t("upgrade")}
@@ -42,10 +42,10 @@ export default function SubscriptionCard() {
 
   // Premium user — show status
   return (
-    <div className="rounded-xl border-2 border-[#C8A856]/30 bg-gradient-to-r from-[#C8A856]/5 to-transparent dark:from-[#C8A856]/10 p-5 mb-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#C8A856]/20 flex items-center justify-center">
+    <div className="rounded-xl border-2 border-[#C8A856]/30 bg-gradient-to-br from-[#C8A856]/5 to-transparent dark:from-[#C8A856]/10 p-5 w-full">
+      <div className="flex flex-col items-start gap-4">
+        <div className="flex items-center gap-3 w-full">
+          <div className="w-10 h-10 shrink-0 rounded-full bg-[#C8A856]/20 flex items-center justify-center">
             <Crown className="w-5 h-5 text-[#C8A856]" />
           </div>
           <div>
@@ -61,13 +61,13 @@ export default function SubscriptionCard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full mt-2">
           {/* LemonSqueezy Customer Portal — LS provides a portal URL for managing subscriptions */}
           <a
             href="https://backingscore.lemonsqueezy.com/billing"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full justify-center px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
           >
             <ExternalLink className="w-4 h-4" />
             {t("manageBilling")}
