@@ -29,7 +29,6 @@ export interface EditorShellProps {
   onPayloadChange?: (payload: DAWPayload) => void;
   onUploadTrackFile?: (trackId: string, file: File) => Promise<void>;
   onNameChange?: (name: string) => void;
-  onUploadScore?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddAudioTrack?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteTrack?: (trackId: string) => void;
   tags?: string[];
@@ -48,7 +47,6 @@ export interface EditorShellProps {
   wikiGenres?: { $id: string; name: string; era?: string }[];
   wikiCompositions?: { $id: string; title: string; period?: string }[];
   wikiComposers?: { $id: string; name: string; roles?: string[] }[];
-  uploadingScore?: boolean;
   uploadingAudio?: boolean;
   uploadError?: string | null;
   onUploadCover?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -70,7 +68,6 @@ export function EditorShell({
   onPayloadChange,
   onUploadTrackFile,
   onNameChange,
-  onUploadScore,
   onAddAudioTrack,
   onDeleteTrack,
   tags = [],
@@ -87,7 +84,6 @@ export function EditorShell({
   wikiGenres = [],
   wikiCompositions = [],
   wikiComposers = [],
-  uploadingScore = false,
   uploadingAudio = false,
   uploadError,
   onUploadCover,
@@ -749,8 +745,6 @@ export function EditorShell({
         onUnpublish={onUnpublish}
         onUploadCover={onUploadCover}
         uploadingCover={uploadingCover}
-        onUploadScore={onUploadScore}
-        uploadingScore={uploadingScore}
         tagsSlot={
           tags !== undefined ? (
             <EditorTagsPicker
@@ -818,8 +812,6 @@ export function EditorShell({
           onSeek={handleSeek}
           onMidiExtracted={handleMidiExtracted}
           midiBase64={midiBase64}
-          onUploadScore={onUploadScore}
-          uploadingScore={uploadingScore}
           payload={payload}
           onPayloadChange={onPayloadChange}
           showMapEditor={showMapEditor}

@@ -50,6 +50,7 @@ export class AudioManager {
   // Click Track
   private metronome: MetronomeEngine | null = null;
   private globalMuted: boolean = false;
+  private hasExternalSolo: boolean = false;
 
   constructor() { }
 
@@ -432,8 +433,13 @@ export class AudioManager {
     }
   }
 
+  public setExternalSolo(solo: boolean) {
+    this.hasExternalSolo = solo;
+    this.updateMuteSoloVolumes();
+  }
+
   private updateMuteSoloVolumes() {
-    let anySolo = false;
+    let anySolo = this.hasExternalSolo;
     this.tracks.forEach((t) => {
       if (t.params.solo) anySolo = true;
     });

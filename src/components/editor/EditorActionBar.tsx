@@ -28,8 +28,6 @@ interface EditorActionBarProps {
   onUnpublish?: () => void;
   onUploadCover?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   uploadingCover?: boolean;
-  onUploadScore?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  uploadingScore?: boolean;
   // Tags slot
   tagsSlot?: React.ReactNode;
 }
@@ -48,8 +46,6 @@ export const EditorActionBar = React.memo(function EditorActionBar({
   onUnpublish,
   onUploadCover,
   uploadingCover,
-  onUploadScore,
-  uploadingScore,
   tagsSlot,
 }: EditorActionBarProps) {
   const { prompt } = useDialogs();
@@ -193,15 +189,7 @@ export const EditorActionBar = React.memo(function EditorActionBar({
                       </label>
                     </DropdownMenuItem>
                   )}
-                  {onUploadScore && (
-                    <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()} className="cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-2.5 text-xs transition-colors">
-                      <label className="flex w-full cursor-pointer items-center gap-2">
-                        <Music className="w-3.5 h-3.5" />
-                        {uploadingScore ? "Uploading..." : "+ MusicXML Score"}
-                        <input type="file" className="hidden" accept=".musicxml,.xml,.mxl" onChange={onUploadScore} disabled={uploadingScore} />
-                      </label>
-                    </DropdownMenuItem>
-                  )}
+
 
                   {/* Expose Save/Publish internally on Mobile */}
                   <DropdownMenuItem onClick={onSave} disabled={saving} className="sm:hidden cursor-pointer font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 py-2.5 mt-1 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-white transition-colors">

@@ -91,6 +91,7 @@ export function TrackList({
   const [openInstTrackId, setOpenInstTrackId] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [isMidiExpanded, setIsMidiExpanded] = useState(false);
   const [showTempoMap, setShowTempoMap] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
@@ -325,7 +326,12 @@ export function TrackList({
           )}
 
           <div className="flex flex-col">
-            {tracks.map((track, index) => {
+            {(() => {
+              const audioTracksList = tracks.filter(t => t.type !== "midi");
+              const midiTracksList = tracks.filter(t => t.type === "midi");
+
+              const renderTrackRow = (track: AudioTrack, index: number, isNested: boolean = false) => {
+
               const isMute = muteByTrackId[track.id] ?? !!track.muted;
               const isSolo = soloByTrackId[track.id] ?? !!track.solo;
               // Fetch buffer if available
@@ -343,7 +349,7 @@ export function TrackList({
               return (
                 <div
                   key={track.id}
-                  className="group flex items-center h-[72px] bg-zinc-800 dark:bg-[#22222a] hover:bg-zinc-700/80 dark:hover:bg-[#282832] transition-colors border-b border-zinc-900/80 dark:border-zinc-800/50"
+                  className={cn("group flex items-center h-[72px] bg-zinc-800 dark:bg-[#22222a] hover:bg-zinc-700/80 dark:hover:bg-[#282832] transition-colors border-b border-zinc-900/80 dark:border-zinc-800/50", isNested && "border-l-4 border-l-blue-500")}
                 >
                   {(() => {
                     let trackBpm = bpm;
@@ -372,7 +378,7 @@ export function TrackList({
                     return (
                       <>
                         {/* Left Controls Header */}
-                    <div className="w-64 h-full flex items-center justify-between px-3 gap-2 border-r border-zinc-900 dark:border-zinc-800/50 bg-[#161619] shrink-0 sticky left-0 z-20 transition-colors">
+                    <div className={cn("w-64 h-full flex items-center justify-between px-3 gap-2 border-r border-zinc-900 dark:border-zinc-800/50 bg-[#161619] shrink-0 sticky left-0 z-20 transition-colors", isNested && "pl-5")}>
 
                       {/* Left: Number, Name, & M/S/R Buttons */}
                       <div className="flex flex-col h-full py-1.5 justify-between flex-1 min-w-0">
@@ -567,7 +573,39 @@ export function TrackList({
                   })()}
                 </div>
               );
-            })}
+
+              };
+
+              return (
+                <>
+                  {audioTracksList.map((t, i) => renderTrackRow(t, i))}
+                  
+                  {midiTracksList.length > 0 && (
+                    <>
+                      {/* MIDI Bus Folder Header */}
+                      <div className="group flex items-center h-[36px] bg-zinc-900 dark:bg-[#1a1a20] border-b border-zinc-800 dark:border-zinc-800/80 transition-colors cursor-pointer" onClick={() => setIsMidiExpanded(!isMidiExpanded)}>
+                        <div className="w-64 h-full flex items-center px-3 gap-2 border-r border-zinc-900 dark:border-zinc-800/50 shrink-0 sticky left-0 z-20">
+                          <button className="text-zinc-500 hover:text-white transition-colors outline-none shrink-0" title={isMidiExpanded ? "Collapse MIDI Tracks" : "Expand MIDI Tracks"}>
+                            {isMidiExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                          </button>
+                          <Music className="w-3.5 h-3.5 text-blue-500" />
+                          <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">MIDI Bus</span>
+                          <span className="ml-auto text-[9px] text-zinc-500 font-mono">{midiTracksList.length} tracks</span>
+                        </div>
+                        <div className="flex-1 h-full bg-zinc-900 dark:bg-[#111115] relative flex items-center px-4">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-600 font-medium italic">
+                            {midiTracksList.length} rendered parts from Score
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Nested MIDI Tracks */}
+                      {isMidiExpanded && midiTracksList.map((t, i) => renderTrackRow(t, i, true))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Add Audio Track Button */}
             {onAddAudioTrack && (

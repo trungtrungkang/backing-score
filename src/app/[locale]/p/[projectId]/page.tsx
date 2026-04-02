@@ -44,7 +44,6 @@ export default function ProjectPage() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [uploadingScore, setUploadingScore] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [openingFile, setOpeningFile] = useState(false);
@@ -144,75 +143,7 @@ export default function ProjectPage() {
     }
   }, [project, projectId, isOwner, saving, name, payload, tags, wikiGenreId, wikiInstrumentIds, wikiCompositionId, wikiComposerIds]);
 
-  const handleUploadScore = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    let file = e.target.files?.[0];
-    if (!file || !project || !isOwner || payload === null || uploadingScore) return;
-    e.target.value = "";
-    setUploadingScore(true);
-    setUploadError(null);
-    try {
-      // Decompress .mxl on the fly
-      if (file.name.toLowerCase().endsWith(".mxl")) {
-        try {
-          const zip = new JSZip();
-          const loadedZip = await zip.loadAsync(file);
-          
-          const containerFile = loadedZip.file("META-INF/container.xml");
-          if (!containerFile) throw new Error("Invalid .mxl file: Missing META-INF/container.xml");
-          const containerXml = await containerFile.async("string");
-          
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(containerXml, "text/xml");
-          const rootfiles = doc.getElementsByTagName("rootfile");
-          
-          let targetPath = "";
-          for (let i = 0; i < rootfiles.length; i++) {
-             const mediaType = rootfiles[i].getAttribute("media-type");
-             if (!mediaType || mediaType === "application/vnd.recordare.musicxml+xml") {
-                 targetPath = rootfiles[i].getAttribute("full-path") || "";
-                 break;
-             }
-          }
-          if (!targetPath && rootfiles.length > 0) targetPath = rootfiles[0].getAttribute("full-path") || "";
-          if (!targetPath) throw new Error("Invalid .mxl: no rootfile found");
 
-          const xmlFile = loadedZip.file(targetPath);
-          if (!xmlFile) throw new Error(`Missing root file in archive: ${targetPath}`);
-
-          const xmlContent = await xmlFile.async("blob");
-          const baseName = file.name.replace(/\.mxl$/i, ".musicxml");
-          file = new File([xmlContent], baseName, { type: "application/xml" });
-        } catch (mxlErr: any) {
-          throw new Error(`Failed to extract .mxl archive: ${mxlErr.message}`);
-        }
-      }
-
-      const { fileId } = await uploadProjectFile(projectId, file);
-      
-      let newPayload: DAWPayload = { ...payload };
-      newPayload.notationData = {
-        type: "music-xml",
-        fileId: fileId,
-        timemap: payload.notationData?.timemap || [],
-      };
-      newPayload.metadata = {
-        ...(newPayload.metadata || {}),
-        scoreSynthMuted: true,
-      };
-      
-      setPayload(newPayload);
-      await updateProject(projectId, {
-        payload: newPayload as ProjectPayload,
-      });
-    } catch (err: any) {
-      console.error("Upload Score error:", err);
-      setUploadError(
-        err?.message ? `Upload failed: ${err.message}` : "Upload failed"
-      );
-    } finally {
-      setUploadingScore(false);
-    }
-  };
 
   const [uploadingCover, setUploadingCover] = useState(false);
   const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,6 +192,13 @@ export default function ProjectPage() {
           fileId: fileId,
         } as AudioTrack,
       ];
+      
+      if (payload.audioTracks.length === 0) {
+        newPayload.metadata = {
+          ...(newPayload.metadata || {}),
+          scoreSynthMuted: true,
+        };
+      }
       
       setPayload(newPayload);
       await updateProject(projectId, {
@@ -472,7 +410,6 @@ export default function ProjectPage() {
             onPayloadChange={setPayload}
             onUploadTrackFile={handleUploadTrackFile}
             onNameChange={isOwner ? setName : undefined}
-            onUploadScore={isOwner ? handleUploadScore : undefined}
             onAddAudioTrack={isOwner ? handleAddAudioTrack : undefined}
             onDeleteTrack={isOwner ? handleDeleteTrack : undefined}
             tags={tags}
@@ -489,7 +426,6 @@ export default function ProjectPage() {
             onWikiComposerIdsChange={isOwner ? setWikiComposerIds : undefined}
             wikiCompositions={wikiCompositions}
             wikiComposers={wikiComposers}
-            uploadingScore={uploadingScore}
             uploadingAudio={uploadingAudio}
             uploadError={uploadError}
             onUploadCover={isOwner ? handleUploadCover : undefined}

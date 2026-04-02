@@ -23,9 +23,7 @@ interface EditorScorePanelProps {
   onSeek: (ms: number) => void;
   onMidiExtracted: (base64: string) => void;
   midiBase64?: string | null;
-  // Upload
-  onUploadScore?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  uploadingScore?: boolean;
+
   // Auto-analyze
   payload: DAWPayload;
   onPayloadChange?: (payload: DAWPayload) => void;
@@ -47,8 +45,7 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
   onSeek,
   onMidiExtracted,
   midiBase64,
-  onUploadScore,
-  uploadingScore,
+
   payload,
   onPayloadChange,
   showMapEditor,
@@ -223,24 +220,7 @@ export const EditorScorePanel = React.memo(function EditorScorePanel({
           isDarkMode={isDarkMode}
         />
 
-        {/* Empty-state upload shortcut for owners */}
-        {!scoreFileId && isOwner && onUploadScore && (
-          <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group z-10 bg-white/80 dark:bg-[#282c34]/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4 px-10 py-10 rounded-2xl border-2 border-dashed border-zinc-300 dark:border-zinc-600 group-hover:border-[#C8A856] group-hover:bg-[#C8A856]/5 transition-all duration-200">
-              <Music className="w-16 h-16 text-zinc-300 dark:text-zinc-700 group-hover:text-[#C8A856] transition-colors duration-200" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
-                  {uploadingScore ? "Uploading..." : "Click to Upload Sheet Music"}
-                </p>
-                <p className="text-sm text-zinc-400 dark:text-zinc-600 mt-1.5">MusicXML · .xml · .mxl</p>
-              </div>
-              {uploadingScore && (
-                <div className="w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
-              )}
-            </div>
-            <input type="file" className="hidden" accept=".musicxml,.xml,.mxl" onChange={onUploadScore} disabled={uploadingScore} />
-          </label>
-        )}
+
       </div>
 
       {showMapEditor && onPayloadChange && (

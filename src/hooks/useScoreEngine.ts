@@ -154,10 +154,24 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
   if (autoUnmuteScoreSynth && muteByTrackId["score-midi"] === undefined) {
     isScoreSynthMuted = false;
   }
+
+  const anyAudioSolo = payload.audioTracks.some(t => soloByTrackId[t.id] ?? t.solo ?? false);
+  const isAnyMidiSolo = (soloByTrackId["score-midi"] ?? payload.metadata?.scoreSynthSolo ?? false) || Object.keys(soloByTrackId).some(k => k.startsWith("score-midi-") && soloByTrackId[k]);
+  
+  if (anyAudioSolo && !isAnyMidiSolo) {
+    isScoreSynthMuted = true;
+  }
+
   const isScoreSynthMutedRef = useRef(isScoreSynthMuted);
   useEffect(() => {
     isScoreSynthMutedRef.current = isScoreSynthMuted;
   }, [isScoreSynthMuted]);
+  
+  useEffect(() => {
+    if (audioManagerRef.current) {
+        audioManagerRef.current.setExternalSolo(!!isAnyMidiSolo);
+    }
+  }, [isAnyMidiSolo]);
 
   // Practice Tools State
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -1278,18 +1292,18 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     if (audioManagerRef.current) audioManagerRef.current.setMetronomeEnabled(enabled);
   }, []);
 
-  const handleMuteToggle = useCallback((trackId: string) => {
+  const handleMuteToggle = useCallback((trackId: string, muted: boolean) => {
     setMuteByTrackId(prev => {
-      const next = { ...prev, [trackId]: !prev[trackId] };
-      if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setMute(trackId, next[trackId]);
+      const next = { ...prev, [trackId]: muted };
+      if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setMute(trackId, muted);
       return next;
     });
   }, []);
 
-  const handleSoloToggle = useCallback((trackId: string) => {
+  const handleSoloToggle = useCallback((trackId: string, solo: boolean) => {
     setSoloByTrackId(prev => {
-      const next = { ...prev, [trackId]: !prev[trackId] };
-      if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setSolo(trackId, next[trackId]);
+      const next = { ...prev, [trackId]: solo };
+      if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setSolo(trackId, solo);
       return next;
     });
   }, []);
