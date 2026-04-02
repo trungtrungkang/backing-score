@@ -18,7 +18,25 @@ export function DailyChallengeCard() {
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading || !data) return null;
+  if (loading) {
+    return (
+      <div className="relative mb-8 overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 p-1 shadow-sm">
+        <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-white dark:bg-zinc-950/50 rounded-xl p-5 sm:p-6 gap-6">
+           <div className="w-full sm:w-32 h-32 shrink-0 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+           <div className="flex-1 flex flex-col gap-3 py-2">
+             <div className="w-24 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse" />
+             <div className="w-48 h-8 md:w-64 bg-zinc-200 dark:bg-zinc-800 rounded-md animate-pulse mt-1" />
+             <div className="w-32 h-4 bg-zinc-200 dark:bg-zinc-800 rounded-md animate-pulse mt-1" />
+           </div>
+           <div className="mt-2 sm:mt-0 flex flex-col justify-center sm:self-stretch border-t sm:border-t-0 sm:border-l border-zinc-200 dark:border-white/10 pt-4 sm:pt-0 sm:pl-6">
+             <div className="w-full sm:w-40 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
     <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 shadow-lg shadow-purple-500/20 group">
