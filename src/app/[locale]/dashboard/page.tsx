@@ -270,6 +270,9 @@ export default function DashboardPage() {
             <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
           </button>
 
+          {/* Gamification Full Width Hero */}
+          <DailyChallengeCard />
+
           {!user.emailVerification && (
             <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -288,9 +291,6 @@ export default function DashboardPage() {
               </Button>
             </div>
           )}
-
-          {/* Gamification Full Width Hero */}
-          <DailyChallengeCard />
 
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-8 min-w-0">
@@ -379,8 +379,8 @@ function FolderTreeNode({
           onClick={() => onSelect(folder.$id)}
           disabled={isCurrent}
           className={`flex-1 flex items-center gap-2 py-2 pr-3 text-sm font-medium text-left transition-colors ${isCurrent
-              ? "text-blue-500 cursor-default"
-              : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+            ? "text-blue-500 cursor-default"
+            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
             }`}
         >
           <Folder className="w-4 h-4 text-amber-500 shrink-0" />
