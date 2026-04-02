@@ -503,11 +503,11 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => actions.handleMuteToggle(track.id)}
+                          onClick={() => actions.handleMuteToggle(track.id, !isMuted)}
                           className={cn("w-7 h-7 rounded border flex items-center justify-center text-xs font-bold transition-all", isMuted ? "bg-red-500/20 border-red-500/50 text-red-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300")}
                         >M</button>
                         <button
-                          onClick={() => actions.handleSoloToggle(track.id)}
+                          onClick={() => actions.handleSoloToggle(track.id, !isSolo)}
                           className={cn("w-7 h-7 rounded border flex items-center justify-center text-xs font-bold transition-all", isSolo ? "bg-green-500/20 border-green-500/50 text-green-500" : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300")}
                         >S</button>
                       </div>
