@@ -77,6 +77,12 @@ export interface PostDocument {
   visibility?: "public" | "followers" | "classroom";
   classroomId?: string;
   isPinned?: boolean;
+  reactionLike?: number;
+  reactionLove?: number;
+  reactionHaha?: number;
+  reactionWow?: number;
+  reactionTotal?: number;
+  commentsCount?: number;
 }
 
 export interface CommentDocument {

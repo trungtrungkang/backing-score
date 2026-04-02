@@ -34,3 +34,18 @@ export async function getPublicProfile(userId: string) {
     return null;
   }
 }
+
+export async function getPublicProfiles(userIds: string[]) {
+  if (!userIds || userIds.length === 0) return {};
+  const uniqueIds = [...new Set(userIds)];
+  try {
+    const results = await Promise.all(uniqueIds.map(id => getPublicProfile(id)));
+    const map: Record<string, any> = {};
+    uniqueIds.forEach((id, index) => {
+      map[id] = results[index];
+    });
+    return map;
+  } catch (e) {
+    return {};
+  }
+}

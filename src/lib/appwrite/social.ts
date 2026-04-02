@@ -17,6 +17,7 @@ import {
   isAppwriteConfigured
 } from "./constants";
 import { createNotification } from "./notifications";
+import { updatePostStatsAction } from "@/app/actions/social";
 import type { 
   PostDocument, 
   CommentDocument, 
@@ -248,6 +249,11 @@ export async function getPost(postId: string): Promise<PostDocument | null> {
 
 // ==========================================
 // COMMENTS & REACTIONS
+
+export async function updatePostStats(postId: string, updates: { reactionLike?: number, reactionLove?: number, reactionHaha?: number, reactionWow?: number, reactionTotal?: number, commentsCount?: number }) {
+  await updatePostStatsAction(postId, updates);
+}
+
 // ==========================================
 
 export async function addComment(postId: string, content: string): Promise<CommentDocument> {
@@ -286,7 +292,16 @@ export async function addComment(postId: string, content: string): Promise<Comme
     }
   } catch { /* post lookup failed, skip notification */ }
 
+  await updatePostStats(postId, { commentsCount: 1 });
+
   return doc as unknown as CommentDocument;
+}
+
+
+export async function deleteComment(commentId: string, postId: string) {
+  if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
+  await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_COMMENTS_COLLECTION_ID, commentId);
+  await updatePostStats(postId, { commentsCount: -1 });
 }
 
 export async function getComments(postId: string): Promise<CommentDocument[]> {
@@ -315,6 +330,7 @@ export async function getCommentsCount(postId: string): Promise<number> {
   return total;
 }
 
+
 export async function toggleReaction(targetType: "post"|"comment"|"project"|"playlist", targetId: string, type: string = "like"): Promise<boolean> {
   if (!isAppwriteConfigured()) throw new Error("Appwrite not configured");
   const user = await account.get();
@@ -331,11 +347,55 @@ export async function toggleReaction(targetType: "post"|"comment"|"project"|"pla
   );
 
   if (documents.length > 0) {
-    // Unlike
-    await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_REACTIONS_COLLECTION_ID, documents[0].$id);
-    return false; // Not reacted
+    const existing = documents[0];
+    if (existing.type === type) {
+       // Unlike / Remove
+       await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_REACTIONS_COLLECTION_ID, existing.$id);
+       if (targetType === "post") {
+          const up: any = { reactionTotal: -1 };
+          if (type === "like") up.reactionLike = -1;
+          else if (type === "love") up.reactionLove = -1;
+          else if (type === "haha") up.reactionHaha = -1;
+          else if (type === "wow") up.reactionWow = -1;
+          await updatePostStats(targetId, up);
+       }
+       return false;
+    } else {
+       // Switch reaction
+       try {
+          await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_REACTIONS_COLLECTION_ID, existing.$id, { type });
+       } catch (e: any) {
+          if (e.code === 401) {
+             // Legacy fallback: old reactions don't have update permissions. 
+             // Delete the old one and create a new one!
+             await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_REACTIONS_COLLECTION_ID, existing.$id);
+             await databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_REACTIONS_COLLECTION_ID, clientID.unique(), { targetType, targetId, userId: user.$id, type }, [
+               clientPermission.read(clientRole.any()),
+               clientPermission.update(clientRole.user(user.$id)),
+               clientPermission.delete(clientRole.user(user.$id))
+             ]);
+          } else {
+             throw e;
+          }
+       }
+       if (targetType === "post") {
+          const up: any = {};
+          if (existing.type === "like") up.reactionLike = -1;
+          else if (existing.type === "love") up.reactionLove = -1;
+          else if (existing.type === "haha") up.reactionHaha = -1;
+          else if (existing.type === "wow") up.reactionWow = -1;
+          
+          if (type === "like") up.reactionLike = (up.reactionLike||0) + 1;
+          else if (type === "love") up.reactionLove = (up.reactionLove||0) + 1;
+          else if (type === "haha") up.reactionHaha = (up.reactionHaha||0) + 1;
+          else if (type === "wow") up.reactionWow = (up.reactionWow||0) + 1;
+          
+          await updatePostStats(targetId, up);
+       }
+       return true;
+    }
   } else {
-    // Like
+    // Like / Add
     await databases.createDocument(
       APPWRITE_DATABASE_ID,
       APPWRITE_REACTIONS_COLLECTION_ID,
@@ -343,11 +403,21 @@ export async function toggleReaction(targetType: "post"|"comment"|"project"|"pla
       { targetType, targetId, userId: user.$id, type },
       [
         clientPermission.read(clientRole.any()),
+        clientPermission.update(clientRole.user(user.$id)),
         clientPermission.delete(clientRole.user(user.$id))
       ]
     );
+
+    if (targetType === "post") {
+       const up: any = { reactionTotal: 1 };
+       if (type === "like") up.reactionLike = 1;
+       else if (type === "love") up.reactionLove = 1;
+       else if (type === "haha") up.reactionHaha = 1;
+       else if (type === "wow") up.reactionWow = 1;
+       await updatePostStats(targetId, up);
+    }
+    
     // Fire-and-forget notification for likes
-    // Look up the target owner to send notification
     (async () => {
       try {
         let ownerId: string | null = null;
@@ -372,9 +442,9 @@ export async function toggleReaction(targetType: "post"|"comment"|"project"|"pla
             targetId,
           });
         }
-      } catch { /* owner lookup failed, skip notification */ }
+      } catch {}
     })();
-    return true; // Reacted
+    return true; 
   }
 }
 
@@ -411,4 +481,29 @@ export async function checkIsReacted(targetType: "post"|"comment"|"project"|"pla
   } catch {
     return false;
   }
+}
+
+
+export async function getUserReactionsForPosts(postIds: string[]): Promise<Record<string, string>> {
+   if (!isAppwriteConfigured() || postIds.length === 0) return {};
+   try {
+     const user = await account.get();
+     const { documents } = await databases.listDocuments(
+       APPWRITE_DATABASE_ID,
+       APPWRITE_REACTIONS_COLLECTION_ID,
+       [
+         clientQuery.equal("targetType", "post"),
+         clientQuery.equal("targetId", postIds),
+         clientQuery.equal("userId", user.$id),
+         clientQuery.limit(postIds.length + 10)
+       ]
+     );
+     const map: Record<string, string> = {};
+     for (const doc of documents) {
+        map[doc.targetId] = doc.type || "like";
+     }
+     return map;
+   } catch {
+     return {};
+   }
 }

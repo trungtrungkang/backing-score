@@ -81,6 +81,7 @@ export {
   toggleReaction,
   getReactionsCount,
   checkIsReacted,
+  getUserReactionsForPosts,
 } from "./social";
 
 // Classroom

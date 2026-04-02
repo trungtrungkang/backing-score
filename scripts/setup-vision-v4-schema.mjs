@@ -191,6 +191,12 @@ async function main() {
     { key: "visibility", type: "string", required: false, size: 32, xdefault: "public" }, // public | followers | classroom
     { key: "classroomId", type: "string", required: false, size: 256 },
     { key: "isPinned", type: "boolean", required: false, xdefault: false },
+    { key: "reactionLike", type: "integer", required: false, xdefault: 0 },
+    { key: "reactionLove", type: "integer", required: false, xdefault: 0 },
+    { key: "reactionHaha", type: "integer", required: false, xdefault: 0 },
+    { key: "reactionWow", type: "integer", required: false, xdefault: 0 },
+    { key: "reactionTotal", type: "integer", required: false, xdefault: 0 },
+    { key: "commentsCount", type: "integer", required: false, xdefault: 0 },
   ]);
 
   // ==========================================

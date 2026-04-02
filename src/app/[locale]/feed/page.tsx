@@ -20,7 +20,8 @@ import {
   PostDocument,
   ProjectDocument,
   PlaylistDocument,
-  CommentDocument
+  CommentDocument,
+  getUserReactionsForPosts
 } from "@/lib/appwrite";
 import { listMyClassrooms } from "@/lib/appwrite/classrooms";
 import type { ClassroomDocument } from "@/lib/appwrite/types";
@@ -34,7 +35,7 @@ import {
   Users, KeyRound, Shield
 } from "lucide-react";
 import { Music4 } from "lucide-react";
-import { getPublicProfile } from "@/app/actions/user";
+import { getPublicProfile, getPublicProfiles } from "@/app/actions/user";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useDialogs } from "@/components/ui/dialog-provider";
@@ -44,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ReactionButton, ReactionType } from "@/components/ReactionButton";
 
 type EnrichedPost = PostDocument & {
   authorProfile?: { name: string; prefs: any };
@@ -52,6 +54,7 @@ type EnrichedPost = PostDocument & {
   playlist?: PlaylistDocument;
   likesCount?: number;
   isLiked?: boolean;
+  reactionType?: string | null;
   commentsCount?: number;
   comments?: (CommentDocument & { authorProfile?: { name: string; prefs: any } })[];
   loadingComments?: boolean;
@@ -106,45 +109,51 @@ export default function FeedPage() {
       setLoading(true);
       try {
         const rawPosts = await getTimeline(20);
+        if (rawPosts.length === 0) {
+           if (!cancelled) setPosts([]);
+           return;
+        }
+
+        // 1. Batch Authors
+        const authorIds = [...new Set(rawPosts.map(p => p.authorId))];
+        const profilesMap = await getPublicProfiles(authorIds);
+
+        // 2. Batch Attachments (Projects & Playlists)
+        const projectIds = [...new Set(rawPosts.filter(p => p.attachmentType === "project" && p.attachmentId).map(p => p.attachmentId as string))];
+        const playlistIds = [...new Set(rawPosts.filter(p => p.attachmentType === "playlist" && p.attachmentId).map(p => p.attachmentId as string))];
         
-        // Enrich posts
-        const enriched = await Promise.all(
-          rawPosts.map(async (p) => {
-            let project: ProjectDocument | undefined = undefined;
-            let playlist: PlaylistDocument | undefined = undefined;
-
-            if (p.attachmentType === "project" && p.attachmentId) {
-              try { project = await getProject(p.attachmentId); } catch {}
-            } else if (p.attachmentType === "playlist" && p.attachmentId) {
-              try { playlist = await getPlaylist(p.attachmentId); } catch {}
-            }
-
-            let likesCount = 0;
-            // Optimistically query server. In production, this data should be heavily cached or aggregated at DB layer.
-            try { likesCount = await getReactionsCount("post", p.$id); } catch {}
-
-            let authorProfile;
-            try { authorProfile = await getPublicProfile(p.authorId); } catch {}
-
-            let commentsCount = 0;
-            try { commentsCount = await getCommentsCount(p.$id); } catch {}
-
-            let isLiked = false;
-            if (user) {
-               try { isLiked = await checkIsReacted("post", p.$id); } catch {}
-            }
-
-            return {
-              ...p,
-              project,
-              playlist,
-              authorProfile,
-              likesCount,
-              commentsCount,
-              isLiked,
-            };
+        const projectsMap: Record<string, ProjectDocument> = {};
+        const playlistsMap: Record<string, PlaylistDocument> = {};
+        
+        await Promise.all([
+          ...projectIds.map(async id => {
+             try { projectsMap[id] = await getProject(id); } catch {}
+          }),
+          ...playlistIds.map(async id => {
+             try { playlistsMap[id] = await getPlaylist(id); } catch {}
           })
-        );
+        ]);
+
+        // 3. Batch Reactions for current user
+        let userReactionsMap: Record<string, string> = {};
+        if (user) {
+           userReactionsMap = await getUserReactionsForPosts(rawPosts.map(p => p.$id));
+        }
+
+        // 4. Map Enriched Data
+        const enriched = rawPosts.map((p) => {
+          return {
+            ...p,
+            project: p.attachmentType === "project" && p.attachmentId ? projectsMap[p.attachmentId] : undefined,
+            playlist: p.attachmentType === "playlist" && p.attachmentId ? playlistsMap[p.attachmentId] : undefined,
+            authorProfile: profilesMap[p.authorId],
+            // Use denormalized counts or default to 0
+            likesCount: p.reactionTotal || 0,
+            commentsCount: p.commentsCount || 0,
+            isLiked: !!userReactionsMap[p.$id],
+            reactionType: userReactionsMap[p.$id] || null,
+          };
+        });
 
         if (!cancelled) setPosts(enriched);
       } catch (e: any) {
@@ -189,6 +198,7 @@ export default function FeedPage() {
         likesCount: 0,
         isLiked: false,
         project: projObj,
+        authorProfile: { name: user.name, prefs: user.prefs }
       }, ...prev]);
       setComposeText("");
       setSelectedAttachment(null);
@@ -199,19 +209,67 @@ export default function FeedPage() {
     }
   };
 
-  const handleToggleLike = async (postIndex: number, postId: string) => {
+  const handleReaction = async (postIndex: number, postId: string, type: string) => {
     const post = posts[postIndex];
-    if (post.isLiked) {
-      setPosts(prev => prev.map((p, i) => i === postIndex ? { ...p, isLiked: false, likesCount: Math.max(0, (p.likesCount || 0) - 1) } : p));
-      await toggleReaction("post", postId, "like").catch(() => {
-         setPosts(prev => prev.map((p, i) => i === postIndex ? { ...p, isLiked: true, likesCount: (p.likesCount || 0) + 1 } : p));
-      });
-    } else {
-      setPosts(prev => prev.map((p, i) => i === postIndex ? { ...p, isLiked: true, likesCount: (p.likesCount || 0) + 1 } : p));
-      await toggleReaction("post", postId, "like").catch(() => {
-         setPosts(prev => prev.map((p, i) => i === postIndex ? { ...p, isLiked: false, likesCount: Math.max(0, (p.likesCount || 0) - 1) } : p));
-      });
-    }
+    const oldIsLiked = post.isLiked;
+    const oldReactionType = post.reactionType;
+    const oldLike = post.reactionLike || 0;
+    const oldLove = post.reactionLove || 0;
+    const oldHaha = post.reactionHaha || 0;
+    const oldWow = post.reactionWow || 0;
+    const oldTotal = post.reactionTotal || 0;
+
+    // Optimistic Update
+    setPosts(prev => prev.map((p, i) => {
+       if (i !== postIndex) return p;
+       const up: any = { ...p };
+       if (oldIsLiked && oldReactionType === type) {
+          // Remove
+          up.isLiked = false;
+          up.reactionType = null;
+          up.reactionTotal = oldTotal - 1;
+          if (type === "like") up.reactionLike = oldLike - 1;
+          else if (type === "love") up.reactionLove = oldLove - 1;
+          else if (type === "haha") up.reactionHaha = oldHaha - 1;
+          else if (type === "wow") up.reactionWow = oldWow - 1;
+       } else if (oldIsLiked && oldReactionType !== type) {
+          // Switch
+          up.reactionType = type;
+          if (oldReactionType === "like") up.reactionLike = oldLike - 1;
+          else if (oldReactionType === "love") up.reactionLove = oldLove - 1;
+          else if (oldReactionType === "haha") up.reactionHaha = oldHaha - 1;
+          else if (oldReactionType === "wow") up.reactionWow = oldWow - 1;
+          
+          if (type === "like") up.reactionLike = (up.reactionLike||0) + 1;
+          else if (type === "love") up.reactionLove = (up.reactionLove||0) + 1;
+          else if (type === "haha") up.reactionHaha = (up.reactionHaha||0) + 1;
+          else if (type === "wow") up.reactionWow = (up.reactionWow||0) + 1;
+       } else {
+          // Add
+          up.isLiked = true;
+          up.reactionType = type;
+          up.reactionTotal = oldTotal + 1;
+          if (type === "like") up.reactionLike = oldLike + 1;
+          else if (type === "love") up.reactionLove = oldLove + 1;
+          else if (type === "haha") up.reactionHaha = oldHaha + 1;
+          else if (type === "wow") up.reactionWow = oldWow + 1;
+       }
+       return up;
+    }));
+
+    await toggleReaction("post", postId, type).catch(() => {
+       // Rollback
+       setPosts(prev => prev.map((p, i) => i === postIndex ? {
+          ...p,
+          isLiked: oldIsLiked,
+          reactionType: oldReactionType,
+          reactionLike: oldLike,
+          reactionLove: oldLove,
+          reactionHaha: oldHaha,
+          reactionWow: oldWow,
+          reactionTotal: oldTotal
+       } : p));
+    });
   };
 
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
@@ -275,23 +333,6 @@ export default function FeedPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#fdfdfc] dark:bg-[#0E0E11] text-zinc-900 dark:text-white flex border-t border-zinc-200 dark:border-zinc-900 justify-center">
       
-      {/* Side Navigation (Left) */}
-      <aside className="w-64 border-r border-zinc-200 dark:border-white/5 bg-transparent p-6 hidden lg:flex flex-col gap-8 sticky top-16 h-[calc(100vh-4rem)] shrink-0">
-         <div>
-           <h2 className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-4">{t("socialNetwork")}</h2>
-          <nav className="flex flex-col gap-1">
-            <button className="flex items-center gap-3 px-3 py-2 rounded-md bg-zinc-800/80 text-white font-medium transition-colors">
-              <Clock className="w-4 h-4 text-[#C8A856]" />
-              {t("timelineFeed")}
-            </button>
-            <Link href="/discover" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-zinc-800/50 text-zinc-400 hover:text-white transition-colors">
-              <Globe className="w-4 h-4" />
-              {t("globalDiscover")}
-            </Link>
-          </nav>
-        </div>
-      </aside>
-
       {/* Main Timeline Column */}
       <main className="w-full max-w-2xl border-x border-zinc-200 dark:border-white/5 min-h-0 overflow-y-auto">
         
@@ -539,20 +580,23 @@ export default function FeedPage() {
 
                          {/* Action Footer */}
                          <div className="flex items-center gap-6 mt-1 text-zinc-400">
-                            <button 
-                              onClick={() => handleToggleLike(index, post.$id)}
-                              className={`flex items-center gap-2 text-[13px] font-semibold transition-colors group ${post.isLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}
-                            >
-                               <div className={`p-1.5 rounded-full group-hover:bg-rose-500/10 transition-colors ${post.isLiked ? 'bg-rose-500/10' : ''}`}>
-                                  <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} />
-                               </div>
-                               <span className={post.likesCount && post.likesCount > 0 ? '' : 'opacity-0'}>
-                                 {post.likesCount}
-                               </span>
-                            </button>
+                             <ReactionButton
+                                isReacted={post.isLiked || false}
+                                reactionType={post.reactionType || null}
+                                reactionLike={post.reactionLike || 0}
+                                reactionLove={post.reactionLove || 0}
+                                reactionHaha={post.reactionHaha || 0}
+                                reactionWow={post.reactionWow || 0}
+                                reactionTotal={post.reactionTotal || 0}
+                                onReact={(type) => handleReaction(index, post.$id, type)}
+                                langLike={t("like") || "Like"}
+                                langLove="Love"
+                                langHaha="Haha"
+                                langWow="Wow"
+                             />
 
-                            <button 
-                              onClick={() => handleToggleComments(index, post.$id)}
+                             <button 
+                               onClick={() => handleToggleComments(index, post.$id)}
                               className={`flex items-center gap-2 text-[13px] font-semibold transition-colors group ${activeCommentPostId === post.$id ? 'text-blue-500' : 'hover:text-blue-500'}`}
                             >
                                <div className={`p-1.5 rounded-full group-hover:bg-blue-500/10 transition-colors ${activeCommentPostId === post.$id ? 'bg-blue-500/10' : ''}`}>
@@ -670,11 +714,6 @@ export default function FeedPage() {
         </div>
 
       </main>
-
-      {/* Right Sidebar (Trending/Suggestions) */}
-      <aside className="w-[300px] p-6 hidden xl:flex flex-col gap-8 sticky top-16 h-[calc(100vh-4rem)] shrink-0">
-          {/* Recommendation Engine omitted pending backend algorithms */}
-      </aside>
 
       {/* Attachment Modal */}
       {showAttachModal && (

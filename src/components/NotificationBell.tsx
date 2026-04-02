@@ -129,7 +129,8 @@ export function NotificationBell() {
   const formatMessage = (n: NotificationDoc): string => {
     try {
       return t(n.type, {
-        userName: n.sourceUserName,
+        userName: n.sourceUserName || "Someone",
+        sourceUserName: n.sourceUserName || "Someone",
         targetName: n.targetName || "",
       });
     } catch {

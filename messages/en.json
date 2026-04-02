@@ -233,7 +233,8 @@
     "commentPlaceholder": "Write a comment...",
     "attachScore": "Attach Score",
     "noScoresYet": "You haven't uploaded any scores yet.",
-    "goToDashboard": "Go to Dashboard"
+    "goToDashboard": "Go to Dashboard",
+    "like": "Like"
   },
   "ProjectDetail": {
     "loading": "Loading…",
@@ -422,7 +423,7 @@
   },
   "Notifications": {
     "title": "Notifications",
-    "like": "{userName} liked \"{targetName}\"",
+    "like": "{userName} reacted to \"{targetName}\"",
     "follow": "{userName} started following you",
     "comment": "{userName} commented on \"{targetName}\"",
     "report_resolved": "Your report on \"{targetName}\" has been reviewed",

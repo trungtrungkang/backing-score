@@ -10,8 +10,7 @@ import {
   getProject,
   getPlaylist,
   toggleReaction,
-  getReactionsCount,
-  checkIsReacted,
+  getUserReactionsForPosts,
   addComment,
   getComments,
   getFileViewUrl,
@@ -22,8 +21,8 @@ import {
 } from "@/lib/appwrite";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ReactionButton, ReactionType } from "@/components/ReactionButton";
 import {
-  Heart,
   MessageSquare,
   ArrowLeft,
   Music,
@@ -41,6 +40,12 @@ type EnrichedPost = PostDocument & {
   playlist?: PlaylistDocument;
   likesCount?: number;
   isLiked?: boolean;
+  reactionType?: string | null;
+  reactionLike?: number;
+  reactionLove?: number;
+  reactionHaha?: number;
+  reactionWow?: number;
+  reactionTotal?: number;
   comments?: (CommentDocument & {
     authorProfile?: { name: string; prefs: any };
   })[];
@@ -95,20 +100,18 @@ export default function PostDetailPage() {
           } catch {}
         }
 
-        let likesCount = 0;
-        try {
-          likesCount = await getReactionsCount("post", raw.$id);
-        } catch {}
-
         let authorProfile: { name: string; prefs: any } | undefined;
         try {
           authorProfile = await getPublicProfile(raw.authorId);
         } catch {}
 
         let isLiked = false;
+        let reactionType: string | null = null;
         if (user) {
           try {
-            isLiked = await checkIsReacted("post", raw.$id);
+            const userReactionsMap = await getUserReactionsForPosts([raw.$id]);
+            isLiked = !!userReactionsMap[raw.$id];
+            reactionType = userReactionsMap[raw.$id] || null;
           } catch {}
         }
 
@@ -132,8 +135,14 @@ export default function PostDetailPage() {
           project,
           playlist,
           authorProfile,
-          likesCount,
+          likesCount: raw.reactionTotal || 0,
+          reactionLike: raw.reactionLike || 0,
+          reactionLove: raw.reactionLove || 0,
+          reactionHaha: raw.reactionHaha || 0,
+          reactionWow: raw.reactionWow || 0,
+          reactionTotal: raw.reactionTotal || 0,
           isLiked,
+          reactionType,
           comments,
         });
       } catch {
@@ -146,34 +155,56 @@ export default function PostDetailPage() {
     loadPost();
   }, [postId, user]);
 
-  const handleToggleLike = async () => {
+  const handleReaction = async (type: ReactionType) => {
     if (!post) return;
-    const wasLiked = post.isLiked;
-    setPost((p) =>
-      p
-        ? {
-            ...p,
-            isLiked: !wasLiked,
-            likesCount: wasLiked
-              ? Math.max(0, (p.likesCount || 0) - 1)
-              : (p.likesCount || 0) + 1,
-          }
-        : p
-    );
+    const oldIsLiked = post.isLiked;
+    const oldReactionType = post.reactionType;
+    const oldLike = post.reactionLike || 0;
+    const oldLove = post.reactionLove || 0;
+    const oldHaha = post.reactionHaha || 0;
+    const oldWow = post.reactionWow || 0;
+    const oldTotal = post.reactionTotal || 0;
+
+    // Optimistic Update
+    const up: any = { ...post };
+    if (oldIsLiked && oldReactionType === type) {
+       // Remove
+       up.isLiked = false;
+       up.reactionType = null;
+       up.reactionTotal = oldTotal - 1;
+       if (type === "like") up.reactionLike = oldLike - 1;
+       else if (type === "love") up.reactionLove = oldLove - 1;
+       else if (type === "haha") up.reactionHaha = oldHaha - 1;
+       else if (type === "wow") up.reactionWow = oldWow - 1;
+    } else if (oldIsLiked && oldReactionType !== type) {
+       // Switch
+       up.reactionType = type;
+       if (oldReactionType === "like") up.reactionLike = oldLike - 1;
+       else if (oldReactionType === "love") up.reactionLove = oldLove - 1;
+       else if (oldReactionType === "haha") up.reactionHaha = oldHaha - 1;
+       else if (oldReactionType === "wow") up.reactionWow = oldWow - 1;
+       
+       if (type === "like") up.reactionLike = (up.reactionLike||0) + 1;
+       else if (type === "love") up.reactionLove = (up.reactionLove||0) + 1;
+       else if (type === "haha") up.reactionHaha = (up.reactionHaha||0) + 1;
+       else if (type === "wow") up.reactionWow = (up.reactionWow||0) + 1;
+    } else {
+       // Add
+       up.isLiked = true;
+       up.reactionType = type;
+       up.reactionTotal = oldTotal + 1;
+       if (type === "like") up.reactionLike = oldLike + 1;
+       else if (type === "love") up.reactionLove = oldLove + 1;
+       else if (type === "haha") up.reactionHaha = oldHaha + 1;
+       else if (type === "wow") up.reactionWow = oldWow + 1;
+    }
+    setPost(up);
+
     try {
-      await toggleReaction("post", post.$id, "like");
+      await toggleReaction("post", post.$id, type);
     } catch {
-      setPost((p) =>
-        p
-          ? {
-              ...p,
-              isLiked: wasLiked,
-              likesCount: wasLiked
-                ? (p.likesCount || 0) + 1
-                : Math.max(0, (p.likesCount || 0) - 1),
-            }
-          : p
-      );
+       // Rollback
+       setPost(post);
     }
   };
 
@@ -357,27 +388,20 @@ export default function PostDetailPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-6 py-3 border-y border-zinc-100 dark:border-white/5">
-                <button
-                  onClick={handleToggleLike}
-                  className={`flex items-center gap-2 text-sm font-semibold transition-colors group ${
-                    post.isLiked ? "text-rose-500" : "hover:text-rose-500"
-                  }`}
-                >
-                  <div
-                    className={`p-1.5 rounded-full group-hover:bg-rose-500/10 transition-colors ${
-                      post.isLiked ? "bg-rose-500/10" : ""
-                    }`}
-                  >
-                    <Heart
-                      className={`w-5 h-5 ${
-                        post.isLiked ? "fill-current" : ""
-                      }`}
-                    />
-                  </div>
-                  <span>
-                    {post.likesCount || 0}
-                  </span>
-                </button>
+                <ReactionButton 
+                  isReacted={post.isLiked || false}
+                  reactionType={post.reactionType || null}
+                  reactionLike={post.reactionLike || 0}
+                  reactionLove={post.reactionLove || 0}
+                  reactionHaha={post.reactionHaha || 0}
+                  reactionWow={post.reactionWow || 0}
+                  reactionTotal={post.reactionTotal || 0}
+                  onReact={handleReaction}
+                  langLike={t("like") || "Like"}
+                  langLove="Love"
+                  langHaha="Haha"
+                  langWow="Wow"
+                />
                 <div className="flex items-center gap-2 text-sm font-semibold text-zinc-400">
                   <div className="p-1.5">
                     <MessageSquare className="w-5 h-5" />

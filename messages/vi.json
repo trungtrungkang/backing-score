@@ -233,7 +233,8 @@
     "commentPlaceholder": "Viết bình luận...",
     "attachScore": "Đính kèm Bản nhạc",
     "noScoresYet": "Bạn chưa tải lên bản nhạc nào.",
-    "goToDashboard": "Vào Bảng điều khiển"
+    "goToDashboard": "Vào Bảng điều khiển",
+    "like": "Thích"
   },
   "ProjectDetail": {
     "loading": "Đang tải…",
@@ -423,7 +424,7 @@
   },
   "Notifications": {
     "title": "Thông báo",
-    "like": "{userName} đã thích \"{targetName}\"",
+    "like": "{userName} đã bày tỏ cảm xúc về \"{targetName}\"",
     "follow": "{userName} đã theo dõi bạn",
     "comment": "{userName} đã bình luận về \"{targetName}\"",
     "report_resolved": "Báo cáo của bạn về \"{targetName}\" đã được xử lý",
