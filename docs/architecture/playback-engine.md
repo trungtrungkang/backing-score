@@ -105,3 +105,22 @@ Thay vì chặn hoàn toàn quyền sử dụng Mic, hệ thống áp dụng cơ
 ### Pipeline gửi điểm API
 - Hàm hook `onPracticeComplete` ở core `useScoreEngine` sẽ tự động trigger Event khi thanh Playhead vượt quá biên độ thời gian của bản nhạc (`totalSongDurationMs`).
 - Sự kiện này bốc dỡ payload trích xuất động linh hoạt % Hits / Misses trên thời gian thực, truyền gọi tắt lên Backend Appwrite mà không cần phải nhúng các logic nặng nề tính toán lại vào trong `PlayShell`.
+
+## 8. Dual Playback Mode & Mixer Synchronization
+Hệ thống cho phép người dùng chuyển đổi qua lại giữa `Midi Mode` (chỉ hiển thị và phát các track giả lập âm thanh nội bộ) và `Audio Mode` (hiển thị và phát các stems audio tải từ storage). Do cả 2 hệ thống âm thanh này được quản lý bởi cùng một Engine tổng (`useScoreEngine`), Mixer gặp phải rủi ro xung đột trạng thái rất lớn (Cross-talk interference).
+
+### Nguyên tắc 1: Cross-Isolation (Cách ly chéo bóng ma)
+Khi Mixer ở `Midi Mode`, các Audio track sẽ bị ẩn khỏi UI. Tuy nhiên, nếu một Track Audio bị ẩn đó từng mang cờ Solo (`[S] = true`) lưu trữ trong Database, cờ Solo này theo thiết kế cốt lõi của Mixer sẽ chặn mồm (kill) toàn bộ các nhạc cụ khác, bao gồm cả MIDI. 
+Để giải quyết tận gốc hiện tượng "Bị chặn tiếng bởi linh hồn (ghost state) của track đang ẩn", Engine áp dụng bộ Filter chéo ở tầng sâu nhất:
+- Nếu `isMidiMode` kích hoạt: Biến cờ `anyAudioSolo` bị ép thẳng về `false` (Bất kể database có ghi gì). MIDI hoàn toàn thống trị.
+- Nếu `isAudioMode` kích hoạt: Biến cờ `isAnyMidiSolo` bị ép thẳng về `false`. Mọi trạng thái ẩn của MIDI không có tác quyền trên Audio Stems.
+
+### Nguyên tắc 2: Thuật toán Base64 Velocity injection cho Multi-Track MIDI
+Trái với hệ thống Audio nơi mỗi track có 1 `AudioGain` riêng biệt, hệ thống `@magenta/music` (Tone.js) chỉ sử dụng duy nhất một cổng Master Node cho toàn bộ bản nhạc. 
+Trong trường hợp `EditorShell` ở chế độ Multi-Track MIDI (MusicXML tách làm cấu trúc nhiều phần như `score-midi-0`, `score-midi-1`), việc áp dụng Mute Global của Master Node là bất khả thi (vì nó sẽ tắt cả 2 track).
+> [!IMPORTANT]
+> **Giải pháp nội suy (Velocity Translation):**  
+> Việc Tắt tiếng (Mute) hay kích hoạt Độc quyền (Solo) đối với bất kì một track con nào (`score-midi-X`) trong môi trường Multi-Track đều không trực tiếp thao tác vào WebAudio. 
+> Thay vào đó, Engine tiến hành biên dịch dữ liệu (Mute/Solo/Volume) này rồi nhúng thẳng vào quá trình **Regenerate (tái tạo) file MIDI Base64**, biến nó thành chỉ số cường độ gõ phím (`Velocity`).
+> Bất kì một note nào thuộc về vòng lặp đã bị Mute (hoặc không nằm trong tập hợp các Tracks được Solo) sẽ bị ép chỉ số `Velocity = 0` (Silent Note On). 
+> Nhờ đó, người dùng vẫn có thể thao tác tắt M/S riêng biệt với các kênh UI độc lập mà vẫn nghe được kết quả tách bạch từ 1 luồng Master Node duy nhất. Cơ chế này còn giải quyết tận gốc lỗi "Tương tác Solo làm bật chéo Mute ở các nút khác" vốn không phải là một tiêu chuẩn thiết kế UI của các ứng dụng âm nhạc (DAWs).

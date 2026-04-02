@@ -12,6 +12,7 @@ import { EditorActionBar } from "./EditorActionBar";
 import { EditorTagsPicker } from "./EditorTagsPicker";
 import { SyncModeHUD } from "./SyncModeHUD";
 import { EditorScorePanel } from "./EditorScorePanel";
+import { PlayModeToggle } from "@/components/player/PlayModeToggle";
 
 const EMPTY_TIMEMAP: { measure: number; timeMs: number }[] = [];
 
@@ -213,7 +214,12 @@ export function EditorShell({
     if (!onPayloadChange) return;
     onPayloadChange({
       ...payload,
-      notationData: { ...(payload.notationData || { type: "music-xml" }), timemap: recordedTimemap, timemapSource: "manual" as const } as any,
+      notationData: { 
+        ...(payload.notationData || { type: "music-xml" }), 
+        manualTimemap: recordedTimemap, 
+        timemapSource: "manual" as const,
+        activePlayMode: "audio"
+      } as any,
     });
     setIsSyncMode(false);
   }, [payload, recordedTimemap, onPayloadChange]);
@@ -362,7 +368,7 @@ export function EditorShell({
 
   const activeLoopPoints = useMemo(() => {
     if (!loopState.enabled) return null;
-    const timemap = payload.notationData?.timemap || [];
+    const timemap = engineState.correctedTimemap || engineState.activeTimemap || [];
     const startMeasure = timemap.find(t => t.measure === loopState.startBar);
     const endMeasureBound = timemap.find(t => t.measure === loopState.endBar + 1);
 
@@ -401,7 +407,7 @@ export function EditorShell({
     }
 
     return { startMs, endMs };
-  }, [loopState, payload.notationData?.timemap, payload.metadata?.tempo]);
+  }, [loopState, engineState.correctedTimemap, engineState.activeTimemap, payload.metadata?.tempo]);
 
   const handleLoopChange = useCallback(
     (loop: LoopState) => {
@@ -423,11 +429,20 @@ export function EditorShell({
   const handleMuteChange = useCallback((trackId: string, mute: boolean) => {
     setMuteByTrackId((prev) => ({ ...prev, [trackId]: mute }));
     if (audioManagerRef.current) audioManagerRef.current.setMute(trackId, mute);
+    if (mute) {
+      setSoloByTrackId(prev => {
+        if (prev[trackId]) {
+          if (audioManagerRef.current) audioManagerRef.current.setSolo(trackId, false);
+          return { ...prev, [trackId]: false };
+        }
+        return prev;
+      });
+    }
     if (onPayloadChange) {
       const track = payload.audioTracks.find((t) => t.id === trackId);
       if (track) {
         const updated = payload.audioTracks.map((t) =>
-          t.id === trackId ? { ...t, muted: mute } : t
+          t.id === trackId ? { ...t, muted: mute, ...(mute ? { solo: false } : {}) } : t
         ) as AudioTrack[];
         onPayloadChange({ ...payload, audioTracks: updated });
       }
@@ -437,11 +452,20 @@ export function EditorShell({
   const handleSoloChange = useCallback((trackId: string, solo: boolean) => {
     setSoloByTrackId((prev) => ({ ...prev, [trackId]: solo }));
     if (audioManagerRef.current) audioManagerRef.current.setSolo(trackId, solo);
+    if (solo) {
+      setMuteByTrackId(prev => {
+        if (prev[trackId]) {
+          if (audioManagerRef.current) audioManagerRef.current.setMute(trackId, false);
+          return { ...prev, [trackId]: false };
+        }
+        return prev;
+      });
+    }
     if (onPayloadChange) {
       const track = payload.audioTracks.find((t) => t.id === trackId);
       if (track) {
         const updated = payload.audioTracks.map((t) =>
-          t.id === trackId ? { ...t, solo } : t
+          t.id === trackId ? { ...t, solo, ...(solo ? { muted: false } : {}) } : t
         ) as AudioTrack[];
         onPayloadChange({ ...payload, audioTracks: updated });
       }
@@ -492,8 +516,8 @@ export function EditorShell({
 
   // Phase 22: Inject per-part MIDI tracks if multi-track info available, else fall back to single Score Synth
   const displayTracks = useMemo(() => {
-    const tracks = [...payload.audioTracks];
-    if (scoreFileId) {
+    const tracks = engineState.isMidiMode ? [] : [...payload.audioTracks];
+    if (scoreFileId && !engineState.isAudioMode) {
       if (scoreMidiTracks.length > 0) {
         // Multi-track mode: one track per MusicXML part
         scoreMidiTracks.forEach((mt) => {
@@ -523,7 +547,7 @@ export function EditorShell({
       }
     }
     return tracks;
-  }, [payload.audioTracks, scoreFileId, payload.metadata, scoreMidiTracks, scoreMidiMuted]);
+  }, [payload.audioTracks, scoreFileId, payload.metadata, scoreMidiTracks, scoreMidiMuted, engineState.isMidiMode, engineState.isAudioMode]);
 
   // Build channel map for PianoRollRegion per-track filtering
   const midiChannelByTrackId = useMemo(() => {
@@ -574,13 +598,28 @@ export function EditorShell({
       const trackIndex = parseInt(trackId.replace("score-midi-", ""), 10);
       setScoreMidiMuted(prev => ({ ...prev, [trackIndex]: mute }));
       setMuteByTrackId(prev => ({ ...prev, [trackId]: mute }));
+      
+      if (mute) {
+        setSoloByTrackId(prev => {
+          if (prev[trackId]) {
+            return { ...prev, [trackId]: false };
+          }
+          return prev;
+        });
+      }
       return;
     }
     // Legacy single Score Synth track
     if (trackId === "score-midi") {
       setMuteByTrackId(prev => ({ ...prev, [trackId]: mute }));
+      if (mute) {
+        setSoloByTrackId(prev => {
+           if (prev[trackId]) return { ...prev, [trackId]: false };
+           return prev;
+        });
+      }
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthMuted: mute } });
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthMuted: mute, ...(mute ? { scoreSynthSolo: false } : {}) } });
       }
       return;
     }
@@ -626,30 +665,13 @@ export function EditorShell({
       const trackIndex = parseInt(trackId.replace("score-midi-", ""), 10);
       setSoloByTrackId(prev => ({ ...prev, [trackId]: solo }));
       if (solo) {
-        // Solo this track: mute all other MIDI tracks
-        const newMuted: Record<number, boolean> = {};
-        scoreMidiTracks.forEach(mt => {
-          newMuted[mt.index] = mt.index !== trackIndex;
+        setScoreMidiMuted(prev => {
+          if (prev[trackIndex]) return { ...prev, [trackIndex]: false };
+          return prev;
         });
-        setScoreMidiMuted(newMuted);
         setMuteByTrackId(prev => {
-          const next = { ...prev };
-          scoreMidiTracks.forEach(mt => {
-            next[`score-midi-${mt.index}`] = mt.index !== trackIndex;
-          });
-          return next;
-        });
-      } else {
-        // Un-solo: unmute all MIDI tracks
-        const newMuted: Record<number, boolean> = {};
-        scoreMidiTracks.forEach(mt => { newMuted[mt.index] = false; });
-        setScoreMidiMuted(newMuted);
-        setMuteByTrackId(prev => {
-          const next = { ...prev };
-          scoreMidiTracks.forEach(mt => {
-            next[`score-midi-${mt.index}`] = false;
-          });
-          return next;
+          if (prev[trackId]) return { ...prev, [trackId]: false };
+          return prev;
         });
       }
       return;
@@ -657,8 +679,14 @@ export function EditorShell({
     // Legacy single Score Synth track
     if (trackId === "score-midi") {
       setSoloByTrackId(prev => ({ ...prev, [trackId]: solo }));
+      if (solo) {
+        setMuteByTrackId(prev => {
+           if (prev[trackId]) return { ...prev, [trackId]: false };
+           return prev;
+        });
+      }
       if (onPayloadChange) {
-        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthSolo: solo } });
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthSolo: solo, ...(solo ? { scoreSynthMuted: false } : {}) } });
       }
       return;
     }
@@ -672,6 +700,13 @@ export function EditorShell({
       const newPerTrack = { ...currentPerTrack, [idx]: volume };
       if (onPayloadChange) {
         onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreMidiPerTrackVolume: newPerTrack } });
+      }
+      return;
+    }
+    if (trackId === "score-midi") {
+      handleEditorVolumeChange(trackId, volume);
+      if (onPayloadChange) {
+        onPayloadChange({ ...payload, metadata: { ...payload.metadata, scoreSynthVolume: volume } });
       }
       return;
     }
@@ -718,7 +753,7 @@ export function EditorShell({
         onToggleSyncMode={() => setIsSyncMode(!isSyncMode)}
         isElasticGrid={!!payload.metadata?.syncToTimemap}
         onToggleElasticGrid={handleToggleElasticGrid}
-        timemap={payload.notationData?.timemap}
+        timemap={engineState.correctedTimemap || engineState.activeTimemap || undefined}
         isMapEditorOpen={showMapEditor}
         onToggleMapEditor={() => setShowMapEditor(!showMapEditor)}
         disabled={loadingAudio}
@@ -766,6 +801,14 @@ export function EditorShell({
             />
           ) : undefined
         }
+        playModeSlot={
+          <PlayModeToggle 
+             payload={payload} 
+             onPayloadChange={onPayloadChange} 
+             stretchedMidiBase64={stretchedMidiBase64} 
+             midiBase64={midiBase64} 
+          />
+        }
       />
 
       {/* Sync Mode HUD */}
@@ -806,7 +849,7 @@ export function EditorShell({
           positionMsRef={positionMsRef}
           isPlaying={isPlaying}
           playbackRate={engineState.playbackRate}
-          timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
+          timemap={engineState.correctedTimemap || engineState.activeTimemap || EMPTY_TIMEMAP}
           measureMap={payload.notationData?.measureMap}
           isDarkMode={isDarkMode}
           onSeek={handleSeek}
@@ -846,7 +889,7 @@ export function EditorShell({
               isPlaying={isPlaying}
               durationMs={totalSongDurationMs}
               bpm={payload.metadata?.tempo || 120}
-              timemap={payload.notationData?.timemap || EMPTY_TIMEMAP}
+              timemap={engineState.correctedTimemap || engineState.activeTimemap || EMPTY_TIMEMAP}
               timeSignature={{
                 numerator: parseInt((payload.metadata?.timeSignature || "4/4").split("/")[0], 10) || 4,
                 denominator: parseInt((payload.metadata?.timeSignature || "4/4").split("/")[1], 10) || 4

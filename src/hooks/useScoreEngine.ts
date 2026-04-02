@@ -24,9 +24,11 @@ export interface ScoreEngineParams {
   onPracticeComplete?: (score?: number) => void;
   /** When provided, enables BPM/time-sig editing (EditorShell). */
   onPayloadChange?: (payload: DAWPayload) => void;
+  /** Explicit override for play mode. If undefined, falls back to payload's activePlayMode. */
+  playModeOverride?: "audio" | "midi";
 }
 
-export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange }: ScoreEngineParams) {
+export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange, playModeOverride }: ScoreEngineParams) {
   const engineId = useId();
   const audioManagerRef = useRef<AudioManager | null>(null);
   const endOfTrackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,8 +92,16 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
   useEffect(() => { isWaitModeLenientRef.current = isWaitModeLenient; }, [isWaitModeLenient]);
   useEffect(() => { practiceTrackIdsRef.current = practiceTrackIds; }, [practiceTrackIds]);
 
+  // Resolve active Play Mode and active Timemap
+  const actualPlayMode = playModeOverride ?? payload.notationData?.activePlayMode ?? (payload.audioTracks.length > 0 ? "audio" : "midi");
+  const isAudioMode = actualPlayMode === "audio";
+  const isMidiMode = actualPlayMode === "midi";
+  
+  const timemap = isMidiMode 
+    ? (payload.notationData?.autoTimemap || payload.notationData?.timemap || [])
+    : (payload.notationData?.manualTimemap || payload.notationData?.timemap || []);
+
   // 1. Establish a Timeline Resolver computing Measure boundaries based on physical MIDI extraction
-  const timemap = payload.notationData?.timemap || [];
   const getMeasureForTime = useCallback((timeMs: number) => {
     if (!timemap || timemap.length === 0) return 0;
     if (timeMs < timemap[0].timeMs) return timemap[0].measure;
@@ -154,12 +164,23 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
   if (autoUnmuteScoreSynth && muteByTrackId["score-midi"] === undefined) {
     isScoreSynthMuted = false;
   }
+  
+  const isMultiTrack = parsedMidiRef.current && parsedMidiRef.current.tracks.length > 1;
+  if (isMultiTrack || Object.keys(muteByTrackId).some(k => k.startsWith("score-midi-"))) {
+    // Rely on per-track velocity scaling for Mute/Solo instead of killing the main synthesizer
+    isScoreSynthMuted = false;
+  }
 
-  const anyAudioSolo = payload.audioTracks.some(t => soloByTrackId[t.id] ?? t.solo ?? false);
-  const isAnyMidiSolo = (soloByTrackId["score-midi"] ?? payload.metadata?.scoreSynthSolo ?? false) || Object.keys(soloByTrackId).some(k => k.startsWith("score-midi-") && soloByTrackId[k]);
+  const anyAudioSolo = !isMidiMode && payload.audioTracks.some(t => soloByTrackId[t.id] ?? t.solo ?? false);
+  const isAnyMidiSolo = !isAudioMode && ((soloByTrackId["score-midi"] ?? payload.metadata?.scoreSynthSolo ?? false) || Object.keys(soloByTrackId).some(k => k.startsWith("score-midi-") && soloByTrackId[k]));
   
   if (anyAudioSolo && !isAnyMidiSolo) {
     isScoreSynthMuted = true;
+  }
+  
+  // Cross-talk handling for Dual-Timemap Play Modes
+  if (isAudioMode) {
+     isScoreSynthMuted = true; // Audio Mode forcibly mutes MIDI synth regardless of local override states
   }
 
   const isScoreSynthMutedRef = useRef(isScoreSynthMuted);
@@ -167,11 +188,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     isScoreSynthMutedRef.current = isScoreSynthMuted;
   }, [isScoreSynthMuted]);
   
-  useEffect(() => {
-    if (audioManagerRef.current) {
-        audioManagerRef.current.setExternalSolo(!!isAnyMidiSolo);
-    }
-  }, [isAnyMidiSolo]);
+
 
   // Practice Tools State
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -230,7 +247,6 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
 
     const chords: { timeMs: number, notes: Set<number>, measure: number, latentMeasure: number, trackIndex?: number }[] = [];
     const measureMap = payload.notationData?.measureMap;
-    const timemap = payload.notationData?.timemap || [];
     
     const ppq = parsedMidi.header.ppq || 480;
     const timeSigs = parsedMidi.header.timeSignatures || [];
@@ -427,6 +443,14 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     };
   }, []);
 
+  useEffect(() => {
+    if (audioManagerRef.current) {
+        audioManagerRef.current.setExternalSolo(!!isAnyMidiSolo);
+        // Ensure Audio Stems are completely suppressed when playing in MIDI mode
+        audioManagerRef.current.setGlobalAudioTracksMuted(isMidiMode);
+    }
+  }, [isAnyMidiSolo, isMidiMode]);
+
   const [stretchedMidiBase64, setStretchedMidiBase64] = useState<string | null>(null);
   const correctedTimemapRef = useRef<TimemapEntry[] | null>(null);
 
@@ -466,10 +490,10 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       // Priority: 'manual' → skip (user timeMs authoritative), 'auto' → override,
       // undefined (legacy) → fallback to MIDI-only heuristic (no audio tracks).
       const tmSource = payload.notationData?.timemapSource;
-      const shouldCorrectTimemap = tmSource !== 'manual';
-      const timemap = payload.notationData?.timemap;
+      const shouldCorrectTimemap = tmSource !== 'manual' || isMidiMode;
+      const activeTimemap = timemap;
       const ppq = midi.header.ppq || 480;
-      if (shouldCorrectTimemap && timemap && timemap.length > 0) {
+      if (shouldCorrectTimemap && activeTimemap && activeTimemap.length > 0) {
         const scaledTempos = [...midi.header.tempos].sort((a, b) => a.ticks - b.ticks);
         // We want unscaled timeMs for the timemap, so we reverse the playbackRate multiplier
         const unscaledTempos = scaledTempos.map(t => ({ ticks: t.ticks, bpm: t.bpm / playbackRate }));
@@ -492,7 +516,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
         };
 
         let accTicks = 0;
-        correctedTimemapRef.current = timemap.map(entry => {
+        correctedTimemapRef.current = activeTimemap.map(entry => {
           const correctedTimeMs = ticksToUnscaledMs(accTicks);
           const durationQuarters = entry.durationInQuarters ??
             (() => {
@@ -542,18 +566,35 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
         });
       }
 
-      // Apply per-track volume by scaling note velocity
+      // Apply per-track volume and Live Mute/Solo toggles by scaling note velocity
       const perTrackVolume = payload.metadata?.scoreMidiPerTrackVolume;
-      if (perTrackVolume) {
-        Object.entries(perTrackVolume).forEach(([trackIdxStr, vol]) => {
-          const trackIdx = parseInt(trackIdxStr, 10);
-          if (trackIdx >= 0 && trackIdx < midi.tracks.length && typeof vol === 'number' && vol !== 1) {
-            midi.tracks[trackIdx].notes.forEach(note => {
-              note.velocity = Math.max(0.01, Math.min(1, note.velocity * vol));
+      let anyMultiTrackSolo = false;
+      const multiSoloMap: Record<number, boolean> = {};
+      Object.keys(soloByTrackId).forEach(k => {
+         if (k.startsWith("score-midi-") && soloByTrackId[k]) {
+             anyMultiTrackSolo = true;
+             multiSoloMap[parseInt(k.replace("score-midi-", ""), 10)] = true;
+         }
+      });
+
+      midi.tracks.forEach((track, trackIdx) => {
+         let effectiveVol = (perTrackVolume && typeof perTrackVolume[trackIdx] === 'number') ? perTrackVolume[trackIdx] : 1;
+         const trackId = `score-midi-${trackIdx}`;
+         const isMuted = muteByTrackId[trackId];
+         
+         if (anyMultiTrackSolo) {
+            if (!multiSoloMap[trackIdx]) effectiveVol = 0;
+         } else if (isMuted) {
+            effectiveVol = 0;
+         }
+
+         if (effectiveVol !== 1) {
+            track.notes.forEach(note => {
+               if (effectiveVol === 0) note.velocity = 0; // Completely silence note
+               else note.velocity = Math.max(0.01, Math.min(1, note.velocity * effectiveVol));
             });
-          }
-        });
-      }
+         }
+      });
 
       const newBytes = midi.toArray();
       let newBinaryString = "";
@@ -582,7 +623,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       console.error("Failed to transform MIDI", e);
       setStretchedMidiBase64(midiBase64);
     }
-  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo, payload.metadata?.scoreMidiInstrumentOverrides, payload.metadata?.scoreMidiPerTrackVolume]);
+  }, [midiBase64, playbackRate, pitchShift, payload.metadata?.tempo, payload.metadata?.scoreMidiInstrumentOverrides, payload.metadata?.scoreMidiPerTrackVolume, isMidiMode, timemap, muteByTrackId, soloByTrackId]);
 
 
   useEffect(() => {
@@ -590,7 +631,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       const metronome = audioManagerRef.current.getMetronome();
       if (metronome) {
         // Pass the compiled Unscaled Timemap to Metronome to securely preserve MIDI dynamic tempo changes
-        const timemapArr = correctedTimemapRef.current || payload.notationData?.timemap || [];
+        const timemapArr = correctedTimemapRef.current || timemap || [];
         metronome.setTimemap(timemapArr);
         metronome.setSyncToTimemap(timemapArr.length > 0);
         metronome.setPlaybackRate(playbackRate);
@@ -608,7 +649,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
         }
       }
     }
-  }, [payload.notationData?.timemap, payload.metadata?.syncToTimemap, playbackRate]);
+  }, [timemap, payload.metadata?.syncToTimemap, playbackRate]);
 
   const handlePlay = useCallback(async () => {
     try {
@@ -738,9 +779,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     let maxAudio = durationMs || 0;
     let maxMidi = midiDurationMs || 0;
     let maxTimemap = 0;
-    const timemapArr = payload.notationData?.timemap;
-    if (timemapArr && timemapArr.length > 0) {
-       const lastMap = timemapArr[timemapArr.length - 1];
+    if (timemap && timemap.length > 0) {
+       const lastMap = timemap[timemap.length - 1];
        const bpm = payload.metadata?.tempo || 120;
        const ts = payload.metadata?.timeSignature || "4/4";
        const [numStr, denStr] = ts.split("/");
@@ -751,7 +791,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     }
     const finalMax = Math.max(maxAudio, maxMidi, maxTimemap);
     return finalMax > 0 ? finalMax : 1800000; // 30 min fallback for metronome-only practice
-  }, [durationMs, midiDurationMs, payload.notationData?.timemap, payload.metadata?.tempo, payload.metadata?.timeSignature]);
+  }, [durationMs, midiDurationMs, timemap, payload.metadata?.tempo, payload.metadata?.timeSignature]);
 
   const skipWaitNote = useCallback(() => {
     if (!isWaitModeRef.current || !isWaitingRef.current) return;
@@ -1298,6 +1338,16 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setMute(trackId, muted);
       return next;
     });
+    if (muted) {
+      setSoloByTrackId(prev => {
+        if (prev[trackId]) {
+          const next = { ...prev, [trackId]: false };
+          if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setSolo(trackId, false);
+          return next;
+        }
+        return prev;
+      });
+    }
   }, []);
 
   const handleSoloToggle = useCallback((trackId: string, solo: boolean) => {
@@ -1306,11 +1356,38 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setSolo(trackId, solo);
       return next;
     });
+    if (solo) {
+      setMuteByTrackId(prev => {
+        if (prev[trackId]) {
+          const next = { ...prev, [trackId]: false };
+          if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setMute(trackId, false);
+          return next;
+        }
+        return prev;
+      });
+    }
   }, []);
 
   const handleVolumeChange = useCallback((trackId: string, volume: number) => {
     setVolumes(prev => ({ ...prev, [trackId]: volume }));
-    if (trackId !== "score-midi" && audioManagerRef.current) audioManagerRef.current.setVolume(trackId, volume);
+    if (trackId !== "score-midi" && audioManagerRef.current) {
+      audioManagerRef.current.setVolume(trackId, volume);
+    } else if (trackId === "score-midi" || trackId.startsWith("score-midi-")) {
+      try {
+        if (typeof window !== 'undefined' && (window as any).Tone?.Destination) {
+           if (volume <= 0.01) {
+             (window as any).Tone.Destination.mute = true;
+           } else {
+             (window as any).Tone.Destination.mute = false;
+             // Gain to decibels: 20 * log10(gain)
+             const db = 20 * Math.log10(volume);
+             (window as any).Tone.Destination.volume.value = db;
+           }
+        }
+      } catch (e) {
+        console.warn("Could not set Tone.js destination volume for score synth", e);
+      }
+    }
   }, []);
 
   // --- Pre-roll toggle ---
@@ -1325,7 +1402,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     const oldBpm = payload.metadata?.tempo ?? 120;
     if (newBpm === oldBpm || newBpm <= 0) return;
     const ratio = oldBpm / newBpm;
-    const oldTimemap = payload.notationData?.timemap ?? [];
+    const oldTimemap = timemap;
     const newTimemap = oldTimemap.map((t: any) => ({ ...t, timeMs: t.timeMs * ratio }));
     onPayloadChange({
       ...payload,
@@ -1352,6 +1429,19 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     }
   }, [payload, onPayloadChange]);
 
+  // Synchronize Tone.js Master Mute with `score-midi` natively
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).Tone?.Destination) {
+        // Force mute Tone.js syntheiszer entirely when the play mode focuses on Audio Stems
+        const isMuted = isAudioMode || !!muteByTrackId["score-midi"];
+        (window as any).Tone.Destination.mute = isMuted;
+      }
+    } catch (e) {
+      console.warn("Could not sync Tone.js Destination mute", e);
+    }
+  }, [muteByTrackId, isAudioMode]);
+
   return {
     state: {
       positionMs, durationMs, totalSongDurationMs, isPlaying, loadingAudio,
@@ -1367,8 +1457,10 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       isGamificationInvalidated,
       midiNotes, micNotes,
       loopState, partNames, timeSignature,
+      activeTimemap: timemap,
       correctedTimemap: correctedTimemapRef.current,
       isScoreSynthMuted, midiStartOffsetMs,
+      isMidiMode, isAudioMode,
     },
     refs: {
       midiPlayerRef, waitModeMonitorRef, positionMsRef, audioManagerRef, isPlayingRef, midiTimeoutRef

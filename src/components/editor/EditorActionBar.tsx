@@ -30,6 +30,7 @@ interface EditorActionBarProps {
   uploadingCover?: boolean;
   // Tags slot
   tagsSlot?: React.ReactNode;
+  playModeSlot?: React.ReactNode;
 }
 
 export const EditorActionBar = React.memo(function EditorActionBar({
@@ -47,6 +48,7 @@ export const EditorActionBar = React.memo(function EditorActionBar({
   onUploadCover,
   uploadingCover,
   tagsSlot,
+  playModeSlot,
 }: EditorActionBarProps) {
   const { prompt } = useDialogs();
   const [shareCopied, setShareCopied] = useState(false);
@@ -129,6 +131,7 @@ export const EditorActionBar = React.memo(function EditorActionBar({
 
       {/* Tags UI slot */}
       {tagsSlot}
+      {playModeSlot}
 
       <div className="flex-1 flex items-center justify-end gap-3 shrink-0">
         {projectId && <ProjectActionsMenu projectId={projectId} />}

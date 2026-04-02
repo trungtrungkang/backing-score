@@ -586,3 +586,89 @@ function unrollMeasures(
 
   return { timemap, measureMap, repeatDescriptions };
 }
+
+// ─── Network & ZIP Utility ───────────────────────────────────────────
+
+export async function fetchAndAnalyzeMusicXML(fileId: string, midiBase64?: string | null): Promise<MusicXMLAnalysis> {
+  const { getFileViewUrl } = await import("@/lib/appwrite");
+  const url = getFileViewUrl(fileId);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let xmlText: string;
+
+  if (bytes[0] === 0x50 && bytes[1] === 0x4B) {
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(buffer);
+    const xmlFile = Object.keys(zip.files).find(f => f.endsWith('.xml') && !f.startsWith('META-INF'));
+    if (!xmlFile) throw new Error('No XML file found in MXL archive');
+    xmlText = await zip.files[xmlFile].async('string');
+  } else {
+    xmlText = new TextDecoder().decode(buffer);
+  }
+
+  const analysis = analyzeMusicXML(xmlText);
+
+  // Override timemap with exact absolute timings if an audio MIDI rendering is available
+  if (midiBase64) {
+    try {
+      const { Midi } = await import('@tonejs/midi');
+      const binaryString = window.atob(midiBase64.split(",")[1] || midiBase64);
+      const len = binaryString.length;
+      const bts = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bts[i] = binaryString.charCodeAt(i);
+      const midiTracker = new Midi(bts);
+      
+      if (midiTracker.header) {
+         const ppq = midiTracker.header.ppq;
+         const tempos = midiTracker.header.tempos;
+         
+         const getMidiSecondsForTicks = (targetTicks: number) => {
+            let timeSecs = 0;
+            let accumulatedTicks = 0;
+            let currentBpm = tempos.length > 0 ? tempos[0].bpm : 120;
+            
+            let i = 0;
+            while (i < tempos.length - 1 && tempos[i+1].ticks <= targetTicks) {
+               const segmentTicks = tempos[i+1].ticks - Math.max(accumulatedTicks, tempos[i].ticks);
+               const secondsPerTick = 60 / (currentBpm * ppq);
+               timeSecs += segmentTicks * secondsPerTick;
+               accumulatedTicks += segmentTicks;
+               currentBpm = tempos[i+1].bpm;
+               i++;
+            }
+            
+            const remainingTicks = targetTicks - accumulatedTicks;
+            const secondsPerTick = 60 / (currentBpm * ppq);
+            timeSecs += remainingTicks * secondsPerTick;
+            return timeSecs;
+         };
+
+         let currentTick = 0;
+         analysis.timemap.forEach(entry => {
+            const absoluteMs = getMidiSecondsForTicks(currentTick) * 1000;
+            entry.timeMs = absoluteMs;
+            
+            if (entry.beatTimestamps) {
+                const newBts: number[] = [];
+                const durationQ = entry.durationInQuarters || 4;
+                const numBeats = entry.beatTimestamps.length;
+                const quarterPerSegment = durationQ / numBeats;
+                for (let b = 0; b < numBeats; b++) {
+                    const beatTick = currentTick + (b * quarterPerSegment * ppq);
+                    newBts.push(getMidiSecondsForTicks(beatTick) * 1000);
+                }
+                entry.beatTimestamps = newBts;
+            }
+            
+            currentTick += (entry.durationInQuarters || 4) * ppq;
+         });
+      }
+    } catch (e) {
+      console.warn("MIDI override failed, falling back to algebraic timemap", e);
+    }
+  }
+
+  return analysis;
+}

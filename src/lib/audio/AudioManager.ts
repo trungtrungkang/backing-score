@@ -50,6 +50,7 @@ export class AudioManager {
   // Click Track
   private metronome: MetronomeEngine | null = null;
   private globalMuted: boolean = false;
+  private globalAudioTracksMuted: boolean = false;
   private hasExternalSolo: boolean = false;
 
   constructor() { }
@@ -447,7 +448,9 @@ export class AudioManager {
     this.tracks.forEach((t) => {
       let isEffectivelyMuted = false;
 
-      if (t.params.muted) {
+      if (this.globalAudioTracksMuted) {
+        isEffectivelyMuted = true;
+      } else if (t.params.muted) {
         isEffectivelyMuted = true;
       } else if (anySolo && !t.params.solo) {
         isEffectivelyMuted = true;
@@ -591,6 +594,11 @@ export class AudioManager {
     if (muted) {
       this.pause();
     }
+  }
+
+  public setGlobalAudioTracksMuted(muted: boolean) {
+    this.globalAudioTracksMuted = muted;
+    this.updateMuteSoloVolumes();
   }
 
   public setMetronomeEnabled(enabled: boolean) {

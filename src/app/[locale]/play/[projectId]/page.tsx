@@ -146,6 +146,18 @@ export default function PlayProjectPage() {
     }
   }, [project, payload, projectId]);
 
+  const handlePayloadChange = useCallback(async (newPayload: DAWPayload) => {
+    if (!isOwner) return; // Only allow project owners to permanently override play mode or save auto-analyzed data
+    try {
+       setPayload(newPayload);
+       await updateProject(projectId, {
+           payload: JSON.stringify(newPayload),
+       });
+    } catch {
+       toast.error("Failed to save mode preference");
+    }
+  }, [projectId, isOwner]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 h-[100dvh] w-full bg-[#fdfdfc] dark:bg-[#151518]">
@@ -190,6 +202,7 @@ export default function PlayProjectPage() {
         isAssignmentContext={!!assignmentId && !!classroomId}
         isOwner={isOwner}
         onSaveNavMap={handleSaveNavMap}
+        onPayloadChange={handlePayloadChange}
       />
     </main>
   );

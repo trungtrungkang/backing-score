@@ -69,6 +69,12 @@ export interface NotationData {
   /** Whether timemap was created manually by user ('manual') or auto-generated ('auto').
    *  When 'manual', timeMs values are authoritative and should not be overridden. */
   timemapSource?: "auto" | "manual";
+  /** Timemap auto-generated from MusicXML Analyzer (MIDI pacing) */
+  autoTimemap?: TimemapEntry[];
+  /** Timemap created manually by user syncing audio to sheet (Audio pacing) */
+  manualTimemap?: TimemapEntry[];
+  /** The actively selected play mode (audio stems vs midi synth) in Editor/Play pages */
+  activePlayMode?: "audio" | "midi";
   /** Optional mapping from latent playback measure index to physical printed measure index */
   measureMap?: Record<number, number>;
   /** PDF specific fields, ported from legacy SheetMusicDocument */
@@ -159,6 +165,19 @@ export function normalizePayload(raw: any | null): DAWPayload {
     }
     else if (payload.notationData && payload.notationData.timemap && payload.notationData.timemap.length > 0 && !payload.notationData.timemapSource) {
       payload.notationData.timemapSource = payload.audioTracks.length > 0 ? "manual" : "auto";
+    }
+
+    // Migrate old `timemap` into their respective dual structures
+    if (payload.notationData && payload.notationData.timemap && payload.notationData.timemap.length > 0) {
+      if (payload.notationData.timemapSource === "auto" && !payload.notationData.autoTimemap) {
+        payload.notationData.autoTimemap = [...payload.notationData.timemap];
+      } else if (payload.notationData.timemapSource === "manual" && !payload.notationData.manualTimemap) {
+        payload.notationData.manualTimemap = [...payload.notationData.timemap];
+      }
+    }
+    
+    if (payload.notationData && !payload.notationData.activePlayMode) {
+       payload.notationData.activePlayMode = payload.audioTracks.length > 0 ? "audio" : "midi";
     }
   } else if (typeof (raw as any).sourceFileId === "string") {
     // Legacy migration for old MusicXML file IDs

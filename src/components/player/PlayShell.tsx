@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { PlayerControls } from "./PlayerControls";
 import { MicCalibrationWizard } from "./MicCalibrationWizard";
 import { VirtualKeyboard } from "./VirtualKeyboard";
+import { PlayModeToggle } from "./PlayModeToggle";
 import { useMicProfile } from "@/hooks/useMicProfile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { Bookmark as NavMapBookmark, NavigationSequence } from "@/lib/appwrite/nav-maps";
@@ -145,6 +146,7 @@ export interface PlayShellProps {
   isAssignmentContext?: boolean;
   isOwner?: boolean;
   onSaveNavMap?: (bookmarks: NavMapBookmark[], sequence: NavigationSequence) => Promise<void>;
+  onPayloadChange?: (payload: DAWPayload) => void;
 }
 
 export function PlayShell({
@@ -165,6 +167,7 @@ export function PlayShell({
   isAssignmentContext = false,
   isOwner = false,
   onSaveNavMap,
+  onPayloadChange,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
@@ -452,10 +455,10 @@ export function PlayShell({
 
   // Phase 20: Inject synthetic Score Synth track if MusicXML exists
   const displayTracks = useMemo(() => {
-    const tracks = [...payload.audioTracks];
+    const tracks = state.isMidiMode ? [] : [...payload.audioTracks];
     const autoUnmuteScoreSynth = tracks.length === 0 && !state.isWaitMode;
 
-    if (scoreFileId) {
+    if (scoreFileId && !state.isAudioMode) {
       tracks.push({
         id: "score-midi",
         name: "Score Synth (Piano)",
@@ -468,7 +471,7 @@ export function PlayShell({
       });
     }
     return tracks;
-  }, [payload.audioTracks, scoreFileId, payload.metadata, state.isWaitMode]);
+  }, [payload.audioTracks, scoreFileId, payload.metadata, state.isWaitMode, state.isMidiMode, state.isAudioMode]);
 
   return (
     <div className="relative flex flex-col h-full w-full bg-[#fdfdfc] dark:bg-[#1A1A1E] text-zinc-900 dark:text-zinc-100 overflow-hidden font-sans">
@@ -511,7 +514,7 @@ export function PlayShell({
               scoreFileId={scoreFileId}
               positionMs={state.positionMs}
               isPlaying={state.isPlaying}
-              timemap={(state.isWaitMode && state.correctedTimemap) ? state.correctedTimemap : (payload.notationData?.timemap || [])}
+              timemap={state.correctedTimemap || state.activeTimemap || []}
               timemapSource={payload.notationData?.timemapSource}
               payloadTempo={payload.metadata?.tempo || 120}
               measureMap={payload.notationData?.measureMap}
@@ -626,6 +629,14 @@ export function PlayShell({
                     {composer}
                   </span>
                 )}
+              </div>
+              <div className="hidden md:flex ml-4 pl-4 border-l border-zinc-200 dark:border-zinc-800 items-center">
+                <PlayModeToggle 
+                   payload={payload} 
+                   onPayloadChange={onPayloadChange} 
+                   stretchedMidiBase64={state.stretchedMidiBase64} 
+                   midiBase64={state.midiBase64} 
+                />
               </div>
             </>
           }

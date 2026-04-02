@@ -41,8 +41,8 @@ interface PlayerControlsProps {
   volumes: Record<string, number>;
   muteByTrackId: Record<string, boolean>;
   soloByTrackId: Record<string, boolean>;
-  onMuteToggle: (id: string) => void;
-  onSoloToggle: (id: string) => void;
+  onMuteToggle: (id: string, muted: boolean) => void;
+  onSoloToggle: (id: string, solo: boolean) => void;
   onVolumeChange: (id: string, vol: number) => void;
   isCollapsed?: boolean;
   onCollapseToggle?: (collapsed: boolean) => void;
@@ -708,13 +708,13 @@ export function PlayerControls({
                             <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 truncate pr-2" title={track.name}>{track.name}</span>
                             <div className="flex gap-1 shrink-0">
                               <button
-                                onClick={() => onMuteToggle(track.id)}
+                                onClick={() => onMuteToggle(track.id, !isMuted)}
                                 className={cn("w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition-colors", isMuted ? "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/50" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-transparent")}
                               >
                                 M
                               </button>
                               <button
-                                onClick={() => onSoloToggle(track.id)}
+                                onClick={() => onSoloToggle(track.id, !isSolo)}
                                 className={cn("w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition-colors", isSolo ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/50" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-transparent")}
                               >
                                 S
@@ -730,7 +730,7 @@ export function PlayerControls({
                               max={1}
                               step={0.01}
                               onValueChange={(val) => {
-                                if (isMuted && val[0] > 0) onMuteToggle(track.id);
+                                if (isMuted && val[0] > 0) onMuteToggle(track.id, false);
                                 onVolumeChange(track.id, val[0]);
                               }}
                             />

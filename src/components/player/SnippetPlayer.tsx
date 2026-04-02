@@ -141,10 +141,10 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
   const scoreFileId = payload.notationData?.fileId;
 
   const displayTracks = useMemo(() => {
-    const tracks = [...payload.audioTracks];
+    const tracks = state.isMidiMode ? [] : [...payload.audioTracks];
     const autoUnmuteScoreSynth = tracks.length === 0 && !state.isWaitMode;
 
-    if (scoreFileId) {
+    if (scoreFileId && !state.isAudioMode) {
       tracks.push({
         id: "score-midi",
         name: "Score Synth (Piano)",
@@ -157,7 +157,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
       });
     }
     return tracks;
-  }, [payload.audioTracks, scoreFileId, payload.metadata, state.isWaitMode]);
+  }, [payload.audioTracks, scoreFileId, payload.metadata, state.isWaitMode, state.isMidiMode, state.isAudioMode]);
 
   return (
     <div
