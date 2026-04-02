@@ -24,9 +24,9 @@ export function DailyChallengeCard() {
     <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 shadow-lg shadow-purple-500/20 group">
        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
        
-       <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-zinc-950/80 backdrop-blur-xl rounded-xl p-5 sm:p-6 gap-6">
-         {/* Left Side: Thumbnail */}
-         <Link href={`/play/${data.projectId}`} className="w-full sm:w-32 h-32 shrink-0 rounded-lg overflow-hidden border-2 border-white/10 relative group/thumb cursor-pointer">
+       <div className="relative flex flex-col items-stretch bg-zinc-950/80 backdrop-blur-xl rounded-xl p-5 gap-4">
+         {/* Top: Thumbnail */}
+         <Link href={`/play/${data.projectId}`} className="w-full h-40 shrink-0 rounded-lg overflow-hidden border-2 border-white/10 relative group/thumb cursor-pointer">
            {data.thumbnailUrl ? (
              <img src={data.thumbnailUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover/thumb:scale-110" />
            ) : (
@@ -60,10 +60,10 @@ export function DailyChallengeCard() {
          </div>
 
          {/* Right: CTA */}
-         <div className="mt-2 sm:mt-0 flex flex-col justify-center sm:self-stretch border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-6">
+         <div className="mt-2 flex flex-col justify-center border-t border-white/10 pt-4">
             <Link 
               href={`/play/${data.projectId}`}
-              className="w-full sm:w-auto text-center px-8 py-3 bg-white text-black hover:bg-zinc-200 transition-colors rounded-xl font-bold whitespace-nowrap shadow-xl"
+              className="w-full text-center px-8 py-3 bg-white text-black hover:bg-zinc-200 transition-colors rounded-xl font-bold whitespace-nowrap shadow-xl"
             >
               Play Challenge
             </Link>
