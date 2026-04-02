@@ -289,6 +289,9 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Gamification Full Width Hero */}
+          <DailyChallengeCard />
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-8 xl:gap-12 items-start">
             {/* LEFT COLUMN: Main Workspace */}
             <div className="flex flex-col gap-8 min-w-0">
@@ -334,7 +337,6 @@ export default function DashboardPage() {
 
             {/* RIGHT COLUMN: Widgets & Gamification */}
             <aside className="flex flex-col gap-6 w-full lg:sticky lg:top-12">
-              <DailyChallengeCard />
               <SubscriptionCard />
             </aside>
           </div>
