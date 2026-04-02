@@ -264,7 +264,7 @@ export default function DashboardPage() {
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 overflow-y-auto py-12 px-6 lg:px-10 xl:px-12 relative bg-white dark:bg-zinc-950/30">
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Mobile sidebar toggle */}
           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden mb-6 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
             <PanelLeftOpen className="w-5 h-5" /> <span className="text-sm font-medium">{t("yourLibrary")}</span>
@@ -292,9 +292,11 @@ export default function DashboardPage() {
           {/* Gamification Full Width Hero */}
           <DailyChallengeCard />
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px] gap-8 xl:gap-12 items-start">
-            {/* LEFT COLUMN: Main Workspace */}
+          <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-8 min-w-0">
+
+              {/* Subscription Status */}
+              <SubscriptionCard />
 
               {/* Stats Summary */}
               {!loading && projects.length > 0 && (
@@ -334,11 +336,6 @@ export default function DashboardPage() {
                 <DriveManager />
               </div>
             </div>
-
-            {/* RIGHT COLUMN: Widgets & Gamification */}
-            <aside className="flex flex-col gap-6 w-full lg:sticky lg:top-12">
-              <SubscriptionCard />
-            </aside>
           </div>
         </div>
       </main>
