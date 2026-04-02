@@ -17,16 +17,11 @@ export default function SubscriptionCard() {
   // Free user — show upgrade prompt
   if (!isPremium) {
     return (
-      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 w-full">
-        <div className="flex flex-col items-start gap-4">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 shrink-0 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-zinc-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">{t("freePlan")}</h3>
-              <p className="text-xs text-zinc-500">{t("upgradeHint")}</p>
-            </div>
+      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 w-full">
+        <div className="flex flex-col items-start gap-3">
+          <div className="flex flex-col gap-0.5 w-full">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">{t("freePlan")}</h3>
+            <p className="text-xs text-zinc-500">{t("upgradeHint")}</p>
           </div>
           <Link
             href="/pricing"
@@ -42,23 +37,18 @@ export default function SubscriptionCard() {
 
   // Premium user — show status
   return (
-    <div className="rounded-xl border-2 border-[#C8A856]/30 bg-gradient-to-br from-[#C8A856]/5 to-transparent dark:from-[#C8A856]/10 p-5 w-full">
-      <div className="flex flex-col items-start gap-4">
-        <div className="flex items-center gap-3 w-full">
-          <div className="w-10 h-10 shrink-0 rounded-full bg-[#C8A856]/20 flex items-center justify-center">
-            <Crown className="w-5 h-5 text-[#C8A856]" />
+    <div className="rounded-xl border-2 border-[#C8A856]/30 bg-gradient-to-br from-[#C8A856]/5 to-transparent dark:from-[#C8A856]/10 p-4 w-full">
+      <div className="flex flex-col items-start gap-3">
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex items-center justify-between gap-2 w-full">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5"><Crown className="w-4 h-4 text-[#C8A856]" />{t("premiumPlan")}</h3>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500">
+              {subscriptionStatus === "cancelled" ? t("cancelledStatus") : t("activeStatus")}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">{t("premiumPlan")}</h3>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500">
-                {subscriptionStatus === "cancelled" ? t("cancelledStatus") : t("activeStatus")}
-              </span>
-            </div>
-            {subscriptionStatus === "cancelled" && (
-              <p className="text-xs text-zinc-500 mt-0.5">{t("cancelledNote")}</p>
-            )}
-          </div>
+          {subscriptionStatus === "cancelled" && (
+            <p className="text-xs text-zinc-500 mt-0.5">{t("cancelledNote")}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full mt-2">

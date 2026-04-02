@@ -659,6 +659,10 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
 
   const sidebarContent = (
     <>
+      <div className="mb-4">
+        <SubscriptionCard />
+      </div>
+
       {/* GROUP 1: LIBRARY */}
       <div className="mb-2">
         <h2 className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-bold mb-3 px-1">
@@ -762,10 +766,6 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
         </>
       )}
 
-      <div className="border-t border-zinc-200 dark:border-zinc-800/50 my-4" />
-      <div className="mt-auto">
-        <SubscriptionCard />
-      </div>
     </>
   );
 
