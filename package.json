@@ -91,5 +91,8 @@
     "typescript": "^5",
     "vitest": "^4.1.0",
     "wrangler": "^4.80.0"
+  },
+  "overrides": {
+    "next": "$next"
   }
 }
