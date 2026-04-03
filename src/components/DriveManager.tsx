@@ -186,7 +186,7 @@ export function DriveManager() {
                 });
 
                 if (thumbRes.ok) {
-                  const { fileId: thumbId, uploadUrl: thumbUploadUrl } = await thumbRes.json();
+                  const { fileId: thumbId, uploadUrl: thumbUploadUrl } = (await thumbRes.json()) as any;
                   await fetch(thumbUploadUrl, { method: "PUT", body: thumbFile, headers: { "Content-Type": "image/jpeg" } });
                   coverUrl = `/api/r2/download/${thumbId}`;
                 }

@@ -112,7 +112,8 @@ export async function listPublishedV5(
 
 export async function updateProjectV5(
   projectId: string,
-  updates: any
+  updates: any,
+  ...args: any[]
 ): Promise<ProjectDocument> {
   const env = process.env as any;
   const db = getDb();
@@ -155,7 +156,7 @@ export async function updateProjectV5(
   return getProjectV5(projectId);
 }
 
-export async function createProjectV5(params: any): Promise<ProjectDocument> {
+export async function createProjectV5(params: any, ...args: any[]): Promise<ProjectDocument> {
   const env = process.env as any;
   const db = getDb();
   const auth = getAuth(env);

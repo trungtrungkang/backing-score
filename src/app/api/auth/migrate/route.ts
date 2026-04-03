@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, name, appwriteId } = await req.json();
+    const { email, password, name, appwriteId } = ((await req.json()) as any) as any;
 
     if (!email || !appwriteId || !password) {
       return NextResponse.json({ error: "Missing payload" }, { status: 400 });

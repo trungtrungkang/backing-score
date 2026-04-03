@@ -10,7 +10,7 @@ export function DailyChallengeCard() {
 
   useEffect(() => {
     fetch("/api/gamification/daily-challenge")
-      .then(res => res.json())
+      .then(res => res.json() as any)
       .then(data => {
          if (!data.error) setData(data);
          setLoading(false);

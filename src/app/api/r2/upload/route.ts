@@ -8,7 +8,7 @@ import { getAuth } from "@/lib/auth/better-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { filename, contentType, fileSize, contextType = "uploads", contextId = "raw" } = (await req.json()) as any;
+    const { filename, contentType, fileSize, contextType = "uploads", contextId = "raw" } = ((await req.json()) as any) as any;
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: "Missing filename or contentType" }, { status: 400 });

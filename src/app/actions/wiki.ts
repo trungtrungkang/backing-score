@@ -1,15 +1,15 @@
 // Deprecated/Migrated
 export {}
-export async function deleteArtist(id: string) { return null; }
-export async function deleteInstrument(id: string) { return null; }
-export async function deleteComposition(id: string) { return null; }
-export async function deleteGenre(id: string) { return null; }
-export async function upsertTranslation(id: string, trans: any) { return null; }
-export async function updateArtist() { return null; }
-export async function updateInstrument() { return null; }
-export async function updateComposition() { return null; }
-export async function updateGenre() { return null; }
-export async function createArtist() { return null; }
-export async function createInstrument() { return null; }
-export async function createComposition() { return null; }
-export async function createGenre() { return null; }
+export async function deleteArtist(...args: any[]) { return null; }
+export async function deleteInstrument(...args: any[]) { return null; }
+export async function deleteComposition(...args: any[]) { return null; }
+export async function deleteGenre(...args: any[]) { return null; }
+export async function upsertTranslation(...args: any[]) { return null; }
+export async function updateArtist(...args: any[]) { return null; }
+export async function updateInstrument(...args: any[]) { return null; }
+export async function updateComposition(...args: any[]) { return null; }
+export async function updateGenre(...args: any[]) { return null; }
+export async function createArtist(...args: any[]) { return null; }
+export async function createInstrument(...args: any[]) { return null; }
+export async function createComposition(...args: any[]) { return null; }
+export async function createGenre(...args: any[]) { return null; }

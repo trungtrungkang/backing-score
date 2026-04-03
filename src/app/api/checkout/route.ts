@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createCheckout } from "@/lib/lemonsqueezy/client";
+import { Client, Account } from "@/lib/appwrite/client";
 
 
 async function getAuthUser(req: NextRequest) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = ((await req.json()) as any) as any;
     const { variantId } = body;
 
     if (!variantId) {

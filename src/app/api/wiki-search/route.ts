@@ -1,3 +1,4 @@
+import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Server-side API for searching Wikipedia and saving compositions to Appwrite.
  *
@@ -41,7 +42,7 @@ async function searchWikipedia(query: string, limit = 10) {
   });
   if (!resp.ok) return [];
 
-  const data = await resp.json();
+  const data = await resp.json() as any;
   return (data.query?.search || []).map((r: any) => ({
     title: r.title,
     snippet: r.snippet?.replace(/<[^>]+>/g, "") || "",
@@ -56,7 +57,7 @@ async function fetchWikiSummary(title: string) {
       headers: { "User-Agent": USER_AGENT },
     });
     if (!resp.ok) return null;
-    const data = await resp.json();
+    const data = await resp.json() as any;
     return {
       title: data.titles?.normalized || data.title || title,
       extract: data.extract || "",
@@ -84,7 +85,7 @@ async function fetchWikiExtract(title: string, maxChars = 3900) {
     });
     if (!resp.ok) return null;
 
-    const data = await resp.json();
+    const data = await resp.json() as any;
     const pages = data.query?.pages || {};
     const page = Object.values(pages)[0] as any;
     if (!page || page.missing !== undefined) return null;
@@ -143,7 +144,7 @@ export async function GET(req: NextRequest) {
 /** POST — save a composition to Appwrite wiki_compositions */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = ((await req.json()) as any) as any;
     const {
       title, year, period, keySignature, difficulty,
       description, genreId, composerIds, imageUrl, wikiArticle,

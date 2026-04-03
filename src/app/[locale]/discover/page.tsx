@@ -419,8 +419,12 @@ export default function DiscoverPage() {
     setCopyError(null);
     try {
       const doc = await copyProjectToMine(projectId);
-      router.push(`/p/${doc.$id}`);
-      router.refresh();
+      if (doc) {
+        router.push(`/p/${doc.$id}`);
+        router.refresh();
+      } else {
+        throw new Error("Copy returned null");
+      }
     } catch (err) {
       setCopyError(err instanceof Error ? err.message : "Failed to copy project");
     } finally {

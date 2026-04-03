@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const sub = await getActiveSubscription(userId);
+    const sub = await getActiveSubscription(userId) as any;
     if (sub) {
       return NextResponse.json({
         isPremium: true,

@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`/api/subscription?userId=${userId}`);
       if (res.ok) {
-        const data = await res.json();
+        const data = ((await res.json()) as any) as any;
         const apiTier = data.tier || (data.isPremium ? "pro" : "free");
         
         if (["pro", "studio"].includes(apiTier)) {

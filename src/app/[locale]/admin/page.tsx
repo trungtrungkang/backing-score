@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
           "Authorization": `Bearer ${jwt}`
         }
       });
-      const data = (await res.json()) as any;
+      const data = ((await res.json()) as any) as any;
       if (!res.ok) throw new Error(data.error || "Migration failed");
       toast.success(`Đã migrate thành công ${data.successCount}/${data.total} files sang R2!`);
     } catch (err: any) {

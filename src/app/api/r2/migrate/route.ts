@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { s3Client, R2_BUCKET_NAME } from "@/lib/r2/client";
 import { Upload } from "@aws-sdk/lib-storage";
-
+import { Client, Client as ServerClient, Account, Storage, Query } from "@/lib/appwrite/client";
 
 /** Route handler set to run as a Node script with max duration (if Vercel limits allow) */
 export const maxDuration = 300; // 5 phút max trên Vercel Pro, Hobby là 10s
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     }
     const jwt = authHeader.split(" ")[1];
 
-    const jwtClient = new ServerClient().setEndpoint(endpoint).setProject(projectId).setJWT(jwt);
+    const jwtClient = new Client().setEndpoint(endpoint).setProject(projectId).setJWT(jwt);
     const user = await new Account(jwtClient).get().catch((e) => null);
 
     if (!user || !user.labels?.includes("admin")) {

@@ -1,3 +1,4 @@
+import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Proxy to stream a file from Appwrite Storage using the server API key.
  * This avoids 401 when opening files (browser doesn't send Appwrite session to Appwrite URL).

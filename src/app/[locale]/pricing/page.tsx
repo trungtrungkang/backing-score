@@ -38,7 +38,7 @@ export default function PricingPage() {
 
       if (!res.ok) throw new Error("Failed to create checkout");
 
-      const data = await res.json();
+      const data = await res.json() as any;
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       }

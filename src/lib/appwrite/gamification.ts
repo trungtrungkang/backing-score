@@ -1,1 +1,1 @@
-export async function processPracticeSession() { return null; }
+export async function processPracticeSession(...args: any[]) { return null; }

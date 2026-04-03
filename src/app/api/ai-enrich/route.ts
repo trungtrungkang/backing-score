@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-
+import { Client, Databases, Query } from "@/lib/appwrite/client";
 import { enrichProject, type EnrichmentInput } from "@/lib/ai/gemini";
 
 const DB = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
@@ -48,7 +48,7 @@ function extractMetadataFromPayload(payloadStr: string): { keySignature?: string
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json() as any;
     const projectIds: string[] = body.projectIds || (body.projectId ? [body.projectId] : []);
 
     if (!projectIds.length) {

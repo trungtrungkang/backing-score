@@ -83,7 +83,7 @@ export async function markAllNotificationsRead(userId: string) {
       Query.limit(100),
     ]);
     await Promise.all(
-      unread.documents.map((doc) =>
+      unread.documents.map((doc: any) =>
         databases.updateDocument(DB, COLL, doc.$id, { read: true })
       )
     );

@@ -281,7 +281,7 @@ export function PlayShell({
           inputType
         })
       });
-      const data = await res.json();
+      const data = ((await res.json()) as any) as any;
       if (data.addedXP) {
         // Dispatch global event for header to animate
         window.dispatchEvent(new CustomEvent("gamification-xp-earned", { detail: data }));

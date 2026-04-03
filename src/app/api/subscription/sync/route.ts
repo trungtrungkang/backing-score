@@ -1,3 +1,4 @@
+import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Subscription Sync API — manually checks LemonSqueezy for a user's subscription
  * when the webhook hasn't fired yet (e.g. during LS account verification period).

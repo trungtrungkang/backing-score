@@ -11,10 +11,10 @@ export {
     deleteProjectV5 as deleteProject
 } from "@/app/actions/v5/projects";
 
-export async function incrementPlayCount(id: string) { return null; }
-export async function listProjects(queries?: any[]) { return { documents: [], total: 0 }; }
-export async function publishMyProject(id: string, published: boolean) { return null; }
-export async function setFeatured(id: string, featured: boolean) { return null; }
-export async function copyProjectToMine(projectId: string) { return null; }
-export async function listProjectsByArtist() { return []; }
-export async function listProjectsByComposition() { return []; }
+export async function incrementPlayCount(...args: any[]): Promise<any> { return null; }
+export async function listProjects(...args: any[]): Promise<any> { return { documents: [], total: 0 }; }
+export async function publishMyProject(...args: any[]): Promise<any> { return null; }
+export async function setFeatured(...args: any[]): Promise<any> { return null; }
+export async function copyProjectToMine(...args: any[]): Promise<any> { return null; }
+export async function listProjectsByArtist(...args: any[]): Promise<any> { return []; }
+export async function listProjectsByComposition(...args: any[]): Promise<any> { return []; }

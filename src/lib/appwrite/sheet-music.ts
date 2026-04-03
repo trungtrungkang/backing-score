@@ -49,7 +49,7 @@ export async function uploadSheetPdf(
     }),
   });
   if (!resPdf.ok) throw new Error("Failed to get PDF upload URL");
-  const { fileId, uploadUrl: pdfUploadUrl } = (await resPdf.json()) as any;
+  const { fileId, uploadUrl: pdfUploadUrl } = ((await resPdf.json()) as any) as any;
 
   const pdfUploadRes = await fetch(pdfUploadUrl, {
     method: "PUT",
@@ -72,7 +72,7 @@ export async function uploadSheetPdf(
         }),
       });
       if (!resThumb.ok) throw new Error("Failed to get Thumb upload URL");
-      const { fileId: thumbId, uploadUrl: thumbUploadUrl } = (await resThumb.json()) as any;
+      const { fileId: thumbId, uploadUrl: thumbUploadUrl } = ((await resThumb.json()) as any) as any;
 
       await fetch(thumbUploadUrl, {
         method: "PUT",
@@ -194,7 +194,7 @@ export async function regenerateThumbnail(sheetId: string): Promise<string> {
     }),
   });
   if (!resThumb.ok) throw new Error("Failed to get Thumb upload URL");
-  const { fileId: newThumbId, uploadUrl: thumbUploadUrl } = (await resThumb.json()) as any;
+  const { fileId: newThumbId, uploadUrl: thumbUploadUrl } = ((await resThumb.json()) as any) as any;
 
   const uploadRes = await fetch(thumbUploadUrl, {
     method: "PUT",

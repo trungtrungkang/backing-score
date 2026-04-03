@@ -69,7 +69,7 @@ export async function uploadProjectFile(
     throw new Error(errorData.error || "Failed to get upload URL");
   }
 
-  const { fileId, uploadUrl, userId } = (await res.json()) as any;
+  const { fileId, uploadUrl, userId } = ((await res.json()) as any) as any;
 
   const uploadRes = await fetch(uploadUrl, {
     method: "PUT",

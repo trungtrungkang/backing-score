@@ -189,7 +189,7 @@ export default function AdminReviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId }),
       });
-      const data = await res.json();
+      const data = await res.json() as any;
       if (data.results?.[projectId]?.status === "ok") {
         setEnrichments(prev => ({ ...prev, [projectId]: data.results[projectId] }));
         toast.success("AI suggestions ready");

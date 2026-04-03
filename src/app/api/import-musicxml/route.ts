@@ -1,3 +1,4 @@
+import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Server-side API route for bulk MusicXML import.
  * Uses node-appwrite (server SDK) with API key — no session required.
@@ -149,7 +150,7 @@ export async function GET() {
 /** POST — import selected files with optional wiki overrides */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = ((await req.json()) as any) as any;
     const adminUserId: string = body.adminUserId || "system";
 
     // Each item: { file, customName?, wikiArtistId?, wikiCompositionId?, wikiGenreId? }

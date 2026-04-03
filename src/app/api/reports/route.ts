@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = ((await request.json()) as any) as any;
     const { targetType, targetId, reason, details, reporterId } = body;
 
     if (!targetType || !targetId || !reason || !reporterId) {

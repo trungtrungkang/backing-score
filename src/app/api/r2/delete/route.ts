@@ -7,7 +7,7 @@ import { getAuth } from "@/lib/auth/better-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { r2Keys } = (await req.json()) as any;
+    const { r2Keys } = ((await req.json()) as any) as any;
     if (!Array.isArray(r2Keys) || r2Keys.length === 0) {
       return NextResponse.json({ error: "Missing or empty r2Keys array" }, { status: 400 });
     }
