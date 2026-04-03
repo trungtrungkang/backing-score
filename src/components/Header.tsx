@@ -111,20 +111,6 @@ export function Header() {
 
   if (pathname?.startsWith("/play")) return null;
 
-  if (loading) {
-    return (
-      <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-900 bg-white/80 dark:bg-black/80 backdrop-blur h-[60px] flex items-center px-4">
-        <div className="flex w-full items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Backing Score Logo" width={24} height={24} className="rounded-md" />
-            <span className="font-bold tracking-tight text-lg">Backing Score</span>
-          </div>
-          <div className="w-5 h-5 border-2 border-zinc-300 dark:border-zinc-600 border-t-black dark:border-t-white rounded-full animate-spin" />
-        </div>
-      </header>
-    );
-  }
-
   const avatarUrl = (user?.prefs as any)?.avatarUrl;
   const initials = user?.name ? user.name.substring(0, 2).toUpperCase() : "U";
 
@@ -156,7 +142,7 @@ export function Header() {
             <NavTab href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} />
             <NavTab href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} />
             <NavTab href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} />
-            {user && (
+            {(user || loading) && (
               <NavTab href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} />
             )}
           </nav>
@@ -176,10 +162,12 @@ export function Header() {
             </Tooltip>
             <LanguageSwitcher />
             <ThemeToggle hideBg className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-500 dark:text-zinc-400" />
-            {user && <GamificationBadge />}
-            {user && <NotificationBell />}
+            {user && !loading && <GamificationBadge />}
+            {user && !loading && <NotificationBell />}
 
-            {user ? (
+            {loading ? (
+              <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+            ) : user ? (
               <DropdownMenu>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -273,7 +261,7 @@ export function Header() {
           <SidebarItem href="/dashboard" icon={Library} label={t("library")} active={pathname.startsWith("/dashboard")} onClick={closeSidebar} />
           <SidebarItem href="/discover" icon={Compass} label={t("explore")} active={pathname.startsWith("/discover")} onClick={closeSidebar} />
           <SidebarItem href="/wiki" icon={BookOpen} label={t("wiki")} active={pathname.startsWith("/wiki")} onClick={closeSidebar} />
-          {user && (
+          {(user || loading) && (
             <SidebarItem href="/feed" icon={Users} label={t("community")} active={pathname.startsWith("/feed")} onClick={closeSidebar} />
           )}
           {canAccessAdmin(user?.labels) && (
@@ -284,7 +272,9 @@ export function Header() {
         {/* Sidebar footer */}
         <div className="p-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between shrink-0">
           <ThemeToggle className="text-zinc-500 dark:text-zinc-400" />
-          {user ? (
+          {loading ? (
+            <div className="w-20 h-8 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+          ) : user ? (
             <button
               onClick={() => { logout(); closeSidebar(); }}
               className="flex items-center gap-2 text-sm font-semibold text-red-500 hover:text-red-600 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

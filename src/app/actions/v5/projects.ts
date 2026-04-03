@@ -12,7 +12,15 @@ import type { ProjectDocument, ProjectPayload } from "@/lib/appwrite/types";
  * Hàm hỗ trợ đội lốt Model SQLite thành Model Appwrite
  */
 function mockAppwriteFormat(row: any): ProjectDocument {
-  const parsedPayload = typeof row.payload === "string" ? JSON.parse(row.payload) : (row.payload || {});
+  // Fix double-stringify if it ever occurred
+  let parsedPayload = row.payload;
+  if (typeof parsedPayload === "string") {
+      try { parsedPayload = JSON.parse(parsedPayload); } catch(e) {}
+  }
+  if (typeof parsedPayload === "string") {
+      try { parsedPayload = JSON.parse(parsedPayload); } catch(e) {}
+  }
+  
   return {
     ...row,
     $id: row.id,
@@ -20,14 +28,13 @@ function mockAppwriteFormat(row: any): ProjectDocument {
     $updatedAt: new Date(row.updatedAt).toISOString(),
     name: row.title,
     published: Boolean(row.isPublished),
-    // Parse lại JSON string về Object payload
-    payload: JSON.stringify(parsedPayload),
-    // Bưng ngược các props này ra root của object để Appwrite Frontend components đọc được
-    wikiGenreId: parsedPayload.wikiGenreId,
-    wikiInstrumentIds: parsedPayload.wikiInstrumentIds || [],
-    wikiCompositionId: parsedPayload.wikiCompositionId,
-    wikiComposerIds: parsedPayload.wikiComposerIds || [],
-    tags: parsedPayload.tags || [],
+    // Appwrite models use string for payload
+    payload: typeof parsedPayload === "object" ? JSON.stringify(parsedPayload) : String(parsedPayload),
+    wikiGenreId: parsedPayload?.wikiGenreId,
+    wikiInstrumentIds: parsedPayload?.wikiInstrumentIds || [],
+    wikiCompositionId: parsedPayload?.wikiCompositionId,
+    wikiComposerIds: parsedPayload?.wikiComposerIds || [],
+    tags: parsedPayload?.tags || [],
   } as unknown as ProjectDocument;
 }
 
@@ -126,17 +133,22 @@ export async function updateProjectV5(
       if (updates.wikiCompositionId !== undefined) pl.wikiCompositionId = updates.wikiCompositionId;
       if (updates.wikiComposerIds !== undefined) pl.wikiComposerIds = updates.wikiComposerIds;
       if (updates.tags !== undefined) pl.tags = updates.tags;
-      body.payload = JSON.stringify(pl);
-  } else if (updates.wikiGenreId || updates.wikiInstrumentIds || updates.wikiCompositionId || updates.wikiComposerIds || updates.tags) {
-      // Nếu không đẩy payload gốc lên nhưng có đổi tag -> Phải query payload cũ -> nhồi thêm tag
+      body.payload = pl; // Drizzle {mode:'json'} tự động stringify
+  } else if (updates.wikiGenreId !== undefined || updates.wikiInstrumentIds !== undefined || updates.wikiCompositionId !== undefined || updates.wikiComposerIds !== undefined || updates.tags !== undefined) {
       const existing = await getProjectV5(projectId);
-      const pl = JSON.parse(existing.payload);
+      let pl: any = existing.payload;
+      if (typeof pl === "string") {
+         try { pl = JSON.parse(pl); } catch(e) {}
+         if (typeof pl === "string") {
+            try { pl = JSON.parse(pl); } catch(e) {}
+         }
+      }
       if (updates.wikiGenreId !== undefined) pl.wikiGenreId = updates.wikiGenreId;
       if (updates.wikiInstrumentIds !== undefined) pl.wikiInstrumentIds = updates.wikiInstrumentIds;
       if (updates.wikiCompositionId !== undefined) pl.wikiCompositionId = updates.wikiCompositionId;
       if (updates.wikiComposerIds !== undefined) pl.wikiComposerIds = updates.wikiComposerIds;
       if (updates.tags !== undefined) pl.tags = updates.tags;
-      body.payload = JSON.stringify(pl);
+      body.payload = pl;
   }
 
   await db.update(projects).set(body).where(eq(projects.id, projectId));
@@ -152,20 +164,18 @@ export async function createProjectV5(params: any): Promise<ProjectDocument> {
   if (!session?.user) throw new Error("Chưa đăng nhập");
 
   const newId = crypto.randomUUID();
-  const pl = typeof params.payload === 'string' ? JSON.parse(params.payload) : (params.payload || {});
+  let pl: any = typeof params.payload === 'string' ? JSON.parse(params.payload) : (params.payload || {});
   if (params.wikiGenreId !== undefined) pl.wikiGenreId = params.wikiGenreId;
   if (params.wikiInstrumentIds !== undefined) pl.wikiInstrumentIds = params.wikiInstrumentIds;
   if (params.wikiCompositionId !== undefined) pl.wikiCompositionId = params.wikiCompositionId;
   if (params.wikiComposerIds !== undefined) pl.wikiComposerIds = params.wikiComposerIds;
   if (params.tags !== undefined) pl.tags = params.tags;
 
-  const plStr = JSON.stringify(pl);
-
   await db.insert(projects).values({
      id: newId,
      userId: session.user.id,
      title: params.name || "Untitled",
-     payload: plStr,
+     payload: pl,
      isPublished: false,
      coverUrl: params.coverUrl || null,
      folderId: params.folderId || null,
