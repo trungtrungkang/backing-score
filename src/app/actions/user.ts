@@ -1,51 +1,37 @@
 "use server";
 
-import { Client, Users } from "node-appwrite";
+import { getDb } from "@/db";
+import { users } from "@/db/schema/auth";
+import { eq, inArray } from "drizzle-orm";
 
-/**
- * Fetches a public user profile via the Appwrite Server SDK.
- * Bypasses Client-side permissions to safely read basic Name/Prefs details.
- */
 export async function getPublicProfile(userId: string) {
-  if (!process.env.APPWRITE_API_KEY) {
-    console.error("Missing APPWRITE_API_KEY server environment variable.");
-    return null;
-  }
-
-  try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-      .setKey(process.env.APPWRITE_API_KEY!);
-
-    const users = new Users(client);
-    const profile = await users.get(userId);
-    
-    // Force prototype stripping utilizing JSON transform so Next.js doesn't crash passing to Client Components
-    return JSON.parse(JSON.stringify({
-      $id: profile.$id,
-      name: profile.name,
-      prefs: profile.prefs || {},
-    }));
-  } catch (error: any) {
-    console.error("Failed to fetch Appwrite user profile:", error);
-    // Explicit return null if User doesn't exist to prevent rendering crashes
-    if (error?.code === 404) return null;
-    return null;
-  }
+  const db = getDb();
+  const uRes = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!uRes.length) return null;
+  const u = uRes[0];
+  
+  return {
+    ...u,
+    prefs: {
+      avatarUrl: u.image || null,
+      displayName: u.name,
+    }
+  };
 }
 
-export async function getPublicProfiles(userIds: string[]) {
-  if (!userIds || userIds.length === 0) return {};
-  const uniqueIds = [...new Set(userIds)];
-  try {
-    const results = await Promise.all(uniqueIds.map(id => getPublicProfile(id)));
-    const map: Record<string, any> = {};
-    uniqueIds.forEach((id, index) => {
-      map[id] = results[index];
-    });
-    return map;
-  } catch (e) {
-    return {};
+export async function getPublicProfiles(ids: string[]) {
+  if (!ids?.length) return {};
+  const db = getDb();
+  const uRes = await db.select().from(users).where(inArray(users.id, ids));
+  const map: Record<string, any> = {};
+  for (const u of uRes) {
+    map[u.id] = {
+      ...u,
+      prefs: {
+        avatarUrl: u.image || null,
+        displayName: u.name,
+      }
+    };
   }
+  return map;
 }

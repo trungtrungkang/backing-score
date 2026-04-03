@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Client, Databases, Query } from "node-appwrite";
+
 import { enrichProject, type EnrichmentInput } from "@/lib/ai/gemini";
 
 const DB = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";

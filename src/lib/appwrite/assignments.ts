@@ -1,165 +1,33 @@
-import {
-  account,
-  databases,
-  storage,
-  ID,
-  Query,
-  Permission,
-  Role,
-} from "./client";
-import {
-  APPWRITE_DATABASE_ID,
-  APPWRITE_ASSIGNMENTS_COLLECTION_ID,
-  APPWRITE_SUBMISSIONS_COLLECTION_ID,
-  APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID,
-  APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID,
-} from "./constants";
-import type { AssignmentDocument, SubmissionDocument } from "./types";
-import { createNotification } from "./notifications";
-import { listClassroomMembers, getClassroom } from "./classrooms";
-import { buildClassroomPermissions } from "./permissions";
+import { account } from "./client";
+import { isAppwriteConfigured } from "./constants";
+import * as D1 from "@/app/actions/v5/assignments";
 
-const dbId = APPWRITE_DATABASE_ID;
-const collId = APPWRITE_ASSIGNMENTS_COLLECTION_ID;
-const submissionsCollId = APPWRITE_SUBMISSIONS_COLLECTION_ID;
-const feedbackCollId = APPWRITE_SUBMISSION_FEEDBACK_COLLECTION_ID;
-const recordingsBucket = APPWRITE_CLASSROOM_RECORDINGS_BUCKET_ID;
-
-/** Create a new assignment for a classroom. Caller must be teacher. */
-export async function createAssignment(params: {
-  classroomId: string;
-  title: string;
-  description?: string;
-  sourceType: string;
-  sourceId: string;
-  type: string;
-  deadline?: string;
-  waitModeRequired?: boolean;
-  sheetMusicId?: string;
-}): Promise<AssignmentDocument> {
-  const user = await account.get();
-
-  const doc = await databases.createDocument(
-    dbId,
-    collId,
-    ID.unique(),
-    {
-      classroomId: params.classroomId,
-      title: params.title,
-      description: params.description || "",
-      sourceType: params.sourceType,
-      sourceId: params.sourceId,
-      type: params.type,
-      deadline: params.deadline || null,
-      waitModeRequired: params.waitModeRequired ?? false,
-      sheetMusicId: params.sheetMusicId || null,
-    },
-    buildClassroomPermissions(user.$id)
-  );
-
-  // Fire-and-forget: notify all students in class
-  (async () => {
-    try {
-      const [members, classroom] = await Promise.all([
-        listClassroomMembers(params.classroomId),
-        getClassroom(params.classroomId),
-      ]);
-      const students = members.filter(m => m.role === "student" && m.status === "active");
-      await Promise.all(students.map(s =>
-        createNotification({
-          recipientId: s.userId,
-          type: "assignment_new",
-          sourceUserName: user.name || user.email || "Teacher",
-          sourceUserId: user.$id,
-          targetType: "assignment",
-          targetName: params.title,
-          targetId: `${params.classroomId}/${doc.$id}`,
-        })
-      ));
-    } catch { /* best-effort */ }
-  })();
-
-  return doc as unknown as AssignmentDocument;
-}
-
-/** List all assignments for a classroom, ordered by creation date. */
-export async function listAssignments(classroomId: string): Promise<AssignmentDocument[]> {
-  const { documents } = await databases.listDocuments(dbId, collId, [
-    Query.equal("classroomId", classroomId),
-    Query.orderDesc("$createdAt"),
-    Query.limit(50),
-  ]);
-  return documents as unknown as AssignmentDocument[];
-}
-
-/** Get a single assignment by ID. */
-export async function getAssignment(assignmentId: string): Promise<AssignmentDocument> {
-  const doc = await databases.getDocument(dbId, collId, assignmentId);
-  return doc as unknown as AssignmentDocument;
-}
-
-/**
- * Delete an assignment with cascade: removes all submissions,
- * their feedback, and recording files before deleting the assignment.
- */
-export async function deleteAssignment(assignmentId: string): Promise<void> {
-  // 1. Fetch all submissions for this assignment
-  const { documents: subs } = await databases.listDocuments(dbId, submissionsCollId, [
-    Query.equal("assignmentId", assignmentId),
-    Query.limit(200),
-  ]);
-  const submissions = subs as unknown as SubmissionDocument[];
-
-  // 2. For each submission: delete feedback + recording file
-  for (const sub of submissions) {
-    // Delete all feedback for this submission
-    try {
-      const { documents: feedbacks } = await databases.listDocuments(dbId, feedbackCollId, [
-        Query.equal("submissionId", sub.$id),
-        Query.limit(100),
-      ]);
-      await Promise.all(
-        feedbacks.map(fb => databases.deleteDocument(dbId, feedbackCollId, fb.$id))
-      );
-    } catch { /* best-effort */ }
-
-    // Delete recording file from storage
-    if (sub.recordingFileId) {
-      try {
-        await storage.deleteFile(recordingsBucket, sub.recordingFileId);
-      } catch { /* best-effort */ }
-    }
-
-    // Delete the submission document
-    try {
-      await databases.deleteDocument(dbId, submissionsCollId, sub.$id);
-    } catch { /* best-effort */ }
+async function getUserIdFallback() {
+  if (!isAppwriteConfigured()) return undefined;
+  try {
+    const user = await account.get();
+    return user.$id;
+  } catch {
+    return undefined;
   }
-
-  // 3. Finally delete the assignment itself
-  await databases.deleteDocument(dbId, collId, assignmentId);
 }
 
-/** Update an assignment. Caller must be teacher/owner. */
-export async function updateAssignment(
-  assignmentId: string,
-  updates: {
-    title?: string;
-    description?: string;
-    type?: string;
-    deadline?: string | null;
-    waitModeRequired?: boolean;
-    sheetMusicId?: string | null;
-  }
-): Promise<AssignmentDocument> {
-  const body: Record<string, unknown> = {};
-  if (updates.title !== undefined) body.title = updates.title;
-  if (updates.description !== undefined) body.description = updates.description;
-  if (updates.type !== undefined) body.type = updates.type;
-  if (updates.deadline !== undefined) body.deadline = updates.deadline;
-  if (updates.waitModeRequired !== undefined) body.waitModeRequired = updates.waitModeRequired;
-  if (updates.sheetMusicId !== undefined) body.sheetMusicId = updates.sheetMusicId;
+export async function createAssignment(params: any) {
+  return D1.createAssignmentV5(params, await getUserIdFallback());
+}
 
-  const doc = await databases.updateDocument(dbId, collId, assignmentId, body);
-  return doc as unknown as AssignmentDocument;
+export async function listAssignments(classroomId: string) {
+  return D1.listAssignmentsV5(classroomId, await getUserIdFallback());
+}
+
+export async function getAssignment(assignmentId: string) {
+  return D1.getAssignmentV5(assignmentId);
+}
+
+export async function updateAssignment(assignmentId: string, updates: any) {
+  return D1.updateAssignmentV5(assignmentId, updates, await getUserIdFallback());
+}
+
+export async function deleteAssignment(assignmentId: string) {
+  return D1.deleteAssignmentV5(assignmentId, await getUserIdFallback());
 }

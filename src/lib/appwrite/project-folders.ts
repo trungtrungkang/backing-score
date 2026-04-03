@@ -1,104 +1,34 @@
-/**
- * Project Folder CRUD for My Uploads.
- * Supports hierarchical (nested) folders via parentFolderId.
- */
-
-import {
-  account,
-  databases,
-  ID,
-  Query,
-  Permission,
-  Role,
-} from "./client";
-import {
-  APPWRITE_DATABASE_ID,
-  APPWRITE_PROJECT_FOLDERS_COLLECTION_ID,
-  APPWRITE_PROJECTS_COLLECTION_ID,
-} from "./constants";
-import { buildStandardPermissions } from "./permissions";
+import { account } from "./client";
+import { isAppwriteConfigured } from "./constants";
+import * as D1 from "@/app/actions/v5/project-folders";
 import type { ProjectFolderDocument } from "./types";
 
-const dbId = APPWRITE_DATABASE_ID;
-const collId = APPWRITE_PROJECT_FOLDERS_COLLECTION_ID;
-const projectsCollId = APPWRITE_PROJECTS_COLLECTION_ID;
-
-/** Create a folder for the current user, optionally inside a parent folder. */
-export async function createProjectFolder(
-  name: string,
-  parentFolderId?: string | null
-): Promise<ProjectFolderDocument> {
-  const user = await account.get();
-  const doc = await databases.createDocument(
-    dbId,
-    collId,
-    ID.unique(),
-    {
-      userId: user.$id,
-      name,
-      parentFolderId: parentFolderId || null,
-      order: 0,
-    },
-    buildStandardPermissions(user.$id)
-  );
-  return doc as unknown as ProjectFolderDocument;
+async function getUserIdFallback() {
+  if (!isAppwriteConfigured()) return undefined;
+  try {
+    const user = await account.get();
+    return user.$id;
+  } catch {
+    return undefined;
+  }
 }
 
-/** List ALL folders belonging to the current user (flat list, build tree client-side). */
+export async function createProjectFolder(name: string, parentFolderId?: string | null): Promise<ProjectFolderDocument> {
+  return D1.createProjectFolderV5(name, parentFolderId, await getUserIdFallback());
+}
+
 export async function listProjectFolders(): Promise<ProjectFolderDocument[]> {
-  const user = await account.get();
-  const { documents } = await databases.listDocuments(dbId, collId, [
-    Query.equal("userId", user.$id),
-    Query.orderAsc("order"),
-    Query.limit(200),
-  ]);
-  return documents as unknown as ProjectFolderDocument[];
+  return D1.listProjectFoldersV5(await getUserIdFallback());
 }
 
-/** Update a folder name or parentFolderId. */
-export async function updateProjectFolder(
-  folderId: string,
-  name?: string,
-  parentFolderId?: string | null
-): Promise<ProjectFolderDocument> {
-  const payload: Record<string, any> = {};
-  if (name !== undefined) payload.name = name;
-  if (parentFolderId !== undefined) payload.parentFolderId = parentFolderId;
-  const doc = await databases.updateDocument(dbId, collId, folderId, payload);
-  return doc as unknown as ProjectFolderDocument;
+export async function updateProjectFolder(folderId: string, name?: string, parentFolderId?: string | null): Promise<ProjectFolderDocument> {
+  return D1.updateProjectFolderV5(folderId, name, parentFolderId, await getUserIdFallback());
 }
 
-/** Delete a folder and all sub-folders recursively. Projects inside are also deleted. */
 export async function deleteProjectFolder(folderId: string): Promise<void> {
-  // Delete projects in this folder
-  try {
-    const { documents } = await databases.listDocuments(dbId, projectsCollId, [
-      Query.equal("folderId", folderId),
-      Query.limit(200),
-    ]);
-    await Promise.all(
-      documents.map(p => databases.deleteDocument(dbId, projectsCollId, p.$id))
-    );
-  } catch { /* best-effort */ }
-
-  // Delete sub-folders recursively
-  try {
-    const { documents: subFolders } = await databases.listDocuments(dbId, collId, [
-      Query.equal("parentFolderId", folderId),
-      Query.limit(100),
-    ]);
-    for (const sub of subFolders) {
-      await deleteProjectFolder(sub.$id);
-    }
-  } catch { /* best-effort */ }
-
-  await databases.deleteDocument(dbId, collId, folderId);
+  return D1.deleteProjectFolderV5(folderId, await getUserIdFallback());
 }
 
-/** Move a project to a folder (or null to unfile). */
-export async function moveProjectToFolder(
-  projectId: string,
-  folderId: string | null
-): Promise<void> {
-  await databases.updateDocument(dbId, projectsCollId, projectId, { folderId });
+export async function moveProjectToFolder(projectId: string, folderId: string | null): Promise<void> {
+  return D1.moveProjectToFolderV5(projectId, folderId, await getUserIdFallback());
 }

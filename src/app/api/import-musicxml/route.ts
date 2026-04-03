@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Client, Databases, Storage, ID, Permission, Role, Query } from "node-appwrite";
+
 import fs from "fs/promises";
 import path from "path";
 

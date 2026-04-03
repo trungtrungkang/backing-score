@@ -166,7 +166,7 @@ function MusicXMLImportTab({ user }: { user: any }) {
     setError(null);
     try {
       const resp = await fetch("/api/import-musicxml");
-      const data = await resp.json();
+      const data = (await resp.json()) as any;
       if (data.error) {
         setError(data.error);
         setPieces([]);
@@ -257,7 +257,7 @@ function MusicXMLImportTab({ user }: { user: any }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items, adminUserId: user?.$id || "system" }),
       });
-      const data = await resp.json();
+      const data = (await resp.json()) as any;
 
       if (data.error) {
         toast.error(data.error);
@@ -577,7 +577,7 @@ function CompositionLookupTab() {
   useEffect(() => {
     fetch("/api/import-musicxml")
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: any) => {
         const slugs = new Set<string>();
         for (const c of data.wikiCompositions || []) {
           slugs.add(c.slug);
@@ -597,7 +597,7 @@ function CompositionLookupTab() {
       setSearching(true);
       try {
         const resp = await fetch(`/api/wiki-search?q=${encodeURIComponent(value)}`);
-        const data = await resp.json();
+        const data = (await resp.json()) as any;
         setSearchResults(data.results || []);
       } catch {
         setSearchResults([]);
@@ -613,7 +613,7 @@ function CompositionLookupTab() {
     setSelectedArticle(null);
     try {
       const resp = await fetch(`/api/wiki-search?title=${encodeURIComponent(title)}`);
-      const data = await resp.json();
+      const data = (await resp.json()) as any;
       if (data.error) {
         toast.error(data.error);
         return;
@@ -653,7 +653,7 @@ function CompositionLookupTab() {
           wikiArticle: selectedArticle?.title || undefined,
         }),
       });
-      const data = await resp.json();
+      const data = (await resp.json()) as any;
       if (data.error) {
         toast.error(data.error);
       } else {

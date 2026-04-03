@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { s3Client, R2_BUCKET_NAME } from "@/lib/r2/client";
 import { Upload } from "@aws-sdk/lib-storage";
-import { Client as ServerClient, Storage, Account, Query } from "node-appwrite";
+
 
 /** Route handler set to run as a Node script with max duration (if Vercel limits allow) */
 export const maxDuration = 300; // 5 phút max trên Vercel Pro, Hobby là 10s

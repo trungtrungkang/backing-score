@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { Client, Storage } from "node-appwrite";
+
 
 const ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
 const PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;

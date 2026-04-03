@@ -7,10 +7,16 @@ import {
   useEffect,
   useState,
 } from "react";
-import { account, ID } from "@/lib/appwrite";
-import { Models, OAuthProvider } from "appwrite";
+import { betterAuthClient } from "@/lib/auth/better-auth-client";
 
-type User = Models.User<Models.Preferences>;
+interface User {
+  $id: string; // Maintain $id for backward compatibility
+  id: string;
+  email: string;
+  name: string;
+  prefs: Record<string, any>;
+  [key: string]: any;
+}
 
 export type ServiceTier = "free" | "pro" | "studio";
 
@@ -50,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const apiTier = data.tier || (data.isPremium ? "pro" : "free");
         
-        // Safeguard enum values
         if (["pro", "studio"].includes(apiTier)) {
            setServiceTier(apiTier as ServiceTier);
         } else {
@@ -70,10 +75,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSession = useCallback(async () => {
     try {
-      const u = await account.get();
-      setUser(u);
-      await checkSubscription(u.$id);
-    } catch {
+      const { data: baSession } = await betterAuthClient.getSession();
+      
+      if (baSession?.user) {
+         let labelsArray: string[] = [];
+         try {
+           const rawLabels = (baSession.user as any).labels;
+           if (typeof rawLabels === 'string') {
+             labelsArray = JSON.parse(rawLabels);
+           } else if (Array.isArray(rawLabels)) {
+             labelsArray = rawLabels;
+           }
+         } catch (err) {
+           labelsArray = [];
+         }
+
+         const customUser: User = {
+           $id: baSession.user.id,
+           id: baSession.user.id,
+           email: baSession.user.email,
+           name: baSession.user.name,
+           labels: labelsArray,
+           prefs: {
+             avatarUrl: (baSession.user as any).image || null,
+             displayName: baSession.user.name,
+           },
+         };
+         setUser(customUser);
+         await checkSubscription(customUser.$id);
+      } else {
+         setUser(null);
+         setServiceTier("free");
+         setSubscriptionStatus(null);
+      }
+    } catch (e) {
       setUser(null);
       setServiceTier("free");
       setSubscriptionStatus(null);
@@ -94,13 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       setError(null);
       try {
-        await account.createEmailPasswordSession({ email, password });
+        const { error: baError } = await betterAuthClient.signIn.email({ email, password });
+        if (baError) throw new Error(baError.message);
         await loadSession();
       } catch (e: unknown) {
-        const msg =
-          e && typeof e === "object" && "message" in e
-            ? String((e as { message: string }).message)
-            : "Login failed";
+        const msg = e instanceof Error ? e.message : "Login failed";
         setError(msg);
         throw e;
       }
@@ -112,25 +145,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string, name: string) => {
       setError(null);
       try {
-        await account.create({
-          userId: ID.unique(),
-          email,
-          password,
-          name: name || undefined,
-        });
-        await account.createEmailPasswordSession({ email, password });
+        const { error: baError } = await betterAuthClient.signUp.email({ email, password, name });
+        if (baError) throw new Error(baError.message);
+        
         try {
-          const locale = window.location.pathname.split("/").filter(Boolean).find(p => ["en","vi","zh-CN","zh-TW","es","fr","de","ja","ko"].includes(p)) ?? "en";
-          await account.createVerification(`${window.location.origin}/${locale}/verify`);
+          // Gửi email xác thực nếu cấu hình
+          // await betterAuthClient.sendVerificationEmail({ email });
         } catch (vErr) {
           console.error("Failed to send verification email:", vErr);
         }
         await loadSession();
       } catch (e: unknown) {
-        const msg =
-          e && typeof e === "object" && "message" in e
-            ? String((e as { message: string }).message)
-            : "Sign up failed";
+        const msg = e instanceof Error ? e.message : "Sign up failed";
         setError(msg);
         throw e;
       }
@@ -138,48 +164,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loadSession]
   );
 
-  const loginWithOAuth = useCallback((provider: "google" | "apple") => {
-    // Extract current locale from pathname (e.g. /en, /vi, /zh-CN)
-    const pathParts = window.location.pathname.split("/").filter(Boolean);
-    const supportedLocales = ["en", "vi", "zh-CN", "zh-TW", "es", "fr", "de", "ja", "ko"];
-    const locale = supportedLocales.includes(pathParts[0]) ? pathParts[0] : "en";
-    const successUrl = `${window.location.origin}/${locale}/dashboard`;
-    const failureUrl = `${window.location.origin}/${locale}/login?error=oauth_failed`;
-    const oAuthProvider = provider === "google" ? OAuthProvider.Google : OAuthProvider.Apple;
-    
-    // Redirects browser completely
-    account.createOAuth2Session(oAuthProvider, successUrl, failureUrl);
+  const loginWithOAuth = useCallback(async (provider: "google") => {
+    try {
+        await betterAuthClient.signIn.social({ 
+            provider: "google",
+            callbackURL: window.location.origin + "/dashboard" 
+        });
+    } catch (e: any) {
+        setError(e?.message || "OAuth login failed");
+    }
   }, []);
 
   const sendVerification = useCallback(async () => {
-    setError(null);
-    try {
-      const locale = window.location.pathname.split("/").filter(Boolean).find(p => ["en","vi","zh-CN","zh-TW","es","fr","de","ja","ko"].includes(p)) ?? "en";
-      await account.createVerification(`${window.location.origin}/${locale}/verify`);
-    } catch (e: unknown) {
-      const msg =
-        e && typeof e === "object" && "message" in e
-          ? String((e as { message: string }).message)
-          : "Failed to send verification email";
-      setError(msg);
-      throw e;
-    }
+    // Implement based on Better Auth plugin if verification is needed
+    // await betterAuthClient.sendVerificationEmail({ email: user?.email! });
   }, []);
 
   const getJWT = useCallback(async () => {
-    try {
-      const res = await account.createJWT();
-      return res.jwt;
-    } catch (e: any) {
-      throw new Error(e?.message || "Failed to generate JWT");
-    }
+    // Chặn luồng JWT của Appwrite.
+    // Đối với BetterAuth hiện tại, Token Session lưu trong Cookie Server.
+    return "";
   }, []);
 
   const logout = useCallback(async () => {
     setError(null);
     try {
-      await account.deleteSession("current");
+      await betterAuthClient.signOut();
       setUser(null);
+      setServiceTier("free");
+      setSubscriptionStatus(null);
     } catch {
       setUser(null);
     }
@@ -187,12 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(async (name: string, prefs?: Record<string, any>) => {
     try {
-      if (name) {
-         await account.updateName(name);
-      }
-      if (prefs) {
-         await account.updatePrefs(prefs);
-      }
+      const { error: baError } = await betterAuthClient.updateUser({ 
+        name,
+        ...(prefs?.avatarUrl ? { image: prefs.avatarUrl } : {})
+      });
+      if (baError) throw new Error(baError.message);
+      
       await loadSession();
     } catch (e: any) {
       throw new Error(e?.message || "Failed to update profile");

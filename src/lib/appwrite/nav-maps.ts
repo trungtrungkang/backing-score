@@ -1,8 +1,6 @@
-import { ID, Query, Permission, Role } from "appwrite";
-import { account, databases } from "./client";
-
-const dbId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
-const collId = "sheet_nav_maps";
+import { account } from "./client";
+import { isAppwriteConfigured } from "./constants";
+import * as D1 from "@/app/actions/v5/nav-maps";
 
 export interface Bookmark {
   id: string;          // UUID, e.g. "bm-1"
@@ -30,82 +28,24 @@ export interface ParsedSheetNavMap {
   sequence: NavigationSequence;
 }
 
-export async function getNavMap(sheetMusicId: string): Promise<ParsedSheetNavMap | null> {
-  const { documents } = await databases.listDocuments(dbId, collId, [
-    Query.equal("sheetMusicId", sheetMusicId),
-    Query.limit(1),
-  ]);
-
-  if (documents.length === 0) return null;
-
-  const doc = documents[0] as unknown as SheetNavMapDocument;
+async function getUserIdFallback() {
+  if (!isAppwriteConfigured()) return undefined;
   try {
-    return {
-      $id: doc.$id,
-      sheetMusicId: doc.sheetMusicId,
-      bookmarks: JSON.parse(doc.bookmarks || "[]"),
-      sequence: JSON.parse(doc.sequence || "[]"),
-    };
+    const user = await account.get();
+    return user.$id;
   } catch {
-    return null;
+    return undefined;
   }
+}
+
+export async function getNavMap(sheetMusicId: string): Promise<ParsedSheetNavMap | null> {
+  return D1.getNavMapV5(sheetMusicId, await getUserIdFallback());
 }
 
 export async function saveNavMap(sheetMusicId: string, bookmarks: Bookmark[], sequence: NavigationSequence): Promise<ParsedSheetNavMap> {
-  const user = await account.get();
-
-  const { documents: existing } = await databases.listDocuments(dbId, collId, [
-    Query.equal("sheetMusicId", sheetMusicId),
-    Query.limit(1),
-  ]);
-
-  if (existing.length > 0) {
-    const docId = existing[0].$id;
-    const doc = await databases.updateDocument(dbId, collId, docId, {
-      bookmarks: JSON.stringify(bookmarks),
-      sequence: JSON.stringify(sequence),
-      userId: user.$id,
-    });
-    return {
-      $id: doc.$id,
-      sheetMusicId,
-      bookmarks,
-      sequence,
-    };
-  } else {
-    const doc = await databases.createDocument(
-      dbId,
-      collId,
-      ID.unique(),
-      {
-        sheetMusicId,
-        userId: user.$id,
-        bookmarks: JSON.stringify(bookmarks),
-        sequence: JSON.stringify(sequence),
-      },
-      [
-        // Publicly readable so students can access teacher's map
-        Permission.read(Role.users()),
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
-      ]
-    );
-    return {
-      $id: doc.$id,
-      sheetMusicId,
-      bookmarks,
-      sequence,
-    };
-  }
+  return D1.saveNavMapV5(sheetMusicId, bookmarks, sequence, await getUserIdFallback());
 }
 
-export async function deleteNavMap(sheetMusicId: string) {
-  const { documents } = await databases.listDocuments(dbId, collId, [
-    Query.equal("sheetMusicId", sheetMusicId),
-    Query.limit(1),
-  ]);
-
-  if (documents.length > 0) {
-    await databases.deleteDocument(dbId, collId, documents[0].$id);
-  }
+export async function deleteNavMap(sheetMusicId: string): Promise<void> {
+  return D1.deleteNavMapV5(sheetMusicId, await getUserIdFallback());
 }

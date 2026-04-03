@@ -1,55 +1,70 @@
 /**
- * Appwrite client and services for Backing & Score.
- * Uses NEXT_PUBLIC_* env vars so the client runs in the browser.
- * See docs/appwrite-setup.md for creating the Appwrite project, database, and bucket.
- *
- * If .env is not set, client still exists but API calls will fail; use isAppwriteConfigured() to show setup UI.
+ * Chết đi Appwrite!
+ * Đây là vỏ bọc cuối cùng của Client để tránh UI bị crash do Import Errors.
+ * Nó hoàn toàn vô sinh và không chứa SDK nào cả.
  */
 
-import {
-  Client,
-  Account,
-  Databases,
-  Storage,
-  ID,
-  Query,
-  Permission,
-  Role,
-  type Models,
-} from "appwrite";
-
-const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ?? "";
-const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ?? "";
-
-const client = new Client();
-client.setEndpoint(endpoint).setProject(projectId);
-
-// Removed 100MB CHUNK_SIZE forcing to allow Appwrite's default 5MB chunking
-// This fixes massive memory freezing and slow upload starts
-export function getAppwriteClient(): Client {
-  return client;
+// Export dummy classes để mock các import đang có trong project
+export class Client {
+   setEndpoint() { return this; }
+   setProject() { return this; }
 }
 
-export const account = new Account(client);
-export const databases = new Databases(client);
-export const storage = new Storage(client);
+export class Account {
+   constructor(client?: any) {}
+   async get(): Promise<any> { throw new Error("Appwrite is dead"); }
+   async createJWT(): Promise<any> { return { jwt: "" }; }
+}
 
-let cachedJwt: string | null = null;
-let jwtExpires: number = 0;
+export class Databases {
+   constructor(client?: any) {}
+   async listDocuments(): Promise<any> { return { documents: [], total: 0 }; }
+   async getDocument(): Promise<any> { return {}; }
+   async createDocument(): Promise<any> { return {}; }
+   async updateDocument(): Promise<any> { return {}; }
+   async deleteDocument(): Promise<any> {}
+}
+
+export class Storage {
+   constructor(client?: any) {}
+}
+
+export const ID = {
+   unique: () => crypto.randomUUID()
+};
+
+export const Query = {
+   equal: () => "",
+   limit: () => "",
+   offset: () => "",
+   orderAsc: () => "",
+   orderDesc: () => "",
+   isNull: () => "",
+   search: () => ""
+};
+
+export const Role = {
+   user: () => "",
+   users: () => ""
+};
+
+export const Permission = {
+   read: () => "",
+   write: () => "",
+   update: () => "",
+   delete: () => ""
+};
+
+export function getAppwriteClient() {
+  return new Client();
+}
+
+export const account = new Account({});
+export const databases = new Databases({});
+export const storage = new Storage({});
 
 export async function getAuthToken(): Promise<string | null> {
-  try {
-    if (cachedJwt && Date.now() < jwtExpires) {
-      return cachedJwt;
-    }
-    const { jwt } = await account.createJWT();
-    cachedJwt = jwt;
-    jwtExpires = Date.now() + 14 * 60 * 1000; // cache for 14 mins
-    return jwt;
-  } catch (e) {
-    return null;
-  }
+  return null;
 }
 
-export { ID, Query, Permission, Role };
-export type { Models };
+export type Models = any;

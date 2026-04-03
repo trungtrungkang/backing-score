@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Client, Account } from "node-appwrite";
+
 import {
   lemonSqueezySetup,
   listSubscriptions,

@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createCheckout } from "@/lib/lemonsqueezy/client";
-import { Client, Account } from "node-appwrite";
+
 
 async function getAuthUser(req: NextRequest) {
   const authHeader = req.headers.get("Authorization") || "";

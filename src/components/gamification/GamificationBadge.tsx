@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { databases } from "@/lib/appwrite";
-import { Query } from "appwrite";
-import { APPWRITE_USER_STATS_COLLECTION_ID, APPWRITE_DATABASE_ID } from "@/lib/appwrite/constants";
+import { getUserStatsV5 } from "@/app/actions/v5/gamification";
 
 export function GamificationBadge() {
   const { user } = useAuth();
@@ -14,16 +12,12 @@ export function GamificationBadge() {
   const fetchStats = async () => {
     if (!user?.$id) return;
     try {
-      const res = await databases.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_USER_STATS_COLLECTION_ID,
-        [Query.equal("userId", user.$id), Query.limit(1)]
-      );
-      if (res.documents.length > 0) {
+      const stat = await getUserStatsV5();
+      if (stat) {
         setStats({
-          level: res.documents[0].level,
-          totalXP: res.documents[0].totalXP,
-          currentStreak: res.documents[0].currentStreak,
+          level: stat.level,
+          totalXP: stat.totalXp,
+          currentStreak: stat.currentStreak,
         });
       }
     } catch {

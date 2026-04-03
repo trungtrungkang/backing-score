@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { account } from "@/lib/appwrite/client";
+import { getUserPrefsV5, updateUserPrefsV5 } from "@/app/actions/v5/user-prefs";
 import { MicProfile } from "./useMicInput";
 
 export function useMicProfile() {
@@ -9,9 +9,9 @@ export function useMicProfile() {
   const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const prefs = await account.getPrefs();
+      const prefs = await getUserPrefsV5();
       if (prefs && prefs.micProfile) {
-        setProfile(JSON.parse(prefs.micProfile as string) as MicProfile);
+        setProfile(JSON.parse(prefs.micProfile) as MicProfile);
       } else {
         setProfile(null);
       }
@@ -25,9 +25,7 @@ export function useMicProfile() {
 
   const saveProfile = useCallback(async (newProfile: MicProfile) => {
     try {
-      const prefs = await account.getPrefs();
-      await account.updatePrefs({
-        ...prefs,
+      await updateUserPrefsV5({
         micProfile: JSON.stringify(newProfile),
       });
       setProfile(newProfile);
@@ -40,12 +38,7 @@ export function useMicProfile() {
 
   const clearProfile = useCallback(async () => {
       try {
-        const prefs = await account.getPrefs();
-        const newPrefs = { ...prefs };
-        delete newPrefs.micProfile;
-        
-        // Appwrite requires at least an empty object for updatePrefs
-        await account.updatePrefs(newPrefs);
+        await updateUserPrefsV5({ micProfile: null });
         setProfile(null);
         return true;
       } catch (error) {

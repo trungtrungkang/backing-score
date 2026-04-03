@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Client, Databases, ID, Permission, Role, Query } from "node-appwrite";
+
 
 const DB = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "backing_score_db";
 const WIKI_API = "https://en.wikipedia.org/api/rest_v1/page/summary";
