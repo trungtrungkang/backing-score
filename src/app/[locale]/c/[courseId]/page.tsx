@@ -1,5 +1,5 @@
-import { getCourseById } from "@/lib/appwrite/courses";
-import { getLessonsByCourse } from "@/lib/appwrite/lessons";
+import { getCourseById } from "@/app/actions/v5/courses";
+import { getLessonsByCourse } from "@/app/actions/v5/lessons";
 import { redirect } from "next/navigation";
 import { CourseGatewayClient } from "./CourseGatewayClient";
 

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkEnrollment } from "@/lib/appwrite/courses";
-import { getStudentProgress, saveWaitModeScore, ProgressDoc, LessonDoc } from "@/lib/appwrite/lessons";
-import { CourseDoc } from "@/lib/appwrite/courses";
+import { checkEnrollment } from "@/app/actions/v5/courses";
+import { getStudentProgress, saveWaitModeScore, ProgressDoc, LessonDoc } from "@/app/actions/v5/lessons";
+import { CourseDoc } from "@/app/actions/v5/courses";
 import { useRouter } from "@/i18n/routing";
 import { Link } from "@/i18n/routing";
 import { CheckCircle2, Lock, PlayCircle, Loader2, ChevronRight, Music, Unlock, Menu, X } from "lucide-react";

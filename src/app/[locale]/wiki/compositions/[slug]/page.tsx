@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { getCompositionBySlug } from "@/lib/appwrite/compositions";
-import { listProjectsByComposition } from "@/lib/appwrite/projects";
+import { listProjectsByComposition } from "@/lib/appwrite";
 import { getTranslationsForEntity, applyTranslations } from "@/lib/appwrite/wikiTranslations";
 import type { CompositionDocument, ProjectDocument } from "@/lib/appwrite/types";
 import { ArrowLeft, Disc3, Calendar, Music2, Gauge } from "lucide-react";

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { getArtistBySlug } from "@/lib/appwrite/artists";
-import { listProjectsByArtist } from "@/lib/appwrite/projects";
+import { listProjectsByArtist } from "@/lib/appwrite";
 import { getTranslationsForEntity, applyTranslations } from "@/lib/appwrite/wikiTranslations";
 import type { ArtistDocument, ProjectDocument } from "@/lib/appwrite/types";
 import { User2, MapPin, Calendar, ArrowLeft, ExternalLink, Globe } from "lucide-react";

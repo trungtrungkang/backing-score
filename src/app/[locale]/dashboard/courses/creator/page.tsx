@@ -3,7 +3,7 @@
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLessonById, updateLesson } from "@/lib/appwrite/lessons";
+import { getLessonById, updateLesson } from "@/app/actions/v5/lessons";
 import { useRouter } from "@/i18n/routing";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";

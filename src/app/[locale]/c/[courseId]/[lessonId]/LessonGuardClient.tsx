@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkEnrollment } from "@/lib/appwrite/courses";
-import { getStudentProgress } from "@/lib/appwrite/lessons";
+import { checkEnrollment } from "@/app/actions/v5/courses";
+import { getStudentProgress } from "@/app/actions/v5/lessons";
 import { useRouter } from "@/i18n/routing";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";

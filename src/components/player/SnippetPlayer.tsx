@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useGamification } from "@/components/editor/GamificationProvider";
 import confetti from "canvas-confetti";
 import { revalidateProgressCache } from "@/app/actions/progress";
-import { saveWaitModeScore } from "@/lib/appwrite/lessons";
+import { saveWaitModeScore } from "@/app/actions/v5/lessons";
 import { createPost } from "@/lib/appwrite/social";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";

@@ -12,7 +12,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationDoc,
-} from "@/lib/appwrite/notifications";
+} from "@/app/actions/notifications";
 
 export function NotificationBell() {
   const { user } = useAuth();

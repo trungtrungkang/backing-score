@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { CloudUpload, Bookmark, FolderOpen, Globe, Plus, GraduationCap, PlaySquare, Settings, Trash2, BookOpen, X, Loader2 } from "lucide-react";
-import { getCreatorCourses, deleteCourse, createCourse, CourseDoc } from "@/lib/appwrite/courses";
+import { getCreatorCourses, deleteCourse, createCourse, CourseDoc } from "@/app/actions/v5/courses";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";

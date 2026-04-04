@@ -31,7 +31,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { useScoreEngine } from "@/hooks/useScoreEngine";
 import { useAuth } from "@/contexts/AuthContext";
 import UpgradePrompt from "@/components/UpgradePrompt";
-import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite/projects";
+import { incrementPlayCount as incrementServerPlayCount } from "@/lib/appwrite";
 import { GamificationCelebration } from "@/components/gamification/GamificationCelebration";
 import { toast } from "sonner";
 

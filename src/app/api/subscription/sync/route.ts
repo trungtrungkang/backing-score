@@ -16,7 +16,7 @@ import {
   lemonSqueezySetup,
   listSubscriptions,
 } from "@lemonsqueezy/lemonsqueezy.js";
-import { upsertSubscription, getActiveSubscription } from "@/lib/appwrite/subscriptions";
+import { upsertSubscription, getActiveSubscription } from "@/app/actions/v5/subscriptions";
 
 const apiKey = process.env.LEMONSQUEEZY_API_KEY || "";
 const STORE_ID = process.env.LEMONSQUEEZY_STORE_ID || "";

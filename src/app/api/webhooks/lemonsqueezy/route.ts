@@ -16,9 +16,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { upsertSubscription } from "@/lib/appwrite/subscriptions";
-import { getProductByVariantId } from "@/lib/appwrite/products";
-import { logPurchase, grantEntitlement } from "@/lib/appwrite/purchases";
+import { upsertSubscription } from "@/app/actions/v5/subscriptions";
+import { getProductByVariantId, logPurchase, grantEntitlement } from "@/app/actions/v5/subscriptions";
 
 const WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "";
 

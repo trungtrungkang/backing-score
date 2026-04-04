@@ -237,3 +237,38 @@ export async function publishMyProjectV5(projectId: string, publish: boolean): P
   return updateProjectV5(projectId, { published: publish });
 }
 
+export async function listProjectsV5(
+  filters: any[] = [],
+  limitNum: number = 100,
+  offsetNum: number = 0
+): Promise<any> {
+   const db = getDb();
+   const rs = await db.select().from(projects).orderBy(desc(projects.updatedAt)).limit(limitNum).offset(offsetNum);
+   const totalRs = await db.select({ id: projects.id }).from(projects);
+   return { documents: rs.map(mockAppwriteFormat), total: totalRs.length };
+}
+
+export async function listProjectsByArtistV5(artistId: string): Promise<ProjectDocument[]> {
+  const db = getDb();
+  // Fetch published projects
+  const rs = await db.select().from(projects).where(eq(projects.isPublished, true)).orderBy(desc(projects.updatedAt)).limit(100);
+  const mapped = rs.map(mockAppwriteFormat);
+  return mapped.filter((p: any) => p.wikiComposerIds?.includes(artistId));
+}
+
+export async function listProjectsByCompositionV5(compId: string): Promise<ProjectDocument[]> {
+  const db = getDb();
+  // Fetch published projects
+  const rs = await db.select().from(projects).where(eq(projects.isPublished, true)).orderBy(desc(projects.updatedAt)).limit(100);
+  const mapped = rs.map(mockAppwriteFormat);
+  return mapped.filter((p: any) => p.wikiCompositionId === compId);
+}
+export async function incrementPlayCountV5(projectId: string): Promise<void> {
+   // Add play count to DB in future phase. For now, just silently succeed.
+   return;
+}
+
+export async function setFeaturedV5(projectId: string, isFeatured: boolean): Promise<ProjectDocument> {
+   // Mark as featured logic in future schema. Just return standard project.
+   return getProjectV5(projectId);
+}

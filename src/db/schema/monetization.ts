@@ -34,10 +34,15 @@ export const entitlements = sqliteTable('entitlements', {
 
 // 4. Thuê bao định kỳ (Subscriptions) - LemonSqueezy Pro/Studio Tier
 export const subscriptions = sqliteTable('subscriptions', {
-  id: text('id').primaryKey(), // ID trả về từ LemonSqueezy
+  id: text('id').primaryKey(), // ID trả về từ LemonSqueezy (lemonSqueezySubscriptionId)
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: text('status', { length: 32 }).notNull(), // active, past_due, canceled
-  planId: text('plan_id').notNull(), 
+  planId: text('plan_id').notNull(), // variantId
+  planName: text('plan_name'),
+  productId: text('product_id'),
+  orderId: text('order_id'),
+  customerId: text('customer_id'),
+  userEmail: text('user_email'),
   currentPeriodEnd: integer('current_period_end', { mode: 'timestamp' }).notNull(),
   cancelAtPeriodEnd: integer('cancel_at_period_end', { mode: 'boolean' }).notNull().default(false),
 });

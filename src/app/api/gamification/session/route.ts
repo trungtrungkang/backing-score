@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppwriteClient, account } from "@/lib/appwrite";
-import { processPracticeSession } from "@/lib/appwrite/gamification";
+import { processPracticeSessionV5 } from "@/app/actions/v5/gamification";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Session too short, ignored" }, { status: 200 });
     }
 
-    const result = await processPracticeSession(userId, {
+    const result = await processPracticeSessionV5(userId, {
       projectId,
       durationMs,
       maxSpeed: maxSpeed || 1.0,

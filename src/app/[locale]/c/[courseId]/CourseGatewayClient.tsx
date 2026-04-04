@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { CourseDoc } from "@/lib/appwrite/courses";
-import { LessonDoc, getStudentProgress, ProgressDoc } from "@/lib/appwrite/lessons";
-import { checkEnrollment, createEnrollment } from "@/lib/appwrite/courses";
+import { CourseDoc } from "@/app/actions/v5/courses";
+import { LessonDoc, getStudentProgress, ProgressDoc } from "@/app/actions/v5/lessons";
+import { checkEnrollment, createEnrollment } from "@/app/actions/v5/courses";
 import { Link } from "@/i18n/routing";
 import { CheckCircle2, Lock, PlayCircle, Loader2 } from "lucide-react";
 import { useRouter } from "@/i18n/routing";

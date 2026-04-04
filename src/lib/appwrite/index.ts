@@ -28,22 +28,24 @@ export type {
   FollowDocument
 } from "./types";
 export {
-  createProject,
-  updateProject,
-  getProject,
-  listProjects,
-  listMyProjects,
-  listPublished,
-  deleteProject,
-  copyProjectToMine,
-  incrementPlayCount,
-  publishMyProject,
-  listFeatured,
-  listRecentlyPublished,
-  listTrending,
-  listMostFavorited,
-  setFeatured,
-} from "./projects";
+  createProjectV5 as createProject,
+  updateProjectV5 as updateProject,
+  getProjectV5 as getProject,
+  listProjectsV5 as listProjects,
+  listMyProjectsV5 as listMyProjects,
+  listPublishedV5 as listPublished,
+  deleteProjectV5 as deleteProject,
+  copyProjectToMineV5 as copyProjectToMine,
+  publishMyProjectV5 as publishMyProject,
+  listFeaturedV5 as listFeatured,
+  listRecentlyPublishedV5 as listRecentlyPublished,
+  listTrendingV5 as listTrending,
+  listMostFavoritedV5 as listMostFavorited,
+  incrementPlayCountV5 as incrementPlayCount,
+  setFeaturedV5 as setFeatured,
+  listProjectsByArtistV5 as listProjectsByArtist,
+  listProjectsByCompositionV5 as listProjectsByComposition
+} from "@/app/actions/v5/projects";
 export {
   uploadProjectFile,
   getFileViewUrl,

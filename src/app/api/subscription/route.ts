@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveSubscription } from "@/lib/appwrite/subscriptions";
+import { getActiveSubscription } from "@/app/actions/v5/subscriptions";
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
