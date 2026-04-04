@@ -23,7 +23,7 @@ Thẻ `ScoreCard` là thẻ Card đa hình chứa siêu dữ liệu của mỗi 
   - Đỏ (Advanced)
 - **Tương tác**: 
   - Nút Copy / Import: Clone cấu trúc Dữ liệu gốc về tài khoản cá nhân.
-  - Nút Favorite (Bookmark): Gắn `toggleFavorite` đẩy thẳng lên Appwrite Database. Kích hoạt State để cập nhật Icon rực lên màu Vàng.
+  - Nút Favorite (Bookmark): Gắn `toggleFavorite` đẩy thẳng lên Database (D1/Turso qua Server Actions). Kích hoạt State để cập nhật Icon rực lên màu Vàng.
   - Nút Play count: `project.playCount`.
 
 ## 3. Thuật toán Dedup Đa Cấp (Hybrid Deduplication)
@@ -34,7 +34,7 @@ Bởi vì một tác phẩm xuất sắc (Featured) thường cũng sẽ Mới N
 Nửa dưới của trang là khu vực Tìm Kiếm Mở (Deep Search):
 - Tích hợp `useDebounce` (chờ 400ms sau khi người dùng ngừng gõ tên nhạc phẩm mới bắn API Tìm kiếm lên CSDL).
 - Fetch động kho Wiki Nhạc Cụ (`wikiInstruments`) vàwiki Thể Loại (`wikiGenres`) sinh ra các phím kén bộ lọc (Filter Pills) xếp hàng ngang.
-- Tự động Reset bộ đếm phân trang (Pagination visibleCount) và Call lại Query Appwrite tuỳ chọn kết hợp (`Difficulty` AND `GenreId` AND `InstrumentId`).
+- Tự động Reset bộ đếm phân trang (Pagination visibleCount) và Call lại Server Action tuỳ chọn kết hợp (`Difficulty` AND `GenreId` AND `InstrumentId`).
 
 ## Unit Test & E2E Scenarios Đề Xuất
 - [x] **Test Render Gradient Card**: Truyền vào một Object project không chứa ảnh bìa (`coverUrl: null`, `name: "Symphony No. 5"`). Kỳ vọng render thẻ CSS tồn tại thuộc tính `style.background = linear-gradient(...)`.
