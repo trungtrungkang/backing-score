@@ -1,88 +1,88 @@
-# KIẾN TRÚC V5: INFRASTRUCTURE & AUTHENTICATION (D1 + BETTER-AUTH)
+# 01. Infrastructure & Authentication (V5)
 
-Tài liệu này xác định nền móng cơ sở hạ tầng (Infrastructure) và chiến lược xác thực (Authentication) cho phiên bản V5 của Backing & Score, đánh dấu sự dịch chuyển từ nền tảng Appwrite (Document/NoSQL) sang kiến trúc Cloudflare D1 (Serverless SQLite) và Better-Auth.
+Tài liệu này mô tả chi tiết về tầng kiến trúc hạ tầng và xác thực trong phiên bản V5 của hệ thống. Đây là cốt lõi nền tảng mà mọi modules khác đều được xây dựng phía trên.
 
-## 1. Cơ sở Hạ tầng Đầu Cuối (Edge Infrastructure)
+## Architecture Overview
 
-Kiến trúc V5 loại bỏ hoàn toàn sụ phụ thuộc vào một máy chủ trung tâm (như Appwrite hay Docker Server), và sử dụng 100% mạng lưới Edge (Mạng rải rác toàn cầu).
-
-- **Compute/Application Layer:** Next.js (App Router) chạy trên Vercel Edge hoặc Cloudflare Pages.
-- **Database Layer:** Cloudflare D1 (Serverless SQLite).
-- **Storage Layer:** Cloudflare R2 (Object Storage cho PDF, Audio, MusicXML).
-- **ORM:** Drizzle ORM (Trọng lượng siêu nhẹ, hỗ trợ native cho D1).
-
-*Lợi ích:* Chi phí lưu trữ gần như bằng không với gói Free tier khổng lồ, thời gian phản hồi (Latency) siêu tốc do Database nằm ngay cạnh người dùng. Hỗ trợ tốt nhất cho PWA và tính năng "Offline-First".
-
-## 2. Authentication: Better-Auth thay thế Appwrite Auth
-
-Thành phần quan trọng nhất khi loại bỏ Appwrite là chúng ta phải tự quản lý Identity. Chúng ta chọn **Better-Auth** làm bộ khung Authentication lõi. Khác với Clerk hay Auth0, Better-Auth không giữ Database người dùng của bạn. Dữ liệu nằm hoàn toàn trên bảng Database `users` của D1.
-
-### 2.1 Cấu trúc Bảng Auth trong D1 (Drizzle Schema)
-
-Theo chuẩn mặc định của Better-Auth, D1 phải có 4 bảng này làm xương sống:
-
-```typescript
-// src/db/schema/auth.ts
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-
-export const users = sqliteTable("users", {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    email: text("email").notNull().unique(),
-    emailVerified: integer("email_verified", { mode: "boolean" }).notNull(),
-    image: text("image"),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-    
-    // Custom field (Ánh xạ từ Appwrite Labels)
-    role: text("role", { enum: ["student", "teacher", "creator", "admin"] }).default("student"),
-});
-
-export const sessions = sqliteTable("sessions", {
-    // Session token để xác thực
-    id: text("id").primaryKey(),
-    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-    token: text("token").notNull().unique(),
-    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-});
-
-export const accounts = sqliteTable("accounts", {
-    // Quản lý đăng nhập Google, Github...
-    id: text("id").primaryKey(),
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    // ...
-});
+```mermaid
+graph TD
+    Client[Client Browser / App] --> |HTTP/HTTPS| Middleware[Next.js Middleware]
+    Middleware --> |Check Session| Auth[Better-Auth]
+    Auth --> |Query JWT/Session| DB[(Turso LibSQL)]
+    Client --> |API calls / Server Actions| NextJS[Next.js App Router]
+    NextJS --> |Server Actions| Drizzle[Drizzle ORM]
+    Drizzle --> |SQL queries| DB
+    NextJS --> |Uploads| R2[(Cloudflare R2 Bucket)]
+    NextJS --> |File Metadata| Drizzle
 ```
 
-### 2.2 Ánh xạ Phân Quyền (RBAC Mapping)
+## 1. Cơ sở dữ liệu: Turso (LibSQL) & Drizzle ORM
 
-Ở Appwrite V4, vai trò User được gán dưới dạng Mảng Nhãn (Labels: `admin`, `creator`, `contentmanager`). 
-Trong hệ thống D1 V5, việc quản lý nhãn trở nên tường minh hơn bằng cột `role` trong bảng `users`. Better-Auth hỗ trợ **Plugins: Organization / Role-Based Access Control** out-of-the-box, cho phép bạn check quyền trực tiếp ở Server Actions của Next.js bằng:
+V5 đã loại bỏ hoàn toàn Appwrite (Backend-as-a-Service) và chuyển dịch sang kiến trúc **Next.js Server Actions + Edge SQL**.
 
-```typescript
-const session = await auth.api.getSession({ headers });
-if (session?.user.role !== "admin") throw new Error("Chỉ admin mới vào được đây!");
+- **Turso (LibSQL)**: Một giải pháp Database Serverless tương thích với SQLite, tối ưu cho xử lý Edge với tốc độ cực nhanh và hỗ trợ sync offline.
+- **Drizzle ORM**: Thư viện ORM siêu nhẹ (Zero-dependencies), giúp chúng ta định nghĩa Schema của SQLite thành các bảng (tables) rõ ràng và Type-Safe hoàn toàn (TypeScript).
+
+### Cấu trúc thư mục DB
+- `src/db/schema/`: Nơi chứa toàn bộ định nghĩa các bảng của Database, được chia thành từng file theo Domain (VD: `auth.ts`, `social.ts`, v.v.).
+- `src/db/index.ts`: Khởi tạo cổng kết nối duy nhất (Client) tới Turso qua `@libsql/client`.
+- `drizzle.config.ts`: Cấu hình cho Drizzle-kit để nó biết phải đọc Schema từ đâu và push schema lên DB nào (Sử dụng Dialect là `turso`).
+
+### Truy xuất Database từ Server Hành động (Server Actions)
+Toàn bộ thao tác truy xuất DB được thực hiện ở Server Actions tại thư mục `src/app/actions/v5/`. 
+*Quy chuẩn bắt buộc*: Không viết Logic chọc DB trực tiếp trên Client (Components).
+
+Ví dụ:
+```ts
+import { getDb } from "@/db";
+import { users } from "@/db/schema/auth";
+import { eq } from "drizzle-orm";
+
+export async function getUserProfile(userId: string) {
+  const db = getDb();
+  const rs = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return rs[0];
+}
 ```
 
-## 3. Chiến lược Di Trú Zero-Downtime (Strangler Fig Pattern)
+## 2. Hệ thống Xác thực: Better-Auth
 
-Đây là điều cốt lõi giúp hệ thống chuyển đổi qua V5 mà 100% User cũ không nhận ra hệ thống đã được đập đi xây lại.
+V5 sử dụng **Better-Auth** làm hệ thống quản lý Identity và Session. Better-Auth kết nối trực tiếp với DB Turso của chúng ta để lưu thông tin Session và JWT.
 
-**Bước 1: Setup Hệ thống Song song**
-- Bản cài đặt của cả `src/lib/appwrite` và `src/lib/auth/better-auth` cùng tồn tại trong dự án.
+### Cấu trúc Auth
+- `src/lib/auth/better-auth.ts`: Khởi tạo Auth Client với Dialect SQLite, cắm Schema Drizzle vào. Nó thiết lập các tính năng xác thực cốt lõi.
+- Trình quản lý Middleware của Next.js sẽ kiểm tra Session thông qua `betterAuth` thay vì Appwrite SDK cũ.
 
-**Bước 2: Lazy Migration cho Cổng Đăng Nhập**
-- Tại Frontend, Form Đăng Nhập chặn luồng submit. Truy vấn đăng nhập email/password được gửi cho Better-Auth ở D1 làm trước.
-- **Nếu thất bại / Không tìm thấy tài khoản (User cũ của Appwrite chưa có dữ liệu bên D1):** 
-  - Gọi lên Appwrite `account.createEmailPasswordSession()`.
-  - Nhận về object Profile của Appwrite User.
-  - Chạy hàm mật Backend (từ BetterAuth) như `admin.createUser()` tự động bơm User ID cũ đó vào bảng `users` trên Database D1.
-  - Cắt JWT của Appwrite, tự phát sinh lại Session Cookie của BetterAuth.
-- Từ hôm sau, User đó login bằng tài khoản cũ, luồng Better-Auth D1 tự động xử lý thành công không cần đi tới bước gọi check Appwrite nữa.
+### Custom Fields (User Preferences)
+Vì User Table mặc định của BetterAuth là cứng, chúng ta mở rộng Profile bằng một bảng phụ mang tên `user_prefs` (trong `src/db/schema/auth.ts`). 
+- Bao gồm: `bio`, `birthday`, `gender`, `urls`.
+- Tại các Server Action, ta thường phải join giữa bảng `user` và `user_prefs` thông qua `userId`. Tính năng `getPublicProfile()` trong thư mục actions xử lý việc gom nhóm này.
 
-**Bước 3: Gỡ bỏ dứt điểm**
-- Chạy một kịch bản Data Dump (Export hàng nghìn users còn ngủ đông chua từng đăng nhập thử) từ bảng User của Appwrite chèn nốt vào D1 trong 1 đêm. Gỡ thư mục Appwrite Auth khỏi mã nguồn.
+## 3. Storage & Object Delivery: Cloudflare R2
+
+Để thay thế Appwrite Storage Bucket, hệ thống V5 sử dụng **Cloudflare R2** - Một dịch vụ lưu trữ Object S3-compatible không tính phí Egress băng thông ảo.
+
+### Tích hợp
+- `src/app/api/r2/upload/route.ts`: API nhận file Upload từ giao diện (Multipart form-data) thông qua `@aws-sdk/client-s3`.
+- Bucket mặc định kết nối thông qua URL S3.
+- Rất quan trọng: Những file tải lên là nhạc hoặc project XML có thể được bảo mật (dùng presigned URL) hoặc là Public cho phép truy cập. 
+- Mọi bản ghi về File đều được đồng bộ hóa tên, định dạng, dung lượng vào file `src/db/schema/assets.ts`. Lớp này hoạt động như Virtual File System, trong khi File cứng (Raw) nằm trên R2.
+
+### Sequence: Upload flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Client App
+    participant A as Next.js API (/api/r2/upload)
+    participant D as Turso (assets table)
+    participant R as Cloudflare R2
+
+    U->>C: Chọn file tải lên
+    C->>A: POST FormData
+    A->>R: s3Client.putObject()
+    R-->>A: Trả về ETag / Success
+    A->>D: db.insert(assets).values(...)
+    D-->>A: Trả về virtual ID
+    A-->>C: Trả về JSON { id, fileUrl }
+    C-->>U: Hiển thị file đã tải
+```
