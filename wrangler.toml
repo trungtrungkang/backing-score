@@ -1,7 +1,12 @@
 name = "backing-and-score"
 compatibility_date = "2024-03-29"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
+
+# Dành cho Workers Git Integration
+main = ".vercel/output/static/_worker.js"
+[assets]
+directory = ".vercel/output/static"
+
 
 # Đánh dấu đây là Database D1 chính phục vụ cho biến môi trường process.env.backing_score_prod
 [[d1_databases]]
