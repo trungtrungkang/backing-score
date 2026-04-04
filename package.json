@@ -93,6 +93,7 @@
     "wrangler": "^4.80.0"
   },
   "overrides": {
-    "next": "$next"
+    "next": "$next",
+    "@swc/helpers": "^0.5.17"
   }
 }
