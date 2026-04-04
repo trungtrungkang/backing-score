@@ -70,6 +70,8 @@
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
     "@cloudflare/workers-types": "^4.20260403.1",
+    "@emnapi/core": "^1.9.2",
+    "@emnapi/runtime": "^1.9.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
