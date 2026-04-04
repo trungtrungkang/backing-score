@@ -291,7 +291,10 @@ export default function FeedPage() {
           const fetched = await getComments(postId);
           const enrichedComments = await Promise.all(fetched.map(async (c) => {
              let authorProfile;
-             try { authorProfile = await getPublicProfile(c.authorId); } catch {}
+             try { 
+                const prof = await getPublicProfile(c.authorId); 
+                if (prof) authorProfile = prof;
+             } catch {}
              return { ...c, authorProfile };
           }));
           setPosts(prev => prev.map((p, i) => i === postIndex ? { ...p, comments: enrichedComments, loadingComments: false } : p));
@@ -307,7 +310,10 @@ export default function FeedPage() {
     try {
       const newC = await addComment(postId, commentText.trim());
       let authorProfile;
-      try { authorProfile = await getPublicProfile(user.$id); } catch {}
+      try { 
+         const prof = await getPublicProfile(user.$id); 
+         if (prof) authorProfile = prof;
+      } catch {}
       const enrichedNewC = { ...newC, authorProfile };
       setPosts(prev => prev.map((p, i) => i === postIndex ? { 
          ...p, 

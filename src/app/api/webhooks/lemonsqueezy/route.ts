@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
         // Fetch product mapping from our unified DB
         const product = await getProductByVariantId(orderVariantId);
         if (product) {
-          await logPurchase(orderId, userId, product.$id, amountCents, currency);
-          await grantEntitlement(userId, product.$id);
-          console.log(`[Webhook] ✅ Entitlement granted for User ${userId} on Product ${product.$id}`);
+          await logPurchase(orderId, userId, product.id, amountCents, currency);
+          await grantEntitlement(userId, product.id);
+          console.log(`[Webhook] ✅ Entitlement granted for User ${userId} on Product ${product.id}`);
         } else {
           console.warn(`[Webhook] ❌ Variant ${orderVariantId} not found in products table! Is it synced?`);
         }

@@ -9,12 +9,7 @@ import type { FavoriteDocument } from "@/lib/appwrite/types";
 // Auth helper
 async function requireUser(clientUserId?: string) {
   if (clientUserId) return clientUserId;
-  let env = process.env as any;
-  try {
-     const { getRequestContext } = await import('@cloudflare/next-on-pages');
-     env = getRequestContext().env || env;
-  } catch {}
-  const auth = getAuth(env);
+  const auth = getAuth(process.env as any);
   const { headers } = await import("next/headers");
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) throw new Error("Unauthorized");

@@ -43,12 +43,12 @@
     "@tonejs/midi": "^2.0.28",
     "@xmldom/xmldom": "^0.8.11",
     "better-auth": "^1.5.6",
-    "better-sqlite3": "^12.8.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "csv-parser": "^3.2.0",
     "drizzle-orm": "^0.45.2",
+    "@libsql/client": "latest",
     "jszip": "^3.10.1",
     "lamejs": "^1.2.1",
     "lucide-react": "^0.577.0",
@@ -68,14 +68,9 @@
     "verovio": "^6.1.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.16",
-    "@cloudflare/workers-types": "^4.20260403.1",
-    "@emnapi/core": "^1.9.2",
-    "@emnapi/runtime": "^1.9.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -83,7 +78,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
     "dotenv": "^17.3.1",
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.30.1",
     "eslint": "^9",
     "eslint-config-next": "^16.1.6",
     "jsdom": "^29.0.1",
@@ -91,8 +86,7 @@
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "vitest": "^4.1.0",
-    "wrangler": "^4.80.0"
+    "vitest": "^4.1.0"
   },
   "overrides": {
     "next": "$next",
