@@ -26,9 +26,11 @@ export interface ScoreEngineParams {
   onPayloadChange?: (payload: DAWPayload) => void;
   /** Explicit override for play mode. If undefined, falls back to payload's activePlayMode. */
   playModeOverride?: "audio" | "midi";
+  /** Callback for broadcasting LiveKit synchronization events */
+  onHostEvent?: (ev: {type: string; positionMs?: number; isPlaying?: boolean; tempo?: number}) => void;
 }
 
-export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange, playModeOverride }: ScoreEngineParams) {
+export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange, playModeOverride, onHostEvent }: ScoreEngineParams) {
   const engineId = useId();
   const audioManagerRef = useRef<AudioManager | null>(null);
   const endOfTrackTimeoutRef = useRef<NodeJS.Timeout | null>(null);

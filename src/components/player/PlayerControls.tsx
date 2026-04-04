@@ -81,6 +81,7 @@ interface PlayerControlsProps {
   rightSlot?: React.ReactNode;
   showVirtualKeyboard?: boolean;
   onVirtualKeyboardToggle?: (show: boolean) => void;
+  isStudentSyncBound?: boolean;
 }
 
 export function formatTime(ms: number) {
@@ -149,6 +150,7 @@ export function PlayerControls({
   onCollapseToggle,
   showVirtualKeyboard,
   onVirtualKeyboardToggle,
+  isStudentSyncBound,
 }: PlayerControlsProps) {
 
   const [localPos, setLocalPos] = useState(positionMs);
@@ -191,10 +193,14 @@ export function PlayerControls({
 
         {/* ROW 2: Google Docs-style Pill Toolbar */}
         <div className="w-full px-2 sm:px-4 pb-2">
-          <div className="flex flex-nowrap overflow-x-auto no-scrollbar items-center justify-start px-1.5 py-1 w-full bg-zinc-100/80 dark:bg-zinc-800/50 rounded-lg sm:rounded-full border border-zinc-200/80 dark:border-zinc-700/60 gap-1.5 sm:gap-2">
+          <div className="flex flex-nowrap overflow-x-auto no-scrollbar items-center justify-start px-1.5 py-1 w-full bg-zinc-100/80 dark:bg-zinc-800/50 rounded-lg sm:rounded-full border border-zinc-200/80 dark:border-zinc-700/60 gap-1.5 sm:gap-2 relative">
+            
+            {isStudentSyncBound && (
+              <div className="absolute inset-0 z-50 bg-transparent" title="Đang theo dõi Tốc độ & Chuẩn nhịp của Giáo viên" />
+            )}
 
             {/* MAIN PLAYBACK */}
-            <div className="flex items-center justify-center gap-0.5 sm:gap-1 pl-1 shrink-0 w-auto bg-transparent border-none p-0 z-[130]">
+            <div className={cn("flex items-center justify-center gap-0.5 sm:gap-1 pl-1 shrink-0 w-auto bg-transparent border-none p-0 z-[130]", isStudentSyncBound && "opacity-50 pointer-events-none")}>
             {playlistId && (
               <button
                 onClick={onPrev}
@@ -770,6 +776,7 @@ export function PlayerControls({
       <div className="w-full flex items-center px-4 sm:px-6 pb-2 -mt-1 gap-3 text-[10px] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400">
           <span className="w-10 text-right tabular-nums">{formatTime(positionMs)}</span>
           <div className="flex-1 relative group py-2">
+            {isStudentSyncBound && <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" title="Đang cuốn theo trang nhạc của Thầy giáo" />}
             <Slider
               value={[localPos]}
               min={0}

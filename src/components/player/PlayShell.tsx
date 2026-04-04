@@ -144,9 +144,13 @@ export interface PlayShellProps {
   forceWaitMode?: boolean;
   /** Active during Classroom Assignments: grant Halo Effect bypass */
   isAssignmentContext?: boolean;
+  /** Active during Classroom Assignments: grant Halo Effect bypass */
   isOwner?: boolean;
   onSaveNavMap?: (bookmarks: NavMapBookmark[], sequence: NavigationSequence) => Promise<void>;
   onPayloadChange?: (payload: DAWPayload) => void;
+  syncMode?: "host" | "guest";
+  incomingXmlCoords?: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number };
+  onBroadcastXmlCoords?: (coords: any) => void;
 }
 
 export function PlayShell({
@@ -168,6 +172,9 @@ export function PlayShell({
   isOwner = false,
   onSaveNavMap,
   onPayloadChange,
+  syncMode,
+  incomingXmlCoords,
+  onBroadcastXmlCoords,
 }: PlayShellProps) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark" || resolvedTheme === "system";
@@ -318,10 +325,47 @@ export function PlayShell({
     payload,
     autoplayOnLoad,
     onNext,
-    onPracticeComplete: (score) => { submitPracticeSession(score); }
+    onPracticeComplete: (score) => { submitPracticeSession(score); },
+    onPayloadChange,
+    onHostEvent: (ev: {type: string; positionMs?: number; isPlaying?: boolean; tempo?: number}) => {
+      if (syncMode === "host" && onBroadcastXmlCoords) {
+        onBroadcastXmlCoords({
+          ...ev,
+          tempo: payload.metadata?.tempo
+        });
+      }
+    }
   });
 
   useEffect(() => { scoreStateRef.current = state; }, [state]);
+
+  // Sync incoming remote state
+  useEffect(() => {
+    if (syncMode === "guest" && incomingXmlCoords) {
+      if (incomingXmlCoords.isPlaying !== state.isPlaying) {
+        if (incomingXmlCoords.isPlaying) actions.handlePlay();
+        else actions.handlePause();
+      }
+      if (Math.abs(incomingXmlCoords.positionMs - state.positionMs) > 500) {
+        actions.handleSeek(incomingXmlCoords.positionMs);
+      }
+    }
+  }, [incomingXmlCoords, syncMode, state.isPlaying, state.positionMs, actions]);
+
+  // Host Heartbeat
+  useEffect(() => {
+    if (syncMode !== "host" || !state.isPlaying || !onBroadcastXmlCoords) return;
+    const interval = setInterval(() => {
+      onBroadcastXmlCoords({
+        type: "heartbeat",
+        isPlaying: true,
+        positionMs: state.positionMs,
+        tempo: payload.metadata?.tempo
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [syncMode, state.isPlaying, state.positionMs, payload.metadata?.tempo, onBroadcastXmlCoords]);
+
   const recorder = useAudioRecorder();
 
   const { profile, loading: profileLoading } = useMicProfile();
@@ -615,6 +659,7 @@ export function PlayShell({
             isRecording: recorder.isRecording,
             onRecordToggle: handleRecordToggle,
           } : {})}
+          isStudentSyncBound={syncMode === 'guest'}
           leftSlot={
             <>
               <button onClick={handleBackClick} disabled={isNavigatingBack} className={cn("p-2 sm:p-2.5 shrink-0 rounded-full bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all", isNavigatingBack && "opacity-50 cursor-wait")}>

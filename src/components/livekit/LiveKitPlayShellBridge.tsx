@@ -7,8 +7,10 @@ import { PlayShell } from "@/components/player/PlayShell";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { CanvasOverlay } from "./CanvasOverlay";
+import { useUniversalSync } from "./UniversalSyncProvider";
 
 export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
+  const { role, latestXmlCoordinates, broadcastPayload } = useUniversalSync();
   const [project, setProject] = useState<ProjectDocument | null>(null);
   const [payload, setPayload] = useState<DAWPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,11 @@ export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
         projectName={project.name}
         payload={payload}
         isAssignmentContext={true} // bypass pro restrictions during classroom
+        syncMode={role === "teacher" ? "host" : "guest"}
+        incomingXmlCoords={latestXmlCoordinates || undefined}
+        onBroadcastXmlCoords={(coords) => {
+           broadcastPayload({ type: "SYNC_XML", xmlCoords: coords });
+        }}
       />
 
       {/* Canvas Overlay covers the exact bounds for Drawing logic! */}

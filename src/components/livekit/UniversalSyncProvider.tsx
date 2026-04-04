@@ -10,7 +10,7 @@ export type SyncPayload = {
   projectId?: string;
   projectType?: "pdf" | "musicxml";
   pdfCoords?: any;
-  xmlCoords?: any;
+  xmlCoords?: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number };
   action?: string;
   points?: any;
   color?: string;
@@ -24,7 +24,7 @@ interface SyncState {
   activeProjectId: string | null;
   activeProjectType: "pdf" | "musicxml" | null;
   latestPdfCoordinates: { pageIndex: number; scrollY: number } | null;
-  latestXmlCoordinates: { measure: number; beat: number; tempo: number; isPlaying: boolean } | null;
+  latestXmlCoordinates: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number } | null;
   drawings: any[];
 }
 
