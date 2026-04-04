@@ -1,0 +1,270 @@
+2026-04-04T07:41:47.655Z	Initializing build environment...
+2026-04-04T07:41:49.524Z	Success: Finished initializing build environment
+2026-04-04T07:41:50.694Z	Cloning repository...
+2026-04-04T07:41:53.159Z	Detected the following tools from environment: npm@10.9.2, nodejs@22.16.0
+2026-04-04T07:41:53.162Z	Restoring from dependencies cache
+2026-04-04T07:41:53.164Z	Restoring from build output cache
+2026-04-04T07:41:53.351Z	Installing project dependencies: npm clean-install --progress=false
+2026-04-04T07:41:58.606Z	npm warn deprecated path-match@1.2.4: This package is archived and no longer maintained. For support, visit https://github.com/expressjs/express/discussions
+2026-04-04T07:41:58.706Z	npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-04-04T07:41:59.267Z	npm warn deprecated tar@6.2.1: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-04-04T07:42:03.231Z	npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+2026-04-04T07:42:03.322Z	npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+2026-04-04T07:42:03.377Z	npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-04-04T07:41:47.655Z	Initializing build environment...
+2026-04-04T07:41:49.524Z	Success: Finished initializing build environment
+2026-04-04T07:41:50.694Z	Cloning repository...
+2026-04-04T07:41:53.159Z	Detected the following tools from environment: npm@10.9.2, nodejs@22.16.0
+2026-04-04T07:41:53.162Z	Restoring from dependencies cache
+2026-04-04T07:41:53.164Z	Restoring from build output cache
+2026-04-04T07:41:53.351Z	Installing project dependencies: npm clean-install --progress=false
+2026-04-04T07:41:58.606Z	npm warn deprecated path-match@1.2.4: This package is archived and no longer maintained. For support, visit https://github.com/expressjs/express/discussions
+2026-04-04T07:41:58.706Z	npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-04-04T07:41:59.267Z	npm warn deprecated tar@6.2.1: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-04-04T07:42:03.231Z	npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+2026-04-04T07:42:03.322Z	npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+2026-04-04T07:42:03.377Z	npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-04-04T07:42:07.369Z	npm warn deprecated @cloudflare/next-on-pages@1.13.16: Please use the OpenNext adapter instead: https://opennext.js.org/cloudflare
+2026-04-04T07:42:28.583Z	
+2026-04-04T07:42:28.583Z	added 1185 packages, and audited 1186 packages in 35s
+2026-04-04T07:42:28.583Z	
+2026-04-04T07:42:28.584Z	270 packages are looking for funding
+2026-04-04T07:42:28.584Z	  run `npm fund` for details
+2026-04-04T07:42:28.673Z	
+2026-04-04T07:42:28.674Z	25 vulnerabilities (2 low, 16 moderate, 7 high)
+2026-04-04T07:42:28.674Z	
+2026-04-04T07:42:28.674Z	To address issues that do not require attention, run:
+2026-04-04T07:42:28.674Z	  npm audit fix
+2026-04-04T07:42:28.674Z	
+2026-04-04T07:42:28.674Z	To address all issues possible (including breaking changes), run:
+2026-04-04T07:42:28.674Z	  npm audit fix --force
+2026-04-04T07:42:28.674Z	
+2026-04-04T07:42:28.674Z	Some issues need review, and may require choosing
+2026-04-04T07:42:28.674Z	a different dependency.
+2026-04-04T07:42:28.674Z	
+2026-04-04T07:42:28.674Z	Run `npm audit` for details.
+2026-04-04T07:42:28.866Z	Executing user build command: npx @cloudflare/next-on-pages@1
+2026-04-04T07:42:29.732Z	⚡️ @cloudflare/next-on-pages CLI v.1.13.16
+2026-04-04T07:42:29.886Z	⚡️ Detected Package Manager: npm (10.9.2)
+2026-04-04T07:42:29.887Z	⚡️ Preparing project...
+2026-04-04T07:42:29.889Z	⚡️ Project is ready
+2026-04-04T07:42:29.889Z	⚡️ Building project...
+2026-04-04T07:42:30.668Z	▲  Vercel CLI 47.0.4
+2026-04-04T07:42:30.675Z	▲  > NOTE: The Vercel CLI now collects telemetry regarding usage of the CLI.
+2026-04-04T07:42:30.675Z	▲  > This information is used to shape the CLI roadmap and prioritize features.
+2026-04-04T07:42:30.676Z	▲  > You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:
+2026-04-04T07:42:30.676Z	▲  > https://vercel.com/docs/cli/about-telemetry
+2026-04-04T07:42:30.799Z	▲  WARN! Build not running on Vercel. System environment variables will not be available.
+2026-04-04T07:42:31.146Z	▲  Installing dependencies...
+2026-04-04T07:42:33.203Z	▲  up to date in 2s
+2026-04-04T07:42:33.204Z	▲  270 packages are looking for funding
+2026-04-04T07:42:33.204Z	▲  run `npm fund` for details
+2026-04-04T07:42:33.220Z	▲  Detected Next.js version: 16.2.2
+2026-04-04T07:42:33.229Z	▲  Running "npm run build"
+2026-04-04T07:42:33.389Z	▲  > backing-and-score@0.1.0 build
+2026-04-04T07:42:33.389Z	▲  > next build --webpack
+2026-04-04T07:42:34.651Z	▲  Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2026-04-04T07:42:34.653Z	▲  This information is used to shape Next.js' roadmap and prioritize features.
+2026-04-04T07:42:34.653Z	▲  You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-04-04T07:42:34.653Z	▲  https://nextjs.org/telemetry
+2026-04-04T07:42:34.769Z	▲  ▲ Next.js 16.2.2 (webpack)
+2026-04-04T07:42:34.769Z	▲  - Environments: .env
+2026-04-04T07:42:34.769Z	▲  
+2026-04-04T07:42:34.842Z	▲  ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+2026-04-04T07:42:34.913Z	▲  Creating an optimized production build ...
+2026-04-04T07:43:16.602Z	▲  <w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of /opt/buildhome/repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js for build dependencies failed at 'import(t)'.
+2026-04-04T07:43:16.602Z	▲  <w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+2026-04-04T07:43:29.611Z	▲  <w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of /opt/buildhome/repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js for build dependencies failed at 'import(t)'.
+2026-04-04T07:43:29.611Z	▲  <w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+2026-04-04T07:43:56.188Z	▲  <w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Parsing of /opt/buildhome/repo/node_modules/next-intl/dist/esm/production/extractor/format/index.js for build dependencies failed at 'import(t)'.
+2026-04-04T07:43:56.189Z	▲  <w> Build dependencies behind this expression are ignored and might cause incorrect cache invalidation.
+2026-04-04T07:44:03.392Z	▲  ✓ Compiled successfully in 88s
+2026-04-04T07:44:03.409Z	▲  Running TypeScript ...
+2026-04-04T07:44:26.515Z	▲  Finished TypeScript in 23.1s ...
+2026-04-04T07:44:26.523Z	▲  Collecting page data using 1 worker ...
+2026-04-04T07:44:36.878Z	▲  Generating static pages using 1 worker (0/19) ...
+2026-04-04T07:44:37.343Z	▲  Generating static pages using 1 worker (4/19) 
+2026-04-04T07:44:37.344Z	▲  Generating static pages using 1 worker (9/19)
+2026-04-04T07:44:37.345Z	▲  Generating static pages using 1 worker (14/19) 
+2026-04-04T07:44:37.345Z	▲  ✓ Generating static pages using 1 worker (19/19) in 466ms
+2026-04-04T07:44:38.460Z	▲  Finalizing page optimization ...
+2026-04-04T07:44:38.460Z	▲  Collecting build traces ...
+2026-04-04T07:44:49.242Z	▲  
+2026-04-04T07:44:49.245Z	▲  Route (app)
+2026-04-04T07:44:49.245Z	▲  ┌ ○ /_not-found
+2026-04-04T07:44:49.246Z	▲  ├ ƒ /[locale]
+2026-04-04T07:44:49.246Z	▲  ├ ƒ /[locale]/about
+2026-04-04T07:44:49.246Z	▲  ├ ƒ /[locale]/admin
+2026-04-04T07:44:49.246Z	▲  ├ ƒ /[locale]/admin/featured
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/admin/import
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/admin/review
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/admin/wiki
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/c/[courseId]
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/c/[courseId]/[lessonId]
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom/[id]
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom/[id]/assign
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom/[id]/assignment/[aid]
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom/create
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/classroom/join/[code]
+2026-04-04T07:44:49.247Z	▲  ├ ƒ /[locale]/collection/[playlistId]
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/collection/[playlistId]/settings
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/admin/cms
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/analytics
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/classrooms
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/classrooms/[classroomId]/manage
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/collections
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/courses
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/courses/[courseId]/edit
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/courses/creator
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/favorites
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/join
+2026-04-04T07:44:49.248Z	▲  ├ ƒ /[locale]/dashboard/pdfs
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/dashboard/pdfs/setlist/[id]
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/dashboard/pdfs/setlist/[id]/edit
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/dashboard/pdfs/setlists
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/dashboard/pdfs/view/[id]
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/discover
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/embed
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/feed
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/feed/post/[postId]
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/guide
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/live/[projectId]
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/login
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/p/[projectId]
+2026-04-04T07:44:49.249Z	▲  ├ ƒ /[locale]/play/[projectId]
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/pricing
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/s
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/signup
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/u/[userId]
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/user-guide
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/verify
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki/artists
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki/artists/[slug]
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki/compositions
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki/compositions/[slug]
+2026-04-04T07:44:49.250Z	▲  ├ ƒ /[locale]/wiki/genres
+2026-04-04T07:44:49.253Z	▲  ├ ƒ /[locale]/wiki/genres/[slug]
+2026-04-04T07:44:49.255Z	▲  ├ ƒ /[locale]/wiki/instruments
+2026-04-04T07:44:49.257Z	▲  ├ ƒ /[locale]/wiki/instruments/[slug]
+2026-04-04T07:44:49.257Z	▲  ├ ƒ /api/ai-enrich
+2026-04-04T07:44:49.257Z	▲  ├ ƒ /api/auth/[...all]
+2026-04-04T07:44:49.257Z	▲  ├ ƒ /api/auth/migrate
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/checkout
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/files/[fileId]
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/gamification/daily-challenge
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/gamification/session
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/import-musicxml
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/import-musicxml/preview
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/r2/delete
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/r2/download/[...fileId]
+2026-04-04T07:44:49.261Z	▲  ├ ƒ /api/r2/migrate
+2026-04-04T07:44:49.262Z	▲  ├ ƒ /api/r2/upload
+2026-04-04T07:44:49.262Z	▲  ├ ƒ /api/reports
+2026-04-04T07:44:49.262Z	▲  ├ ƒ /api/subscription
+2026-04-04T07:44:49.262Z	▲  ├ ƒ /api/subscription/sync
+2026-04-04T07:44:49.262Z	▲  ├ ƒ /api/webhooks/lemonsqueezy
+2026-04-04T07:44:49.269Z	▲  ├ ƒ /api/wiki-search
+2026-04-04T07:44:49.269Z	▲  ├ ○ /apple-icon.png
+2026-04-04T07:44:49.269Z	▲  ├ ○ /icon.png
+2026-04-04T07:44:49.269Z	▲  ├ ○ /robots.txt
+2026-04-04T07:44:49.269Z	▲  └ ○ /sitemap.xml
+2026-04-04T07:44:49.269Z	▲  
+2026-04-04T07:44:49.269Z	▲  
+2026-04-04T07:44:49.270Z	▲  ƒ Proxy (Middleware)
+2026-04-04T07:44:49.270Z	▲  ○  (Static)   prerendered as static content
+2026-04-04T07:44:49.270Z	▲  ƒ  (Dynamic)  server-rendered on demand
+2026-04-04T07:44:50.074Z	▲  Traced Next.js server files in: 423.62ms
+2026-04-04T07:44:51.873Z	▲  Created all serverless functions in: 1.797s
+2026-04-04T07:44:51.981Z	▲  Collected static files (public/, static/, .next/static): 22.068ms
+2026-04-04T07:44:52.125Z	▲  Build Completed in .vercel/output [2m]
+2026-04-04T07:44:52.338Z	⚡️ Completed `npx vercel build`.
+2026-04-04T07:44:53.498Z	
+2026-04-04T07:44:53.499Z	⚡️ ERROR: Failed to produce a Cloudflare Pages build from the project.
+2026-04-04T07:44:53.499Z	⚡️ 
+2026-04-04T07:44:53.499Z	⚡️ 	The following routes were not configured to run with the Edge Runtime:
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/about
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/admin/featured
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/admin/import
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/admin/review
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/admin/wiki
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/admin
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/c/[courseId]/[lessonId]
+2026-04-04T07:44:53.499Z	⚡️ 	  - /[locale]/c/[courseId]
+2026-04-04T07:44:53.500Z	⚡️ 	  - /[locale]/classroom/[id]/assign
+2026-04-04T07:44:53.500Z	⚡️ 	  - /[locale]/classroom/[id]/assignment/[aid]
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/classroom/[id]
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/classroom/create
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/classroom/join/[code]
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/classroom
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/collection/[playlistId]/settings
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/collection/[playlistId]
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/admin/cms
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/analytics
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/classrooms/[classroomId]/manage
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/classrooms
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/collections
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/courses/[courseId]/edit
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/courses/creator
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/courses
+2026-04-04T07:44:53.501Z	⚡️ 	  - /[locale]/dashboard/favorites
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/join
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/pdfs/setlist/[id]/edit
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/pdfs/setlist/[id]
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/pdfs/setlists
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/pdfs/view/[id]
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard/pdfs
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/dashboard
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/discover
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/embed
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/feed/post/[postId]
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/feed
+2026-04-04T07:44:53.502Z	⚡️ 	  - /[locale]/guide
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/live/[projectId]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/login
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/p/[projectId]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/play/[projectId]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/pricing
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/s
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/signup
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/u/[userId]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/user-guide
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/verify
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/artists/[slug]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/artists
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/compositions/[slug]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/compositions
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/genres/[slug]
+2026-04-04T07:44:53.503Z	⚡️ 	  - /[locale]/wiki/genres
+2026-04-04T07:44:53.504Z	⚡️ 	  - /[locale]/wiki/instruments/[slug]
+2026-04-04T07:44:53.504Z	⚡️ 	  - /[locale]/wiki/instruments
+2026-04-04T07:44:53.504Z	⚡️ 	  - /[locale]/wiki
+2026-04-04T07:44:53.504Z	⚡️ 	  - /[locale]
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/ai-enrich
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/auth/[...all]
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/auth/migrate
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/checkout
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/files/[fileId]
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/gamification/daily-challenge
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/gamification/session
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/import-musicxml/preview
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/import-musicxml
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/r2/delete
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/r2/download/[...fileId]
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/r2/migrate
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/r2/upload
+2026-04-04T07:44:53.504Z	⚡️ 	  - /api/reports
+2026-04-04T07:44:53.505Z	⚡️ 	  - /api/subscription/sync
+2026-04-04T07:44:53.505Z	⚡️ 	  - /api/subscription
+2026-04-04T07:44:53.505Z	⚡️ 	  - /api/webhooks/lemonsqueezy
+2026-04-04T07:44:53.505Z	⚡️ 	  - /api/wiki-search
+2026-04-04T07:44:53.505Z	⚡️ 
+2026-04-04T07:44:53.506Z	⚡️ 	Please make sure that all your non-static routes export the following edge runtime route segment config:
+2026-04-04T07:44:53.506Z	⚡️ 	  export const runtime = 'edge';
+2026-04-04T07:44:53.506Z	⚡️ 
+2026-04-04T07:44:53.506Z	⚡️ 	You can read more about the Edge Runtime on the Next.js documentation:
+2026-04-04T07:44:53.506Z	⚡️ 	  https://nextjs.org/docs/app/building-your-application/rendering/edge-and-nodejs-runtimes
+2026-04-04T07:44:53.506Z	
+2026-04-04T07:44:53.548Z	Failed: error occurred while running build command
