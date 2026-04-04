@@ -1,10 +1,11 @@
-export {
-    listMyPlaylistsV5 as listMyPlaylists,
-    listPublishedPlaylistsV5 as listPublishedPlaylists,
-    getPlaylistV5 as getPlaylist,
-    createPlaylistV5 as createPlaylist,
-    updatePlaylistV5 as updatePlaylist,
-    deletePlaylistV5 as deletePlaylist,
-    addProjectToPlaylistV5 as addProjectToPlaylist,
-    removeProjectFromPlaylistV5 as removeProjectFromPlaylist
-} from "@/app/actions/v5/playlists";
+import * as PlaylistActions from "@/app/actions/v5/playlists";
+import { withDedup } from "../promise-dedup";
+
+export const listMyPlaylists = withDedup("listMyPlaylists", PlaylistActions.listMyPlaylistsV5);
+export const listPublishedPlaylists = withDedup("listPublishedPlaylists", PlaylistActions.listPublishedPlaylistsV5);
+export const getPlaylist = PlaylistActions.getPlaylistV5;
+export const createPlaylist = PlaylistActions.createPlaylistV5;
+export const updatePlaylist = PlaylistActions.updatePlaylistV5;
+export const deletePlaylist = PlaylistActions.deletePlaylistV5;
+export const addProjectToPlaylist = PlaylistActions.addProjectToPlaylistV5;
+export const removeProjectFromPlaylist = PlaylistActions.removeProjectFromPlaylistV5;

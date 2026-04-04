@@ -8,11 +8,14 @@ import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslations } from "next-intl";
 import {
-  listMyNotifications,
+  listMyNotifications as fetchMyNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationDoc,
 } from "@/app/actions/notifications";
+import { withDedup } from "@/lib/promise-dedup";
+
+const listMyNotifications = withDedup("listMyNotifications", fetchMyNotifications);
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -45,7 +48,7 @@ export function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.$id]);
 
   useEffect(() => {
     loadNotifications();
@@ -53,10 +56,10 @@ export function NotificationBell() {
 
   // Poll for new notifications every 30 seconds
   useEffect(() => {
-    if (!user) return;
+    if (!user?.$id) return;
     const interval = setInterval(loadNotifications, 30_000);
     return () => clearInterval(interval);
-  }, [user, loadNotifications]);
+  }, [user?.$id, loadNotifications]);
 
   // Handle mark all read
   const handleMarkAllRead = async () => {

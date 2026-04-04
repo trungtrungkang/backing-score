@@ -37,10 +37,10 @@ export default function Home() {
                 {t('btnExplore')}
               </Button>
             </Link>
-            <Link href="/academy">
-              {/* Secondary EdTech call to action */}
+            <Link href="/dashboard/classrooms">
+              {/* Secondary EdTech call to action - Private Classrooms */}
               <Button size="lg" variant="outline" className="bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full px-10 py-7 h-auto text-lg w-full sm:w-auto font-bold backdrop-blur-md transition-all">
-                {t('btnAcademy')}
+                LMS / Classrooms
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
@@ -161,8 +161,8 @@ export default function Home() {
               <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed mb-8">
                 {t('f2Desc')}
               </p>
-              <Link href="/academy" className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
-                {t('f2Link')} <ArrowRight className="w-4 h-4" />
+              <Link href="/dashboard/classrooms" className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
+                Teacher Dashboard <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="w-full md:w-1/2">
@@ -315,7 +315,6 @@ export default function Home() {
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/about" className="hover:text-zinc-900 dark:hover:text-white transition-colors">About</Link>
             <Link href="/discover" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Discover</Link>
-            <Link href="/academy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Academy</Link>
             <Link href="/wiki" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Wiki</Link>
             <Link href="/user-guide" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Guide</Link>
           </nav>

@@ -61,7 +61,8 @@ import {
   EyeOff,
   X,
   CheckSquare,
-  Square
+  Square,
+  Globe
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -118,11 +119,11 @@ export function DriveManager() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.$id]);
 
   useEffect(() => {
-    if (!authLoading && user) loadData();
-  }, [authLoading, user, loadData]);
+    if (!authLoading && user?.$id) loadData();
+  }, [authLoading, user?.$id, loadData]);
 
   const toggleSelection = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -364,6 +365,39 @@ export function DriveManager() {
       {/* Header controls layout can go here if needed, but in our design Dashboard injects the header. We'll include standalone toolbar */}
       <div className="flex flex-col gap-6 p-6">
         
+        {/* Stats Summary */}
+        {!loading && projects.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 md:gap-4 mb-2">
+            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Music4 className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.length}</div>
+                <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("totalProjects")}</div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+                <Globe className="w-4 h-4 text-green-500" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.filter(p => p.published).length}</div>
+                <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("publishedCount")}</div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-4 md:px-5 flex items-center gap-3 shadow-sm">
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+                <PlaySquare className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-lg md:text-xl font-black text-zinc-900 dark:text-white truncate">{projects.reduce((sum, p) => sum + ((p as any).playCount || 0), 0)}</div>
+                <div className="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-500 font-bold truncate">{t("totalPlays")}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Upload Progress */}
         {uploadProgress && (
           <div className="bg-zinc-100 dark:bg-zinc-800/80 rounded-xl p-4 flex items-center justify-between shadow-sm">

@@ -320,7 +320,7 @@ export default function DiscoverPage() {
     }
 
     loadSections();
-  }, [user]);
+  }, [user?.$id]);
 
   // Load "All scores" section (with filters)
   useEffect(() => {

@@ -17,9 +17,11 @@ export async function createSheetFolder(name: string, parentFolderId?: string | 
   return D1.createProjectFolderV5(name, parentFolderId, await getUserIdFallback()) as unknown as SheetMusicFolderDocument;
 }
 
-export async function listSheetFolders(): Promise<SheetMusicFolderDocument[]> {
+import { withDedup } from "../promise-dedup";
+
+export const listSheetFolders = withDedup("listSheetFolders", async function listSheetFolders(): Promise<SheetMusicFolderDocument[]> {
   return D1.listProjectFoldersV5(await getUserIdFallback()) as unknown as SheetMusicFolderDocument[];
-}
+});
 
 export async function updateSheetFolder(folderId: string, name: string): Promise<SheetMusicFolderDocument> {
   return D1.updateProjectFolderV5(folderId, name, undefined, await getUserIdFallback()) as unknown as SheetMusicFolderDocument;

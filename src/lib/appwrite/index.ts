@@ -27,25 +27,26 @@ export type {
   ReactionDocument,
   FollowDocument
 } from "./types";
-export {
-  createProjectV5 as createProject,
-  updateProjectV5 as updateProject,
-  getProjectV5 as getProject,
-  listProjectsV5 as listProjects,
-  listMyProjectsV5 as listMyProjects,
-  listPublishedV5 as listPublished,
-  deleteProjectV5 as deleteProject,
-  copyProjectToMineV5 as copyProjectToMine,
-  publishMyProjectV5 as publishMyProject,
-  listFeaturedV5 as listFeatured,
-  listRecentlyPublishedV5 as listRecentlyPublished,
-  listTrendingV5 as listTrending,
-  listMostFavoritedV5 as listMostFavorited,
-  incrementPlayCountV5 as incrementPlayCount,
-  setFeaturedV5 as setFeatured,
-  listProjectsByArtistV5 as listProjectsByArtist,
-  listProjectsByCompositionV5 as listProjectsByComposition
-} from "@/app/actions/v5/projects";
+import * as ProjectActions from "@/app/actions/v5/projects";
+import { withDedup } from "@/lib/promise-dedup";
+
+export const createProject = ProjectActions.createProjectV5;
+export const updateProject = ProjectActions.updateProjectV5;
+export const getProject = withDedup("getProject", ProjectActions.getProjectV5);
+export const listProjects = withDedup("listProjects", ProjectActions.listProjectsV5);
+export const listMyProjects = withDedup("listMyProjects", ProjectActions.listMyProjectsV5);
+export const listPublished = withDedup("listPublished", ProjectActions.listPublishedV5);
+export const deleteProject = ProjectActions.deleteProjectV5;
+export const copyProjectToMine = ProjectActions.copyProjectToMineV5;
+export const publishMyProject = ProjectActions.publishMyProjectV5;
+export const listFeatured = withDedup("listFeatured", ProjectActions.listFeaturedV5);
+export const listRecentlyPublished = withDedup("listRecentlyPublished", ProjectActions.listRecentlyPublishedV5);
+export const listTrending = withDedup("listTrending", ProjectActions.listTrendingV5);
+export const listMostFavorited = withDedup("listMostFavorited", ProjectActions.listMostFavoritedV5);
+export const incrementPlayCount = ProjectActions.incrementPlayCountV5;
+export const setFeatured = ProjectActions.setFeaturedV5;
+export const listProjectsByArtist = withDedup("listProjectsByArtist", ProjectActions.listProjectsByArtistV5);
+export const listProjectsByComposition = withDedup("listProjectsByComposition", ProjectActions.listProjectsByCompositionV5);
 export {
   uploadProjectFile,
   getFileViewUrl,

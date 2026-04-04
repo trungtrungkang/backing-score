@@ -2,6 +2,9 @@
 
 Đây là luồng tổ hợp nghiệp vụ phức tạp nhất của dự án, nối liền quyền tác giả (Giáo viên) với không gian đệ trình (Học viên).
 
+> [!WARNING]
+> **Khấu hao tính năng Public Academy**
+> Tính năng khóa học đại trà (Academy Menu) hiện tại đã bị gỡ bỏ khỏi dự án để tập trung mạnh hơn cho mảng B2B. Toàn bộ tính năng liên quan đến bài giảng, khóa học, lộ trình giờ đây được chuyển vào mô hình Nhóm Kín thông qua **LMS Classrooms** do Giáo viên tự thu phí/bảo mật.
 ## 1. Flow: Tạo Lớp học & Đóng Gói Khóa Học (Teacher View)
 
 ### UI/UX Route: `/dashboard/classrooms`

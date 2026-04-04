@@ -17,9 +17,11 @@ export async function createProjectFolder(name: string, parentFolderId?: string 
   return D1.createProjectFolderV5(name, parentFolderId, await getUserIdFallback());
 }
 
-export async function listProjectFolders(): Promise<ProjectFolderDocument[]> {
+import { withDedup } from "../promise-dedup";
+
+export const listProjectFolders = withDedup("listProjectFolders", async function listProjectFolders(): Promise<ProjectFolderDocument[]> {
   return D1.listProjectFoldersV5(await getUserIdFallback());
-}
+});
 
 export async function updateProjectFolder(folderId: string, name?: string, parentFolderId?: string | null): Promise<ProjectFolderDocument> {
   return D1.updateProjectFolderV5(folderId, name, parentFolderId, await getUserIdFallback());

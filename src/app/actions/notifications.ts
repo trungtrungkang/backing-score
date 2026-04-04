@@ -57,15 +57,21 @@ export async function createNotificationAction(data: {
 }
 
 export async function listMyNotifications(userId: string, limitNum: number = 20) {
-  const db = getDb();
-  // Map row to legacy NotificationDoc format
-  const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limitNum);
-  return rows.map((r: any) => ({
-    ...r,
-    $id: r.id,
-    $createdAt: new Date(r.createdAt).toISOString(),
-    recipientId: r.userId
-  }));
+  if (!userId) return [];
+  
+  try {
+    const db = getDb();
+    const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limitNum);
+    return rows.map((r: any) => ({
+      ...r,
+      $id: r.id,
+      $createdAt: new Date(r.createdAt).toISOString(),
+      recipientId: r.userId
+    }));
+  } catch (error) {
+    console.error("[listMyNotifications] Error fetching notifications:", error);
+    return [];
+  }
 }
 
 export async function markNotificationRead(notificationId: string) {

@@ -14,15 +14,28 @@ async function requireUser() {
 }
 
 export async function getUserStatsV5(providedUserId?: string) {
-   const userId = providedUserId || await requireUser();
-   const db = getDb();
-   const q = await db.select().from(userStats).where(eq(userStats.userId, userId)).limit(1);
-   if (q.length === 0) {
-     // Create initial stats
-     await db.insert(userStats).values({ userId, totalXp: 0, level: 1, currentStreak: 0, longestStreak: 0, totalPracticeMs: 0 });
-     return (await db.select().from(userStats).where(eq(userStats.userId, userId)).limit(1))[0];
+   let userId = providedUserId;
+   if (!userId) {
+     try {
+       userId = await requireUser();
+     } catch (e) {
+       return null;
+     }
    }
-   return q[0];
+   
+   try {
+     const db = getDb();
+     const q = await db.select().from(userStats).where(eq(userStats.userId, userId)).limit(1);
+     if (q.length === 0) {
+       // Create initial stats
+       await db.insert(userStats).values({ userId, totalXp: 0, level: 1, currentStreak: 0, longestStreak: 0, totalPracticeMs: 0 });
+       return (await db.select().from(userStats).where(eq(userStats.userId, userId)).limit(1))[0];
+     }
+     return q[0];
+   } catch (error) {
+     console.error("[getUserStatsV5] Error fetching stats:", error);
+     return null;
+   }
 }
 
 export async function processPracticeSessionV5(userId: string, data: {

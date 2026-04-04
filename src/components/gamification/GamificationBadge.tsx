@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserStatsV5 } from "@/app/actions/v5/gamification";
+import { withDedup } from "@/lib/promise-dedup";
+
+const getUserStats = withDedup("getUserStats", getUserStatsV5);
 
 export function GamificationBadge() {
   const { user } = useAuth();
@@ -12,7 +15,7 @@ export function GamificationBadge() {
   const fetchStats = async () => {
     if (!user?.$id) return;
     try {
-      const stat = await getUserStatsV5();
+      const stat = await getUserStats();
       if (stat) {
         setStats({
           level: stat.level,
@@ -27,7 +30,7 @@ export function GamificationBadge() {
 
   useEffect(() => {
     fetchStats();
-  }, [user]);
+  }, [user?.$id]);
 
   useEffect(() => {
     const handleXpEarned = () => {
@@ -35,7 +38,7 @@ export function GamificationBadge() {
     };
     window.addEventListener("gamification-xp-earned", handleXpEarned);
     return () => window.removeEventListener("gamification-xp-earned", handleXpEarned);
-  }, [user]);
+  }, [user?.$id]);
 
   if (!stats) return null;
 

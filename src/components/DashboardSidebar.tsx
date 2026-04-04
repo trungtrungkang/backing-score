@@ -562,7 +562,7 @@ export function DashboardSidebar({ mobileOpen, onMobileClose, onDropSheet }: { m
     } catch {
       /* silent */
     }
-  }, [user]);
+  }, [user?.$id]);
 
   useEffect(() => {
     loadFolders();
