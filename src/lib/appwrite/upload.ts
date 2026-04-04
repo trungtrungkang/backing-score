@@ -1,5 +1,3 @@
-import { account, getAuthToken } from "./client";
-import { isAppwriteConfigured } from "./constants";
 import * as D1 from "@/app/actions/v5/assets";
 
 const ALLOWED_EXTENSIONS = [
@@ -25,16 +23,6 @@ const ALLOWED_EXTENSIONS = [
 function getExtension(filename: string): string {
   const last = filename.split(".").pop();
   return last ? last.toLowerCase() : "";
-}
-
-async function getUserIdFallback() {
-  if (!isAppwriteConfigured()) return undefined;
-  try {
-    const user = await account.get();
-    return user.$id;
-  } catch {
-    return undefined;
-  }
 }
 
 export async function uploadProjectFile(
@@ -85,7 +73,7 @@ export async function uploadProjectFile(
 
   // Register Asset in Database (Storage Management V5 to D1)
   try {
-    const uid = userId || await getUserIdFallback();
+    const uid = userId || undefined;
     await D1.createDriveAssetV5({
         userId: uid,
         originalName: file.name,

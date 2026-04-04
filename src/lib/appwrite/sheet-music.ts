@@ -1,20 +1,8 @@
-import { account, getAuthToken } from "./client";
-import { isAppwriteConfigured } from "./constants";
 import * as D1 from "@/app/actions/v5/sheet-music";
 import * as FoldersD1 from "@/app/actions/v5/project-folders";
 import type { SheetMusicDocument } from "./types";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-
-async function getUserIdFallback() {
-  if (!isAppwriteConfigured()) return undefined;
-  try {
-    const user = await account.get();
-    return user.$id;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function uploadSheetPdf(
   file: File,
@@ -98,7 +86,7 @@ export async function uploadSheetPdf(
      folderId: meta.folderId || null,
      thumbnailId,
      favorite: false,
-  }, await getUserIdFallback());
+  }, undefined);
 }
 
 export async function listMySheetMusic(
@@ -112,7 +100,7 @@ export async function listMySheetMusic(
     offset?: number;
   }
 ): Promise<{ documents: SheetMusicDocument[]; total: number }> {
-  return D1.listMySheetMusicV5(folderId, options, await getUserIdFallback());
+  return D1.listMySheetMusicV5(folderId, options, undefined);
 }
 
 export async function listSheetMusic(limit = 100): Promise<{ documents: SheetMusicDocument[], total: number }> {
@@ -127,19 +115,19 @@ export async function updateSheetMusic(
   id: string,
   data: Partial<Pick<SheetMusicDocument, "title" | "composer" | "instrument" | "tags" | "folderId" | "favorite" | "lastOpenedAt">>
 ): Promise<SheetMusicDocument> {
-  return D1.updateSheetMusicV5(id, data, await getUserIdFallback());
+  return D1.updateSheetMusicV5(id, data, undefined);
 }
 
 export async function deleteSheetMusic(id: string): Promise<void> {
-  return D1.deleteSheetMusicV5(id, await getUserIdFallback());
+  return D1.deleteSheetMusicV5(id, undefined);
 }
 
 export async function moveSheetToFolder(id: string, folderId: string | null): Promise<void> {
-  return D1.updateSheetMusicV5(id, { folderId }, await getUserIdFallback()).then(() => {});
+  return D1.updateSheetMusicV5(id, { folderId }, undefined).then(() => {});
 }
 
 export async function toggleSheetFavorite(id: string, currentValue: boolean): Promise<void> {
-  return D1.updateSheetMusicV5(id, { favorite: !currentValue }, await getUserIdFallback()).then(() => {});
+  return D1.updateSheetMusicV5(id, { favorite: !currentValue }, undefined).then(() => {});
 }
 
 export async function getSheetPdfBlobUrl(fileId: string): Promise<string> {
@@ -159,7 +147,7 @@ export function getThumbnailUrl(thumbnailId: string): string {
 }
 
 export async function touchSheetLastOpened(id: string): Promise<void> {
-  return D1.updateSheetMusicV5(id, { lastOpenedAt: new Date().toISOString() }, await getUserIdFallback()).then(() => {});
+  return D1.updateSheetMusicV5(id, { lastOpenedAt: new Date().toISOString() }, undefined).then(() => {});
 }
 
 export async function backfillThumbnails(onProgress?: (current: number, total: number) => void): Promise<number> {
@@ -203,6 +191,6 @@ export async function regenerateThumbnail(sheetId: string): Promise<string> {
   });
   if (!uploadRes.ok) throw new Error("Failed to upload thumbnail to R2");
 
-  await D1.updateSheetMusicV5(doc.$id, { thumbnailId: newThumbId }, await getUserIdFallback());
+  await D1.updateSheetMusicV5(doc.$id, { thumbnailId: newThumbId }, undefined);
   return newThumbId;
 }

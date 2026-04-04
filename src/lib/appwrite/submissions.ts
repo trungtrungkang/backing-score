@@ -1,31 +1,19 @@
-import { account } from "./client";
-import { isAppwriteConfigured } from "./constants";
 import * as D1 from "@/app/actions/v5/submissions";
 
-async function getUserIdFallback() {
-  if (!isAppwriteConfigured()) return undefined;
-  try {
-    const user = await account.get();
-    return user.$id;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function submitAssignment(params: any) {
-  return D1.submitAssignmentV5(params, await getUserIdFallback());
+  return D1.submitAssignmentV5(params, undefined);
 }
 
 export async function listSubmissions(assignmentId: string) {
-  return D1.listSubmissionsV5(assignmentId, await getUserIdFallback());
+  return D1.listSubmissionsV5(assignmentId, undefined);
 }
 
 export async function getMySubmission(assignmentId: string) {
-  return D1.getMySubmissionV5(assignmentId, await getUserIdFallback());
+  return D1.getMySubmissionV5(assignmentId, undefined);
 }
 
 export async function listMySubmissions(classroomId: string) {
-  return D1.listMySubmissionsV5(classroomId, await getUserIdFallback());
+  return D1.listMySubmissionsV5(classroomId, undefined);
 }
 
 export function getRecordingUrl(fileId: string) {

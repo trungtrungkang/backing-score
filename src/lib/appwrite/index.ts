@@ -1,14 +1,4 @@
-export {
-  getAppwriteClient,
-  account,
-  databases,
-  storage,
-  ID,
-  Query,
-  Permission,
-  Role,
-  type Models,
-} from "./client";
+
 export {
   APPWRITE_DATABASE_ID,
   APPWRITE_PROJECTS_COLLECTION_ID,

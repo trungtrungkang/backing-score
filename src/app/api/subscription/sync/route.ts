@@ -1,17 +1,7 @@
 export const runtime = "edge";
-import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
-/**
- * Subscription Sync API — manually checks LemonSqueezy for a user's subscription
- * when the webhook hasn't fired yet (e.g. during LS account verification period).
- *
- * POST /api/subscription/sync
- * Header: Authorization: Bearer <JWT>
- *
- * This endpoint is called after checkout success to ensure the subscription
- * record exists in Appwrite even if the webhook is delayed.
- */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@/lib/auth/better-auth";
 
 import {
   lemonSqueezySetup,
@@ -22,32 +12,18 @@ import { upsertSubscription, getActiveSubscription } from "@/app/actions/v5/subs
 const apiKey = process.env.LEMONSQUEEZY_API_KEY || "";
 const STORE_ID = process.env.LEMONSQUEEZY_STORE_ID || "";
 
-async function getAuthUser(req: NextRequest) {
-  const authHeader = req.headers.get("Authorization") || "";
-  const jwt = authHeader.replace("Bearer ", "");
-  if (!jwt) return null;
-
-  try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-    client.setJWT(jwt);
-    const account = new Account(client);
-    return await account.get();
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthUser(req);
+    const auth = getAuth();
+    const sessionResponse = await auth.api.getSession({ headers: req.headers });
+    const user = sessionResponse?.user;
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if we already have an active subscription in Appwrite
-    const existing = await getActiveSubscription(user.$id);
+    // Check if we already have an active subscription in Database
+    const existing = await getActiveSubscription(user.id);
     if (existing) {
       return NextResponse.json({
         synced: true,
@@ -95,9 +71,9 @@ export async function POST(req: NextRequest) {
 
     const attrs = activeSub.attributes;
 
-    // Upsert into Appwrite (mimicking what the webhook would do)
+    // Upsert into Database (mimicking what the webhook would do)
     await upsertSubscription({
-      userId: user.$id,
+      userId: user.id,
       lemonSqueezyCustomerId: String(attrs.customer_id || ""),
       lemonSqueezySubscriptionId: String(activeSub.id),
       lemonSqueezyOrderId: String(attrs.order_id || ""),
@@ -110,7 +86,7 @@ export async function POST(req: NextRequest) {
       userEmail: user.email,
     });
 
-    console.log(`[Sync] ✅ Synced subscription ${activeSub.id} for user ${user.$id}`);
+    console.log(`[Sync] ✅ Synced subscription ${activeSub.id} for user ${user.id}`);
 
     return NextResponse.json({
       synced: true,

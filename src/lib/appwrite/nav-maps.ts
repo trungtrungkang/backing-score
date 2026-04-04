@@ -1,5 +1,3 @@
-import { account } from "./client";
-import { isAppwriteConfigured } from "./constants";
 import * as D1 from "@/app/actions/v5/nav-maps";
 
 export interface Bookmark {
@@ -28,24 +26,14 @@ export interface ParsedSheetNavMap {
   sequence: NavigationSequence;
 }
 
-async function getUserIdFallback() {
-  if (!isAppwriteConfigured()) return undefined;
-  try {
-    const user = await account.get();
-    return user.$id;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function getNavMap(sheetMusicId: string): Promise<ParsedSheetNavMap | null> {
-  return D1.getNavMapV5(sheetMusicId, await getUserIdFallback());
+  return D1.getNavMapV5(sheetMusicId, undefined);
 }
 
 export async function saveNavMap(sheetMusicId: string, bookmarks: Bookmark[], sequence: NavigationSequence): Promise<ParsedSheetNavMap> {
-  return D1.saveNavMapV5(sheetMusicId, bookmarks, sequence, await getUserIdFallback());
+  return D1.saveNavMapV5(sheetMusicId, bookmarks, sequence, undefined);
 }
 
 export async function deleteNavMap(sheetMusicId: string): Promise<void> {
-  return D1.deleteNavMapV5(sheetMusicId, await getUserIdFallback());
+  return D1.deleteNavMapV5(sheetMusicId, undefined);
 }

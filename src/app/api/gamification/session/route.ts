@@ -1,6 +1,5 @@
 export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
-import { getAppwriteClient, account } from "@/lib/appwrite";
 import { processPracticeSessionV5 } from "@/app/actions/v5/gamification";
 
 export async function POST(req: NextRequest) {

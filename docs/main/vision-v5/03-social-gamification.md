@@ -35,14 +35,14 @@ sequenceDiagram
 ## 3. Notifications (Thông báo)
 
 Nhận dạng người dùng bị tương tác:
-- Cột `actorId` chính là `sourceUserId` của API cũ. Nó đóng vai trò xác định kẻ gây ra thông báo.
+- Cột `source_user_id` đóng vai trò xác định kẻ gây ra thông báo (Nhiều tài liệu cũ hoặc backend cũ gọi ngầm định là actorId, nhưng schema chuẩn là source_user_id).
 - Cột `targetType` sẽ rẽ nhánh bằng cách dựa vào `postId` hoặc `projectId` của bản ghi đó.
 - Lắng nghe: Client định kỳ gọi `listMyNotifications` thông qua SWR hoặc query actions.
 
 ## 4. Gamification (Hệ thống Xếp Hạng Trò Chơi)
 
 Khuyến khích học thuật qua điểm thưởng (XP / GEM).
-- `src/db/schema/gamification.ts`: Chứa session đăng nhập mỗi ngày (`daily_sessions`), chuỗi `streaks`.
+- `src/db/schema/gamification.ts`: Chứa session đăng nhập mỗi ngày (`practice_sessions`), chuỗi `streaks`.
 - **Leveling**: Có quy chuẩn thăng cấp hạng thông qua số kinh nghiệm tích lũy (Exp) và hiển thị Rank (Tier) huy hiệu trên Profile công khai.
 - Logic tại `src/app/actions/v5/gamification.ts`.
 
@@ -52,7 +52,7 @@ erDiagram
     users ||--o{ posts : "creates"
     users ||--o{ comments : "writes"
     users ||--o{ reactions : "gives"
-    users ||--o{ user_levels : "has param"
+    users ||--o{ user_stats : "has param"
     
     posts ||--o{ comments : "contains"
     posts ||--o{ reactions : "receives"
@@ -74,7 +74,7 @@ erDiagram
         string projectId FK
     }
     
-    user_levels {
+    user_stats {
         string userId PK, FK
         int currentXp
         int currentLevel

@@ -36,7 +36,7 @@ import {
   PlaylistDocument,
   ProjectPayload
 } from "@/lib/appwrite";
-import { getAuthToken } from "@/lib/appwrite/client";
+
 import { uploadProjectFile } from "@/lib/appwrite/upload";
 import {
   CloudUpload,
@@ -176,9 +176,7 @@ export function DriveManager() {
                 const { thumbnailBlob } = await extractPdfMetadata(file);
 
                 const thumbFile = new File([thumbnailBlob], `thumb_${fileId}.jpg`, { type: "image/jpeg" });
-                const token = await getAuthToken();
                 const headers: Record<string, string> = { "Content-Type": "application/json" };
-                if (token) headers["Authorization"] = `Bearer ${token}`;
 
                 const thumbRes = await fetch("/api/r2/upload", {
                   method: "POST",

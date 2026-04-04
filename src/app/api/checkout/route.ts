@@ -6,35 +6,19 @@ export const runtime = "edge";
  * Body: { variantId: string }
  * Header: Authorization: Bearer <JWT>
  *
- * Requires authenticated user (Appwrite JWT token).
+ * Requires authenticated user.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createCheckout } from "@/lib/lemonsqueezy/client";
-import { Client, Account } from "@/lib/appwrite/client";
-
-
-async function getAuthUser(req: NextRequest) {
-  const authHeader = req.headers.get("Authorization") || "";
-  const jwt = authHeader.replace("Bearer ", "");
-
-  if (!jwt) return null;
-
-  try {
-    const client = new Client()
-      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-    client.setJWT(jwt);
-    const account = new Account(client);
-    return await account.get();
-  } catch {
-    return null;
-  }
-}
+import { getAuth } from "@/lib/auth/better-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthUser(req);
+    const auth = getAuth();
+    const sessionResponse = await auth.api.getSession({ headers: req.headers });
+    const user = sessionResponse?.user;
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -46,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "variantId is required" }, { status: 400 });
     }
 
-    const checkoutUrl = await createCheckout(user.$id, user.email, variantId);
+    const checkoutUrl = await createCheckout(user.id, user.email, variantId);
 
     return NextResponse.json({ checkoutUrl });
   } catch (err: any) {
