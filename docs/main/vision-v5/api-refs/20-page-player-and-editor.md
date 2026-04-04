@@ -9,9 +9,9 @@ Trang này thiết kế để User tự load Editor soạn nhạc thuần túy, 
 ### Server Component (`page.tsx`)
 1. Nhận `params.projectId`.
 2. Gọi hàm `getProjectV5(projectId)`. Phân quyền: Cắm hàm Auth kiểm tra User có quyền ghi/chỉnh sửa dự án này không (Dự án của tôi hoặc dự án được share cấp quyền Write).
-3. Truyền dữ liệu tĩnh Project (dạng JSON parsed) và Sheet Music Content (Load từ R2 nếu có link, hoặc Load từ Payload cục bộ nếu nhỏ gọn) đổ xuống Client Component `<EditorWorkspace />`.
+3. Truyền dữ liệu tĩnh Project (dạng JSON parsed) và Sheet Music Content (Load từ R2 nếu có link, hoặc Load từ Payload cục bộ nếu nhỏ gọn) đổ xuống Client Component `<EditorShell />`.
 
-### Logic Client (`EditorWorkspace.tsx`)
+### Logic Client (`EditorShell.tsx`)
 - Lịch sử (Undo/Redo): State được quản lý qua Hook Custom (Ví dụ `useMusicHistory`). Mỗi thao tác sửa Note đẩy vào mảng History.
 - Autosave: Hook `useEffect` cài một Debounce 5 giây. Nếu `rawContent` có sự xê dịch, gọi thẳng Action `updateProjectV5(id, { payload: mới })`.
 - Xử lý Event Thoát: Chặn (BeforeUnloadEvent) nếu có thay đổi chưa sync lên Server.
