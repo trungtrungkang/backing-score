@@ -704,7 +704,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
     isPlayingRef.current = true;
-  }, [payload.audioTracks.length, stretchedMidiBase64, isScoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs]);
+    if (onHostEvent) onHostEvent({ type: "play", isPlaying: true, positionMs: positionMsRef.current });
+  }, [payload.audioTracks.length, stretchedMidiBase64, isScoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, onHostEvent]);
 
   // Keep a ref to the latest handlePlay for external callers.
   const handlePlayRef = useRef(handlePlay);
@@ -843,7 +844,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
          setPositionMs(Math.max(0, (midiPlayerRef.current.currentTime * playbackRate * 1000) - midiStartOffsetMs + offsetMs));
       }
     }
-  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, positionMs, playbackRate]);
+    if (onHostEvent) onHostEvent({ type: "pause", isPlaying: false, positionMs: positionMsRef.current });
+  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, positionMs, playbackRate, onHostEvent]);
 
   // Synchronize Playback state across multiple component instances (e.g. SnippetPlayer)
   useEffect(() => {
@@ -887,7 +889,8 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     }
     positionMsRef.current = ms;
     setPositionMs(ms);
-  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, isScoreSynthMuted]);
+    if (onHostEvent) onHostEvent({ type: "seek", positionMs: ms, isPlaying: isPlayingRef.current });
+  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, isScoreSynthMuted, onHostEvent]);
 
   const handleStop = useCallback((isEndOfTrack: boolean = false) => {
     handlePause();

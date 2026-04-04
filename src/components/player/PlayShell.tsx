@@ -341,30 +341,40 @@ export function PlayShell({
 
   // Sync incoming remote state
   useEffect(() => {
-    if (syncMode === "guest" && incomingXmlCoords) {
-      if (incomingXmlCoords.isPlaying !== state.isPlaying) {
-        if (incomingXmlCoords.isPlaying) actions.handlePlay();
-        else actions.handlePause();
+    if (syncMode === "guest" && incomingXmlCoords && scoreStateRef.current) {
+      const isPosDiff = Math.abs(incomingXmlCoords.positionMs - scoreStateRef.current.positionMs) > 500;
+      
+      const applySync = () => {
+         if (isPosDiff) {
+            actions.handleSeek(incomingXmlCoords.positionMs);
+         }
+         if (incomingXmlCoords.isPlaying !== scoreStateRef.current.isPlaying) {
+            if (incomingXmlCoords.isPlaying) {
+               // wait for handleSeek to settle positionMs
+               setTimeout(() => actions.handlePlay(), 50);
+            } else {
+               actions.handlePause();
+            }
+         }
       }
-      if (Math.abs(incomingXmlCoords.positionMs - state.positionMs) > 500) {
-        actions.handleSeek(incomingXmlCoords.positionMs);
-      }
+      applySync();
     }
-  }, [incomingXmlCoords, syncMode, state.isPlaying, state.positionMs, actions]);
+  }, [incomingXmlCoords, syncMode, actions]);
 
   // Host Heartbeat
   useEffect(() => {
-    if (syncMode !== "host" || !state.isPlaying || !onBroadcastXmlCoords) return;
+    if (syncMode !== "host" || !onBroadcastXmlCoords) return;
     const interval = setInterval(() => {
+      if (!scoreStateRef.current?.isPlaying) return;
       onBroadcastXmlCoords({
         type: "heartbeat",
         isPlaying: true,
-        positionMs: state.positionMs,
+        positionMs: scoreStateRef.current.positionMs,
         tempo: payload.metadata?.tempo
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, [syncMode, state.isPlaying, state.positionMs, payload.metadata?.tempo, onBroadcastXmlCoords]);
+  }, [syncMode, payload.metadata?.tempo, onBroadcastXmlCoords]);
 
   const recorder = useAudioRecorder();
 

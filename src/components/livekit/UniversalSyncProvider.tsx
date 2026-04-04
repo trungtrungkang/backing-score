@@ -122,6 +122,9 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     if (data.type === "TOGGLE_STUDENT_DRAW") {
         setCanStudentDraw(data.canStudentDraw ?? false);
     }
+    if (data.type === "SYNC_XML") {
+        setXmlCoordinates(data.xmlCoords || data);
+    }
 
     // 2. Broadcast đi cho Học sinh
     const finalPayload = {
