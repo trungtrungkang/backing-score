@@ -27,13 +27,22 @@ Trái tim đồng bộ hóa của ứng dụng nằm ở mảng lưới thời g
   - Vòng lặp `handleKeyDown` ghi nhận sự kiện nhấp từ bàn phím -> Lấy độ trễ chính xác của Node âm thanh `audioManagerRef.getCurrentPositionMs()` tại khoảnh khắc bấm -> Gói lại và nén thành mảng `manualTimemap`.
   - Đây giống như một mini-game "Tap to the beat" để gắn dính bản PDF/MusicXML tĩnh lặng khớp hoàn toàn với hơi thở của người ca sĩ hát bằng cảm xúc (tempo trồi sụt thất thường) trong bản ghi âm.
 
-## 4. Chế độ Tập luyện Mở rộng (Wait Mode & Flow Mode)
-Tích hợp mạnh mẽ với Hardware ngoại vi:
-- Giao tiếp với `useMidiInput.ts` (Bàn phím Piano cứng của người dùng cắm vào máy tính) và `useMicInput.ts` (Nghe cao độ nốt qua Micrô).
-- Khi bật chế độ `isWaitMode`:
-  - Phát nhạc đến 1 điểm -> Dừng ngắt (Global Mute tắt).
-  - Vòng lặp quét `practiceChordsRef` (lấy từ MIDI thô) xem người dùng bấm đúng Hợp âm/Nốt không.
-  - Ghi nhận Anti-cheat: `isGamificationInvalidated` báo động nếu Micrô vô tình thu lại chính âm thanh Synthesizer của máy phát ra do không tắt loa/cắm tai nghe.
+## 4. Chế độ Tập luyện Chuyên Sâu (Wait Mode & Flow Mode)
+Bằng việc hợp nhất luồng dữ liệu từ `useMidiInput` (Bàn phím cơ) và `useMicInput` (Cao độ FFT), `useScoreEngine` cung cấp một cỗ máy (Engine) chấm điểm thời gian thực:
+
+### A. Hoạt động Trích xuất Hợp âm (`practiceChordsRef`)
+Ngay khi load bài, Hook quét toàn bộ dữ liệu MIDI của các Track được chọn tập luyện, nhóm trùng lặp các nốt đánh cùng lúc (sai số < 20ms) thành một Mảng Tọa Độ phân giải: `[{ timeMs: 1200, notes: Set(60, 64, 67), measure: 2 }, ...]`. Biến con trỏ `targetChordIndexRef` bắt đầu từ 0.
+
+### B. Chế độ Chờ (Wait Mode) - Chìa khóa tự học
+- **Cơ chế chặn (Blocking)**: Một vòng lặp `requestAnimationFrame` chạy ở tần số ~60FPS liên tục đối chiếu `positionMs` của bài nhạc với mảng Hợp âm mục tiêu. Khi tiếng nhạc chạy tới sát nút Hợp âm hiện tại, Audio/MIDI tự động **hãm phanh (Pause) và ngắt tiếng (Mute)**. Dòng thời gian bị đóng băng.
+- **Cơ chế so khớp (Collision Detection)**: Hook liên tục kiểm tra Set `activeNotesRef` từ Microphone/MIDI. Khi nào Micro của bạn phát đủ phổ âm (VD: Đô-Mi-Son) khớp với tập hợp `targetChord.notes`, Hook nhả cờ `hit`, nhả phanh cho bản nhạc xé rào chạy sang mũi nhọn `targetChordIndexRef + 1`.
+
+### C. Chế độ Trôi chảy (Flow Mode) - Chấm điểm biểu diễn
+- Khác với Wait Mode, tiếng nhạc **không bao giờ bị dừng lại**.
+- **Cửa sổ dung sai (Tolerance Window)**: Thuật toán quy định một cửa sổ sai số (Ví dụ ±150 mili-giây). Nếu tiếng vang lên khớp cao độ trong cửa sổ thời gian đó khi nốt lướt đi băng qua vạch con trỏ, Cờ hệ thống lưu trữ Record điểm rớt vào mảng `assessmentMeasureResults` thành `hit`. Trượt cửa sổ hoặc sai nốt bị đánh `miss`.
+
+### D. Hệ thống Anti-Cheat
+Ghi giong lại biến cờ `isGamificationInvalidated` chặn tịt ngay hiện tượng sinh viên bật Micro mà quên tắt Loa (Loopback phá game). Cụ thể, nếu `Score Synth` (vốn dĩ phát tiếng Piano dẫn đường) đang được vặn to bằng Loa ngoài, nó sẽ lọt vào Mic. Engine tự phát giác điều này và từ chối cập nhật Exp sau buổi học.
 
 ## Unit Test & E2E Scenarios Đề Xuất
 Bởi vì quá đồ sộ, cần Fake (Mock) hoàn toàn lớp cấp thấp:
