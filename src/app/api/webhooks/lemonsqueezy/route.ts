@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * LemonSqueezy Webhook Handler
  *
@@ -15,7 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
+
 import { upsertSubscription } from "@/app/actions/v5/subscriptions";
 import { getProductByVariantId, logPurchase, grantEntitlement } from "@/app/actions/v5/subscriptions";
 
@@ -24,20 +25,31 @@ const WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "";
 /**
  * Verify the X-Signature header to ensure the request is from LemonSqueezy.
  */
-function verifySignature(rawBody: string, signature: string): boolean {
+/**
+ * Verify the X-Signature header using Web Crypto API.
+ */
+async function verifySignature(rawBody: string, signature: string): Promise<boolean> {
   if (!WEBHOOK_SECRET) {
     console.warn("[Webhook] LEMONSQUEEZY_WEBHOOK_SECRET not set — skipping verification");
     return true;
   }
   try {
-    const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
-    const digest = hmac.update(rawBody).digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature));
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(WEBHOOK_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const signatureBuffer = new Uint8Array((signature.match(/[\da-f]{2}/gi) || []).map((h) => parseInt(h, 16)));
+    return await crypto.subtle.verify("HMAC", key, signatureBuffer, encoder.encode(rawBody));
   } catch (err) {
     console.error("[Webhook] Signature verification error:", err);
     return false;
   }
 }
+
 
 export async function POST(req: NextRequest) {
   let rawBody = "";
@@ -46,7 +58,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get("x-signature") || "";
 
     // Verify webhook authenticity
-    if (signature && !verifySignature(rawBody, signature)) {
+    if (signature && !(await verifySignature(rawBody, signature))) {
       console.error("[Webhook] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }

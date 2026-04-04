@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { projects } from "@/db/schema/drive";

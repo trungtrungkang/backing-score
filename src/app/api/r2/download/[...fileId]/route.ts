@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
 import { s3Client, R2_BUCKET_NAME } from "@/lib/r2/client";
 import { GetObjectCommand } from "@aws-sdk/client-s3";

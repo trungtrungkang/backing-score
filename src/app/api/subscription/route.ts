@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * Subscription status API — checks if a user has an active premium subscription.
  *

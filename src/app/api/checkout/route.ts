@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * Checkout API — creates a LemonSqueezy checkout session.
  *

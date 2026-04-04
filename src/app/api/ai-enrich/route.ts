@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * AI Enrich API route.
  * POST /api/ai-enrich

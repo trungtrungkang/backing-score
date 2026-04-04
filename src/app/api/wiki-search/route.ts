@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Server-side API for searching Wikipedia and saving compositions to Appwrite.

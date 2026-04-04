@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { Client, Databases, Account, Storage, Query, ID, Permission, Role, Models } from "@/lib/appwrite/client";
 /**
  * Proxy to stream a file from Appwrite Storage using the server API key.

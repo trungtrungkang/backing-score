@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { getAuth } from "@/lib/auth/better-auth";
 import { NextRequest } from "next/server";
 
