@@ -325,17 +325,21 @@ export function PlayShell({
     payload,
     autoplayOnLoad,
     onNext,
-    onPracticeComplete: (score) => { submitPracticeSession(score); },
+    onPracticeComplete: useCallback((score?: number) => { submitPracticeSession(score ?? 0); }, [submitPracticeSession]),
     onPayloadChange,
-    onHostEvent: (ev: {type: string; positionMs?: number; isPlaying?: boolean; tempo?: number}) => {
+    onHostEvent: useCallback((ev: {type: string; positionMs?: number; isPlaying?: boolean; tempo?: number}) => {
       if (syncMode === "host" && onBroadcastXmlCoords) {
         onBroadcastXmlCoords({
           ...ev,
           tempo: payload.metadata?.tempo
         });
       }
-    }
+    }, [syncMode, onBroadcastXmlCoords, payload.metadata?.tempo])
   });
+  // Track continuous intents to prevent event queue spam
+  const isPlayingIntentRef = useRef<boolean | null>(null);
+  const actionsRef = useRef(actions);
+  useEffect(() => { actionsRef.current = actions; }, [actions]);
 
   useEffect(() => { scoreStateRef.current = state; }, [state]);
 
@@ -346,20 +350,29 @@ export function PlayShell({
       
       const applySync = () => {
          if (isPosDiff) {
-            actions.handleSeek(incomingXmlCoords.positionMs);
+            actionsRef.current.handleSeek(incomingXmlCoords.positionMs);
+            // Manually pre-apply positionMs to reference to prevent re-seeking on subsequent rapid packets
+            scoreStateRef.current.positionMs = incomingXmlCoords.positionMs;
          }
-         if (incomingXmlCoords.isPlaying !== scoreStateRef.current.isPlaying) {
+         
+         const isCurrentlyPlaying = scoreStateRef.current.isPlaying;
+         
+         if (incomingXmlCoords.isPlaying !== isCurrentlyPlaying && incomingXmlCoords.isPlaying !== isPlayingIntentRef.current) {
+            isPlayingIntentRef.current = incomingXmlCoords.isPlaying;
             if (incomingXmlCoords.isPlaying) {
                // wait for handleSeek to settle positionMs
-               setTimeout(() => actions.handlePlay(), 50);
+               setTimeout(() => actionsRef.current.handlePlay(), 50);
             } else {
-               actions.handlePause();
+               actionsRef.current.handlePause();
             }
+         } else if (incomingXmlCoords.isPlaying === isCurrentlyPlaying) {
+             isPlayingIntentRef.current = isCurrentlyPlaying;
          }
       }
       applySync();
     }
-  }, [incomingXmlCoords, syncMode, actions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingXmlCoords, syncMode]);
 
   // Host Heartbeat
   useEffect(() => {

@@ -672,7 +672,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
       // positionMs is in song-time (original tempo). The stretched MIDI has tempo * playbackRate,
       // so midiPlayer.currentTime expects stretched-time. Divide by playbackRate to convert.
-      const targetTimeSecs = (positionMs - offsetMs + midiStartOffsetMs) / 1000 / playbackRate;
+      const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000 / playbackRate;
       
       if (targetTimeSecs >= 0) {
         midiPlayerRef.current.currentTime = targetTimeSecs;
@@ -692,20 +692,20 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       // For MIDI-only projects, position is tracked via performance.now(), which diverges
       // from AudioManager's AudioContext-based clock. Without this seek, the metronome
       // starts at the wrong position after pause/resume.
-      await audioManagerRef.current.seek(positionMs);
+      await audioManagerRef.current.seek(positionMsRef.current);
       playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.log(e)));
     }
     
     if (payload.audioTracks.length === 0) {
       midiPlayStartTimeRef.current = performance.now();
-      midiPlayStartPosRef.current = positionMs;
+      midiPlayStartPosRef.current = positionMsRef.current;
     }
 
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
     isPlayingRef.current = true;
     if (onHostEvent) onHostEvent({ type: "play", isPlaying: true, positionMs: positionMsRef.current });
-  }, [payload.audioTracks.length, stretchedMidiBase64, isScoreSynthMuted, positionMs, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, onHostEvent]);
+  }, [payload.audioTracks.length, stretchedMidiBase64, isScoreSynthMuted, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, onHostEvent]);
 
   // Keep a ref to the latest handlePlay for external callers.
   const handlePlayRef = useRef(handlePlay);
@@ -835,7 +835,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       setPositionMs(audioManagerRef.current.getCurrentPositionMs()); 
     } else if (midiPlayerRef.current) {
       if (isWaitModeRef.current) {
-         setPositionMs(positionMs);
+         setPositionMs(positionMsRef.current);
       } else {
          const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
          // midiPlayer.currentTime is in stretched-time (MIDI tempo is multiplied by playbackRate).
@@ -845,7 +845,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       }
     }
     if (onHostEvent) onHostEvent({ type: "pause", isPlaying: false, positionMs: positionMsRef.current });
-  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, positionMs, playbackRate, onHostEvent]);
+  }, [payload.audioTracks.length, midiStartOffsetMs, payload.metadata?.scoreSynthOffsetMs, playbackRate, onHostEvent]);
 
   // Synchronize Playback state across multiple component instances (e.g. SnippetPlayer)
   useEffect(() => {
