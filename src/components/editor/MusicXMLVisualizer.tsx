@@ -1342,14 +1342,14 @@ export function MusicXMLVisualizer({
         <button
           onClick={() => setScale(s => Math.max(s - 10, 20))}
           className="w-8 h-8 bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 rounded flex items-center justify-center shadow-sm hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm"
-          title="Thu nhỏ (Zoom Out)"
+          title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={() => setScale(s => Math.min(s + 10, 120))}
           className="w-8 h-8 bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 rounded flex items-center justify-center shadow-sm hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition-all border border-zinc-200 dark:border-zinc-700 backdrop-blur-sm"
-          title="Phóng to (Zoom In)"
+          title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>

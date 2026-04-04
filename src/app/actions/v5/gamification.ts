@@ -23,6 +23,8 @@ export async function getUserStatsV5(providedUserId?: string) {
      }
    }
    
+   if (!userId) return null;
+   
    try {
      const db = getDb();
      const q = await db.select().from(userStats).where(eq(userStats.userId, userId)).limit(1);

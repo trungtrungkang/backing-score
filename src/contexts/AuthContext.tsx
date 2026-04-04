@@ -14,6 +14,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  emailVerified: boolean;
   prefs: Record<string, any>;
   [key: string]: any;
 }
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
            id: baSession.user.id,
            email: baSession.user.email,
            name: baSession.user.name,
+           emailVerified: baSession.user.emailVerified,
            labels: labelsArray,
            prefs: {
              avatarUrl: (baSession.user as any).image || null,
@@ -148,12 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error: baError } = await betterAuthClient.signUp.email({ email, password, name });
         if (baError) throw new Error(baError.message);
         
-        try {
-          // Gửi email xác thực nếu cấu hình
-          // await betterAuthClient.sendVerificationEmail({ email });
-        } catch (vErr) {
-          console.error("Failed to send verification email:", vErr);
-        }
         await loadSession();
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Sign up failed";
@@ -176,9 +172,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendVerification = useCallback(async () => {
-    // Implement based on Better Auth plugin if verification is needed
-    // await betterAuthClient.sendVerificationEmail({ email: user?.email! });
-  }, []);
+    if (!user?.email) return;
+    try {
+      // @ts-ignore - BetterAuth TS inference can be finicky depending on version
+      await betterAuthClient.sendVerificationEmail({ 
+        email: user.email, 
+        callbackURL: window.location.origin + "/dashboard" 
+      });
+    } catch (e) {
+      console.error("Failed to send verification email manually:", e);
+    }
+  }, [user]);
 
   const getJWT = useCallback(async () => {
     // Chặn luồng JWT của Appwrite.

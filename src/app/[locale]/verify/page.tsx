@@ -2,36 +2,23 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { account } from "@/lib/appwrite";
 import { CheckCircle, XCircle, Loader2, Music4 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 
 function VerifyContent() {
   const searchParams = useSearchParams();
-  const userId = searchParams.get("userId");
-  const secret = searchParams.get("secret");
+  const token = searchParams.get("token"); // Better-Auth uses token
   
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [status, setStatus] = useState<"loading" | "success" | "error">("error");
+  const [errorMsg, setErrorMsg] = useState("This legacy verification page is deprecated. Please use the link in your email.");
 
   useEffect(() => {
-    if (!userId || !secret) {
-      setStatus("error");
-      setErrorMsg("Invalid or missing verification link parameters.");
-      return;
+    // Legacy appwrite page, better-auth handles this automatically via /api/auth/verify-email
+    if (!token) {
+      setErrorMsg("Link is missing verification token.");
     }
-
-    account.updateVerification(userId, secret)
-      .then(() => {
-        setStatus("success");
-      })
-      .catch((err: any) => {
-        console.error("Verification failed:", err);
-        setStatus("error");
-        setErrorMsg(err?.message || "Verification failed. The link may have expired or already been used.");
-      });
-  }, [userId, secret]);
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0E0E11] text-zinc-900 dark:text-zinc-100 flex items-center justify-center p-6 relative overflow-hidden">

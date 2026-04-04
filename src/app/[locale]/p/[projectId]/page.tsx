@@ -12,8 +12,6 @@ import {
   updateProject,
   uploadProjectFile,
   getFileViewUrl,
-  Permission,
-  Role,
   type ProjectDocument,
   type ProjectPayload,
 } from "@/lib/appwrite";
@@ -289,12 +287,6 @@ export default function ProjectPage() {
     setPublishing(true);
     setError(null);
     try {
-      const publishPermissions = [
-        Permission.read(Role.user(project.userId)),
-        Permission.update(Role.user(project.userId)),
-        Permission.delete(Role.user(project.userId)),
-        Permission.read(Role.any()),
-      ];
       await updateProject(
         projectId,
         {
@@ -306,8 +298,7 @@ export default function ProjectPage() {
           wikiInstrumentIds: wikiInstrumentIds,
           wikiCompositionId: wikiCompositionId || "",
           wikiComposerIds: wikiComposerIds,
-        },
-        publishPermissions
+        }
       );
       setProject((prev) =>
         prev

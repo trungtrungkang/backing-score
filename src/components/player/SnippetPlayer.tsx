@@ -255,7 +255,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
           <button
             onClick={toggleFullscreen}
             className="px-2 py-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all ml-1"
-            title={isFullscreen ? "Thoát toàn màn hình (Exit Fullscreen)" : "Toàn màn hình (Fullscreen Native)"}
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -265,7 +265,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="px-2 py-1.5 rounded-md text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all"
-              title={isExpanded ? "Thu nhỏ chiều dọc (Collapse)" : "Mở rộng chiều dọc (Expand)"}
+              title={isExpanded ? "Collapse view" : "Expand view"}
             >
               {isExpanded ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
@@ -529,7 +529,7 @@ export function SnippetPlayer({ payload, zoom = 40, snippetId, practiceRequired 
               onClick={() => setShowSettings(!showSettings)}
               className={`p-2 rounded-md transition-all ${showSettings ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"
                 }`}
-              title="Mở rộng cài đặt (Settings)"
+              title="Settings"
             >
               <Settings2 className="w-4 h-4" />
             </button>

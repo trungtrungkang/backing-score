@@ -36,9 +36,7 @@ export async function uploadProjectFile(
     );
   }
 
-  const token = await getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch("/api/r2/upload", {
     method: "POST",

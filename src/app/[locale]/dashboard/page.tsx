@@ -42,6 +42,7 @@ export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { user, loading: authLoading, sendVerification, getJWT, refreshSubscription } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const searchParams = useSearchParams();
 
   // After checkout success: sync subscription from LS and refresh premium status
@@ -67,6 +68,12 @@ export default function DashboardPage() {
       })();
     }
   }, [searchParams, user, getJWT, refreshSubscription]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
 
   if (authLoading || !user) {
     return (
@@ -95,7 +102,7 @@ export default function DashboardPage() {
           {/* Gamification Full Width Hero */}
           <DailyChallengeCard />
 
-          {!user.emailVerification && (
+          {!user.emailVerified && (
             <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -104,11 +111,21 @@ export default function DashboardPage() {
                 </p>
               </div>
               <Button
-                onClick={() => sendVerification().then(() => toast.success("Verification email sent!"))}
+                onClick={async () => {
+                  try {
+                    setIsSendingEmail(true);
+                    await sendVerification();
+                    toast.success("Verification email sent!");
+                  } finally {
+                    setIsSendingEmail(false);
+                  }
+                }}
+                disabled={isSendingEmail}
                 variant="outline"
                 size="sm"
                 className="shrink-0 bg-white dark:bg-zinc-900"
               >
+                {isSendingEmail ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {t("resendEmail")}
               </Button>
             </div>

@@ -791,7 +791,7 @@ export function PlayShell({
             className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 dark:bg-zinc-100/90 dark:hover:bg-white backdrop-blur-md text-white dark:text-black px-4 py-2.5 sm:px-5 sm:py-3 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 border border-white/10 dark:border-black/10 group"
             title="Press [Right Arrow] to skip"
           >
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Bỏ qua nốt</span>
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Skip</span>
             <div className="flex items-center justify-center px-1.5 py-0.5 rounded bg-white/20 dark:bg-black/10 text-[10px] font-black group-hover:bg-white/30 dark:group-hover:bg-black/20 transition-colors">
               <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>

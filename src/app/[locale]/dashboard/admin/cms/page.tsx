@@ -83,12 +83,12 @@ export default function AdminCmsPage() {
         return [
           {
             accessorKey: "name",
-            header: "Mã Bài (Tên)",
+            header: "Title",
             cell: EditableCell,
           },
           {
             accessorKey: "difficulty",
-            header: "Độ khó (1-100)",
+            header: "Difficulty",
             cell: EditableCell,
           },
           {
@@ -119,12 +119,12 @@ export default function AdminCmsPage() {
           },
           {
             accessorKey: "composer",
-            header: "Tác Giả",
+            header: "Author",
             cell: EditableCell,
           },
           {
             accessorKey: "instrument",
-            header: "Nhạc Cụ",
+            header: "Instrument",
             cell: EditableCell,
           },
           {

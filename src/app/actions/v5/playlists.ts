@@ -89,7 +89,7 @@ export async function getPlaylistV5(playlistId: string): Promise<PlaylistDocumen
     .where(eq(setlists.id, playlistId))
     .limit(1);
 
-  if (results.length === 0) throw new Error("Playlist không tồn tại");
+  if (results.length === 0) throw new Error("Playlist not found");
 
   return await mockFormat(db, results[0]);
 }

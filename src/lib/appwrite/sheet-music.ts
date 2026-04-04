@@ -22,10 +22,7 @@ export async function uploadSheetPdf(
   const title = meta.title || file.name.replace(/\.pdf$/i, "");
   
   // 1. Upload PDF to Cloudflare R2
-  // For R2, we use explicit sessions now via BetterAuth cookie, so getAuthToken might not be strictly needed, but kept for fallback
-  const token = await getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const resPdf = await fetch("/api/r2/upload", {
     method: "POST",
@@ -168,9 +165,7 @@ export async function regenerateThumbnail(sheetId: string): Promise<string> {
   const { thumbnailBlob } = await extractPdfMetadata(file);
 
   const thumbFile = new File([thumbnailBlob], `thumb_${doc.fileId}.jpg`, { type: "image/jpeg" });
-  const token = await getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const resThumb = await fetch("/api/r2/upload", {
     method: "POST",

@@ -49,7 +49,7 @@ export async function listMyProjectsV5(tagFilters?: string[]): Promise<ProjectDo
   });
   
   if (!session?.user) {
-    throw new Error("Không có quyền truy cập. Vui lòng đăng nhập lại.");
+    throw new Error("Unauthorized access. Please login again.");
   }
 
   const userId = session.user.id;
@@ -77,7 +77,7 @@ export async function getProjectV5(projectId: string): Promise<ProjectDocument> 
     .limit(1);
 
   if (rs.length === 0) {
-    throw new Error("Dự án không tồn tại trên D1");
+    throw new Error("Project not found");
   }
 
   return mockAppwriteFormat(rs[0]);
@@ -112,7 +112,7 @@ export async function updateProjectV5(
   const auth = getAuth(env);
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Chưa đăng nhập");
+  if (!session?.user) throw new Error("Unauthorized");
 
   const body: any = { updatedAt: new Date() };
   if (updates.name !== undefined) body.title = updates.name;
@@ -154,7 +154,7 @@ export async function createProjectV5(params: any, ...args: any[]): Promise<Proj
   const auth = getAuth(env);
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Chưa đăng nhập");
+  if (!session?.user) throw new Error("Unauthorized");
 
   const newId = crypto.randomUUID();
   let pl: any = typeof params.payload === 'string' ? JSON.parse(params.payload) : (params.payload || {});
@@ -185,7 +185,7 @@ export async function deleteProjectV5(projectId: string): Promise<void> {
   const auth = getAuth(env);
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Chưa đăng nhập");
+  if (!session?.user) throw new Error("Unauthorized");
 
   await db.delete(projects).where(eq(projects.id, projectId));
 }
