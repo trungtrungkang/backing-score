@@ -94,3 +94,22 @@ export const submissionFeedback = sqliteTable('submission_feedback', {
   grade: real('grade'), // Điểm số
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+// 8. Phiên học trực tuyến (Live Sessions)
+export const liveSessions = sqliteTable('live_sessions', {
+  id: text('id').primaryKey(), // Trùng khớp với LiveKit Room Name
+  classroomId: text('classroom_id').notNull().references(() => classrooms.id, { onDelete: 'cascade' }),
+  hostId: text('host_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  activeProjectId: text('active_project_id').references(() => projects.id, { onDelete: 'set null' }),
+  startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
+  endedAt: integer('ended_at', { mode: 'timestamp' }), // NULL nghĩa là lớp đang diễn ra
+});
+
+// 9. Điểm danh trực tuyến (Live Attendances)
+export const liveAttendances = sqliteTable('live_attendances', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull().references(() => liveSessions.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  joinedAt: integer('joined_at', { mode: 'timestamp' }).notNull(),
+  leftAt: integer('left_at', { mode: 'timestamp' }),
+});

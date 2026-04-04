@@ -86,6 +86,8 @@ Toàn bộ quá trình đồng bộ đi qua đường truyền `Data Channel` P2
   - Giải pháp: Định kỳ (Tick-rate) chạy nền. Cứ mỗi 5 giây, Teacher Client sẽ tự động đẩy lại một gói Sync đầy đủ `Keep-alive states`. Học trò mới cắm Router mạng vào lại sẽ nhận gói Sync mới nhất.
 - **Giáo viên Tắt Micro Nhưng Học Sinh Vẫn Chơi Đàn:**
   - Track Media và Track Data của WebRTC tách biệt độc lập với nhau. Nếu Thầy tắt Mic (Muted), dữ liệu đồng bộ nốt nhạc vẫn tuôn chảy mà không bị gãy vỡ. Việc dạy học theo hệ Offline (Tập câm điếc dựa vào nhịp gõ metronome hình học) vẫn diễn ra trơn tru.
+- **Giáo viên Rớt Mạng Đột Ngột (Reconnection & Session Crash Resilience):**
+  - Tránh tình trạng hệ thống vội vã kết thúc Lớp học và tạo ra vô số các `sessionId` rác khi thầy rớt Wifi. Khi Teacher kết nối lại (`createLiveSession`), Backend sẽ quét xem lớp này có phiên nào vừa chạy cách đây vài giờ và chưa bị đóng (Ended) hay không. Nếu có, Backend sẽ **Tái sử dụng (Resume)** đúng mã UUID của phiên đó để bảo toàn mảng dữ liệu Điểm danh (live_attendances). Về sau, Việc đánh dấu phòng "Thật sự Kết thúc" sẽ do tín hiệu Webhook tĩnh `room_finished` từ cụm LiveKit quyết định.
 
 ## 4. UI / UX Design Phác Thảo
 - **Floating / Picture-in-Picture UI**: Layout MusicXML dọc hoặc ngang chiếm 70% trang màn hình. Giao diện LiveKit được thiết kế trôi bồng bềnh dưới dạng "Video bong bóng" hoặc bám cố định một dải nhỏ bên mép Trái (Sidebar).

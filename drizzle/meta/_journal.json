@@ -71,6 +71,13 @@
       "when": 1775277181696,
       "tag": "0009_careless_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1775328386253,
+      "tag": "0010_open_naoko",
+      "breakpoints": true
     }
   ]
 }
