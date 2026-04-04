@@ -35,7 +35,7 @@ export async function getArtistBySlugV5(slug: string): Promise<ArtistDocument | 
 
 export async function listArtistsV5(limit = 20, cursor?: string): Promise<ArtistDocument[]> {
   const db = getDb();
-  let query = db.select().from(wikiArtists).orderBy(wikiArtists.name).limit(limit);
+  let query: any = db.select().from(wikiArtists).orderBy(wikiArtists.name).limit(limit);
   
   // Note: Standard pagination often uses offset, but cursor is requested. 
   // For alphabetical order, cursorAfter would literally be name > cursorName 

@@ -85,6 +85,13 @@ export const notifications = sqliteTable('notifications', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // Người nhận
   actorId: text('actor_id').references(() => users.id, { onDelete: 'set null' }), // Ai tạo ra thông báo?
+  
+  sourceUserId: text('source_user_id'),
+  sourceUserName: text('source_user_name'),
+  targetType: text('target_type'),
+  targetName: text('target_name'),
+  targetId: text('target_id'),
+
   type: text('type', { length: 32 }).notNull(), // like, comment, follow...
   message: text('message'),
   read: integer('read', { mode: 'boolean' }).notNull().default(false),

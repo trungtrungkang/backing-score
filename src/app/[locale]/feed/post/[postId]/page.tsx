@@ -102,7 +102,8 @@ export default function PostDetailPage() {
 
         let authorProfile: { name: string; prefs: any } | undefined;
         try {
-          authorProfile = await getPublicProfile(raw.authorId);
+          const prof = await getPublicProfile(raw.authorId);
+          if (prof) authorProfile = prof;
         } catch {}
 
         let isLiked = false;
@@ -123,7 +124,8 @@ export default function PostDetailPage() {
             rawComments.map(async (c) => {
               let cProfile;
               try {
-                cProfile = await getPublicProfile(c.authorId);
+                const prof = await getPublicProfile(c.authorId);
+                if (prof) cProfile = prof;
               } catch {}
               return { ...c, authorProfile: cProfile };
             })
@@ -215,7 +217,8 @@ export default function PostDetailPage() {
       const newC = await addComment(post.$id, commentText.trim());
       let authorProfile: { name: string; prefs: any } | undefined;
       try {
-        authorProfile = await getPublicProfile(user.$id);
+        const prof = await getPublicProfile(user.$id);
+        if (prof) authorProfile = prof;
       } catch {}
       setPost((p) =>
         p

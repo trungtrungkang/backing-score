@@ -29,7 +29,7 @@ export async function getInstrumentBySlugV5(slug: string): Promise<InstrumentDoc
 
 export async function listInstrumentsV5(limit = 20, cursor?: string): Promise<InstrumentDocument[]> {
   const db = getDb();
-  let query = db.select().from(wikiInstruments).orderBy(wikiInstruments.name).limit(limit);
+  let query: any = db.select().from(wikiInstruments).orderBy(wikiInstruments.name).limit(limit);
   
   if (cursor) {
     query = db.select().from(wikiInstruments).where(gt(wikiInstruments.id, cursor)).orderBy(wikiInstruments.id).limit(limit);

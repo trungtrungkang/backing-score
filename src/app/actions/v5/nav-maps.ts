@@ -25,8 +25,8 @@ export async function getNavMapV5(sheetMusicId: string, _clientUserId?: string):
      return {
          $id: doc.id,
          sheetMusicId: doc.sheetMusicId,
-         bookmarks: JSON.parse(doc.bookmarks),
-         sequence: JSON.parse(doc.sequence)
+         bookmarks: typeof doc.bookmarks === "string" ? JSON.parse(doc.bookmarks) : doc.bookmarks,
+         sequence: typeof doc.sequence === "string" ? JSON.parse(doc.sequence) : doc.sequence
      };
   } catch {
      return null;

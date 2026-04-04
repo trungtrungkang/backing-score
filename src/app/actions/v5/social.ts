@@ -148,7 +148,7 @@ export async function getTimelineV5(limit = 20, cursor?: string, _clientUserId?:
      ].filter(Boolean) as any[])
   );
 
-  let query = db.select().from(posts).where(feedFilter);
+  let query: any = db.select().from(posts).where(feedFilter);
   // Sort pinned first, then by createdAt desc. Cursor logic intentionally simplified for now in Drizzle.
   query = query.orderBy(desc(posts.isPinned), desc(posts.createdAt)).limit(limit);
   

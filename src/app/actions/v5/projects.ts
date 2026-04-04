@@ -40,10 +40,6 @@ function mockAppwriteFormat(row: any): ProjectDocument {
 
 export async function listMyProjectsV5(tagFilters?: string[]): Promise<ProjectDocument[]> {
   let env = process.env as any;
-  try {
-     const { getRequestContext } = await import('@cloudflare/next-on-pages');
-     env = getRequestContext().env || env;
-  } catch {}
   const db = getDb();
   const auth = getAuth(env);
 
@@ -72,10 +68,6 @@ export async function listMyProjectsV5(tagFilters?: string[]): Promise<ProjectDo
 
 export async function getProjectV5(projectId: string): Promise<ProjectDocument> {
   let env = process.env as any;
-  try {
-     const { getRequestContext } = await import('@cloudflare/next-on-pages');
-     env = getRequestContext().env || env;
-  } catch {}
   const db = getDb();
 
   const rs = await db
@@ -213,14 +205,14 @@ export async function copyProjectToMineV5(projectId: string): Promise<ProjectDoc
 // Discovery stubs
 export async function listTrendingV5(limit: number = 8): Promise<ProjectDocument[]> {
   const env = process.env as any;
-  const db = getDb(env.backing_score_prod);
+  const db = getDb();
   const rs = await db.select().from(projects).where(eq(projects.isPublished, true)).limit(limit);
   return rs.map(mockAppwriteFormat);
 }
 
 export async function listFeaturedV5(limit: number = 6): Promise<ProjectDocument[]> {
   const env = process.env as any;
-  const db = getDb(env.backing_score_prod);
+  const db = getDb();
   const rs = await db.select().from(projects).where(eq(projects.isPublished, true)).limit(limit);
   return rs.map(mockAppwriteFormat);
 }

@@ -29,7 +29,7 @@ export async function getCompositionBySlugV5(slug: string): Promise<CompositionD
 
 export async function listCompositionsV5(limit = 20, cursor?: string): Promise<CompositionDocument[]> {
   const db = getDb();
-  let query = db.select().from(wikiCompositions).orderBy(wikiCompositions.title).limit(limit);
+  let query: any = db.select().from(wikiCompositions).orderBy(wikiCompositions.title).limit(limit);
   
   if (cursor) {
     query = db.select().from(wikiCompositions).where(gt(wikiCompositions.id, cursor)).orderBy(wikiCompositions.id).limit(limit);
