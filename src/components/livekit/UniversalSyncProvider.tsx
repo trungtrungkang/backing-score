@@ -6,11 +6,12 @@ import { LocalAudioTrack, Track, ConnectionState } from "livekit-client";
 import { toast } from "sonner";
 
 export type SyncPayload = {
-  type: "SYNC_PDF" | "SYNC_XML" | "CHANGE_DOC" | "HEARTBEAT" | "DRAWING" | "TOGGLE_STUDENT_DRAW" | "MODERATE" | "END_CLASS";
+  type: "SYNC_PDF" | "SYNC_XML" | "CHANGE_DOC" | "HEARTBEAT" | "DRAWING" | "TOGGLE_STUDENT_DRAW" | "MODERATE" | "END_CLASS" | "REQUEST_FULL_SYNC" | "SYNC_FULL_STATE";
   timestamp: number;
   senderId: string;
   projectId?: string;
   projectType?: "pdf" | "musicxml";
+  drawings?: any[];
   pdfCoords?: any;
   xmlCoords?: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number; anchorMeasureId?: string };
   action?: string;
@@ -135,6 +136,33 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
          }, 1500);
       }
 
+      // Xử lý Request Full Sync từ Học sinh mới vào
+      if (payload.type === "REQUEST_FULL_SYNC") {
+        if (role === "teacher") {
+           broadcastPayload({
+              type: "SYNC_FULL_STATE",
+              projectId: activeProjectId ?? undefined,
+              projectType: activeProjectType ?? undefined,
+              pdfCoords: latestPdfCoordinates,
+              xmlCoords: latestXmlCoordinates,
+              drawings,
+              canStudentDraw
+           });
+        }
+      }
+
+      // Nhận Full Sync State từ Giáo viên
+      if (payload.type === "SYNC_FULL_STATE") {
+        if (role === "student") {
+           if (payload.projectId !== undefined) setActiveProjectId(payload.projectId ?? null);
+           if (payload.projectType !== undefined) setActiveProjectType(payload.projectType ?? null);
+           if (payload.pdfCoords) setPdfCoordinates(payload.pdfCoords);
+           if (payload.xmlCoords) setXmlCoordinates(payload.xmlCoords);
+           if (payload.drawings) setDrawings(payload.drawings);
+           if (payload.canStudentDraw !== undefined) setCanStudentDraw(payload.canStudentDraw);
+        }
+      }
+
         // Xử lý gói Data Tọa độ (Chỉ nhận nếu đang AutoSync hoặc gặp Heartbeat force)
       if (payload.type === "HEARTBEAT" || isAutoSyncEnabled) {
         if (payload.type === "SYNC_PDF" || (payload.type === "HEARTBEAT" && payload.pdfCoords)) {
@@ -178,7 +206,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     } catch (err) {
       console.error("Failed to decode SyncPayload", err);
     }
-  }, [isAutoSyncEnabled, role, visualSyncDelay]);
+  }, [isAutoSyncEnabled, role, visualSyncDelay, activeProjectId, activeProjectType, latestPdfCoordinates, latestXmlCoordinates, drawings, canStudentDraw]);
 
   const { send } = useDataChannel("music-sync", onMessage);
 
@@ -231,7 +259,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       timestamp: Date.now(),
       senderId: room.localParticipant.identity
     };
-    send(new TextEncoder().encode(JSON.stringify(finalPayload)), { reliable: data.type === "CHANGE_DOC" || data.type === "DRAWING" || data.type === "TOGGLE_STUDENT_DRAW" });
+    send(new TextEncoder().encode(JSON.stringify(finalPayload)), { reliable: data.type === "CHANGE_DOC" || data.type === "DRAWING" || data.type === "TOGGLE_STUDENT_DRAW" || data.type === "SYNC_FULL_STATE" });
   }, [send, role, room]);
 
   const broadcastDrawing = useCallback((action: string, points?: any, color?: string, pageIndex?: number, strokeId?: string) => {
@@ -279,6 +307,20 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     setAutoSync(true);
     // Nếu có Heartbeat xót lại trong Cache thì gọi ngay lập tức ra
   }, []);
+
+  // Student xin dữ liệu lần đầu khi nối mạng xong
+  const hasRequestedSync = useRef(false);
+  useEffect(() => {
+    if (role === "student" && !hasRequestedSync.current && room?.state === ConnectionState.Connected) {
+       hasRequestedSync.current = true;
+       try {
+           const req: Partial<SyncPayload> = { type: "REQUEST_FULL_SYNC", timestamp: Date.now(), senderId: room.localParticipant.identity };
+           send(new TextEncoder().encode(JSON.stringify(req)), { reliable: true });
+       } catch (e) {
+           console.error("Lỗi khi request full sync", e);
+       }
+    }
+  }, [role, room?.state, send, room?.localParticipant?.identity]);
 
   // Teacher ngầm gửi Heartbeat cứ mỗi 3 giây
   useEffect(() => {
