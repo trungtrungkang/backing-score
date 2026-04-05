@@ -5,8 +5,6 @@ import { getProject, type ProjectDocument } from "@/lib/appwrite";
 import { normalizePayload, type DAWPayload } from "@/lib/daw/types";
 import { PlayShell } from "@/components/player/PlayShell";
 import { Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { CanvasOverlay } from "./CanvasOverlay";
 import { useUniversalSync } from "./UniversalSyncProvider";
 
 export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
@@ -69,9 +67,6 @@ export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
            broadcastPayload({ type: "SYNC_XML", xmlCoords: coords });
         }}
       />
-
-      {/* Canvas Overlay covers the exact bounds for Drawing logic! */}
-      <CanvasOverlay />
     </div>
   );
 }

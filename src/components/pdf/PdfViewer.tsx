@@ -35,6 +35,7 @@ import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import PdfNavMapPanel from "./PdfNavMapPanel";
 import { saveNavMap, type ParsedSheetNavMap, type Bookmark, type NavigationSequence } from "@/lib/appwrite/nav-maps";
+import { PdfDrawingLayer } from "./PdfDrawingLayer";
 
 interface PdfViewerProps {
   sheetMusicId: string;
@@ -992,6 +993,7 @@ export default function PdfViewer({
                         id={`pdf-canvas-spread-${idx}`}
                         className="bg-white block"
                       />
+                      <PdfDrawingLayer pageIndex={pageNum} />
                     </div>
                   );
                 })}
@@ -1011,6 +1013,7 @@ export default function PdfViewer({
                     className="bg-white"
                     style={{ maxWidth: "100%" }}
                   />
+                  <PdfDrawingLayer pageIndex={pageNum} />
                 </div>
               ))}
               </>

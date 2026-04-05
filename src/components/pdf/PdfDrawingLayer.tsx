@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { useUniversalSync } from "./UniversalSyncProvider";
-import { Pencil, Eraser, Trash2, MousePointer2 } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { useUniversalSync } from "../livekit/UniversalSyncProvider";
 import { cn } from "@/lib/utils";
 
-// A rudimentary canvas overlay for anchor-based drawing sync
-export function CanvasOverlay() {
+export function PdfDrawingLayer({ pageIndex }: { pageIndex: number }) {
   const { role, drawings, broadcastDrawing, canStudentDraw, activeProjectType, isDrawingMode, drawingColor } = useUniversalSync();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -14,8 +12,23 @@ export function CanvasOverlay() {
   // Local state for drawing paths (in-progress)
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<{x: number, y: number}[]>([]);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   const hasPermission = (role === "teacher" || canStudentDraw) && activeProjectType !== "musicxml";
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+         setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Filter drawings that belong to this particular page
+  const pageDrawings = drawings.filter(d => d.pageIndex === pageIndex || d.action === "CLEAR");
 
   // Render received drawings
   useEffect(() => {
@@ -36,8 +49,8 @@ export function CanvasOverlay() {
     ctx.lineJoin = "round";
     ctx.lineWidth = 4;
 
-    // Render historical drawings
-    for (const drawEvent of drawings) {
+    // Render historical drawings for THIS page
+    for (const drawEvent of pageDrawings) {
       if (drawEvent.action === "DRAW" && drawEvent.points) {
         ctx.strokeStyle = drawEvent.color || "#ef4444";
         ctx.beginPath();
@@ -67,7 +80,7 @@ export function CanvasOverlay() {
       ctx.stroke();
     }
 
-  }, [drawings, currentPath, drawingColor]);
+  }, [pageDrawings, currentPath, drawingColor, dimensions]);
 
   // Pointer Handlers
   const getRelativePosition = (e: React.PointerEvent) => {
@@ -98,7 +111,7 @@ export function CanvasOverlay() {
     
     // Optimize: Broadcast intermediate stroke segments every N points
     if (nextPath.length % 5 === 0) {
-       broadcastDrawing("DRAW", nextPath, drawingColor);
+       broadcastDrawing("DRAW", nextPath, drawingColor, pageIndex);
     }
   };
 
@@ -106,13 +119,9 @@ export function CanvasOverlay() {
     if (!isDrawing || !isDrawingMode || !hasPermission) return;
     setIsDrawing(false);
     if (currentPath.length > 0) {
-      broadcastDrawing("DRAW", currentPath, drawingColor);
+      broadcastDrawing("DRAW", currentPath, drawingColor, pageIndex);
     }
     setCurrentPath([]);
-  };
-
-  const clearCanvas = () => {
-    broadcastDrawing("CLEAR");
   };
 
   return (

@@ -16,6 +16,7 @@ export type SyncPayload = {
   action?: string;
   points?: any;
   color?: string;
+  pageIndex?: number;
   canStudentDraw?: boolean;
   moderateAction?: "MUTE_MIC" | "MUTE_CAM";
   targetIdentity?: string;
@@ -39,7 +40,7 @@ interface SyncContextValue extends SyncState {
   setCanStudentDraw: (val: boolean) => void;
   syncToHost: () => void;
   broadcastPayload: (payload: Partial<SyncPayload>) => void;
-  broadcastDrawing: (action: string, points?: any, color?: string) => void;
+  broadcastDrawing: (action: string, points?: any, color?: string, pageIndex?: number) => void;
   visualSyncDelay: number;
   setVisualSyncDelay: (val: number) => void;
   setIsDrawingMode: (val: boolean) => void;
@@ -197,12 +198,13 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     send(new TextEncoder().encode(JSON.stringify(finalPayload)), { reliable: data.type === "CHANGE_DOC" || data.type === "DRAWING" || data.type === "TOGGLE_STUDENT_DRAW" });
   }, [send, role, room]);
 
-  const broadcastDrawing = useCallback((action: string, points?: any, color?: string) => {
+  const broadcastDrawing = useCallback((action: string, points?: any, color?: string, pageIndex?: number) => {
     broadcastPayload({
       type: "DRAWING",
       action,
       points,
-      color
+      color,
+      pageIndex
     });
   }, [broadcastPayload]);
 
