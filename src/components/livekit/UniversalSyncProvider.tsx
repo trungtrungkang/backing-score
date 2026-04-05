@@ -180,6 +180,13 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     if (data.type === "SYNC_XML") {
         setXmlCoordinates(data.xmlCoords || data);
     }
+    if (data.type === "DRAWING") {
+        if (data.action === "CLEAR") {
+           setDrawings([]);
+        } else {
+           setDrawings(prev => [...prev, data as SyncPayload]);
+        }
+    }
 
     // 2. Broadcast đi cho Học sinh
     const finalPayload = {
