@@ -419,9 +419,52 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
   useEffect(() => {
     if (!audioManagerRef.current) {
       audioManagerRef.current = new AudioManager();
+      
+      // Đồng bộ ngay trạng thái Mute Loa từ nút bấm Toolbar (nếu tắt dở từ trước)
+      const isMuted = !!(window as any).__localSpeakerMuted;
+      audioManagerRef.current.setLocalSpeakerMute(isMuted);
+
+      const globalTone = (window as any).Tone;
+      // 1. Ép Tone.js của MIDI xài chung AudioContext với AudioManager để cho phép hoà trộn tín hiệu
+      if (globalTone && globalTone.context && globalTone.context.rawContext !== audioManagerRef.current.getContext()) {
+          try {
+             globalTone.setContext(audioManagerRef.current.getContext());
+          } catch(e) { console.warn("Failed to sync Tone.js context", e); }
+      }
+      
       const tempo = payload.metadata?.tempo || 120;
       audioManagerRef.current.getMetronome()?.setTempoParams(tempo, payload.metadata?.timeSignature || "4/4", payload.metadata?.timeSignature || "4/4");
       MidiPlayerSingleton.setAudioManager(audioManagerRef.current);
+
+      // 2. Định tuyến Tone.js (MIDI) vào Master MediaStreamDestination & SpeakerGain
+      const mediaDest = audioManagerRef.current.getMediaStreamDestination();
+      const speakerGain = audioManagerRef.current.getSpeakerGain();
+      if (globalTone && globalTone.Destination && mediaDest && speakerGain) {
+         try {
+           // Ngắt gốc tự động đổ ra loa mặc định của Tone.js để kiểm soát bằng AudioManager
+           globalTone.Destination.disconnect();
+           // Nhánh 1: Cắm vào loa cục bộ (chịu ảnh hưởng bởi chế độ Mute Local)
+           globalTone.Destination.connect(speakerGain);
+           // Nhánh 2: Cắm vào LiveKit (Luôn sạch 100%, không bị Mute Local làm ảnh hưởng)
+           globalTone.Destination.connect(mediaDest);
+         } catch(e) {}
+      }
+
+      // 3. Phóng luồng Âm thanh (Audio Track) ra ngoài cho LiveKit nhặt
+      if (mediaDest && syncMode === "host") {
+         const sysTrack = mediaDest.stream.getAudioTracks()[0];
+         if (sysTrack) {
+             (window as any).__livekitSystemAudioTrack = sysTrack;
+             window.dispatchEvent(new CustomEvent('livekit-system-audio-ready', { detail: sysTrack }));
+         }
+      }
+
+      // 4. Lắng nghe yêu cầu "Tắt tiếng cục bộ" từ UI phòng học
+      const handleMuteLocal = (e: CustomEvent) => {
+          if (audioManagerRef.current) audioManagerRef.current.setLocalSpeakerMute(e.detail);
+      };
+      window.addEventListener('mute-local-speaker', handleMuteLocal as any);
+      (audioManagerRef.current as any)._muteLocalHandler = handleMuteLocal;
 
       const initialVols: Record<string, number> = {};
       payload.audioTracks.forEach(t => {
@@ -433,13 +476,16 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     return () => {
       MidiPlayerSingleton.cleanup();
       if (audioManagerRef.current) {
+        if ((audioManagerRef.current as any)._muteLocalHandler) {
+           window.removeEventListener('mute-local-speaker', (audioManagerRef.current as any)._muteLocalHandler);
+        }
         audioManagerRef.current.stop();
         audioManagerRef.current = null;
       }
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       prevFilesRef.current = null;
     };
-  }, [payload.metadata, payload.audioTracks]);
+  }, [payload.metadata, payload.audioTracks, syncMode]);
 
   // Safety net: force-stop all audio on browser back/forward or page unload
   useEffect(() => {

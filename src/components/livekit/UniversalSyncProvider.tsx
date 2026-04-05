@@ -1,7 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { useRoomContext, useDataChannel } from "@livekit/components-react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { useRoomContext, useDataChannel, useConnectionState } from "@livekit/components-react";
+import { LocalAudioTrack, Track, ConnectionState } from "livekit-client";
+import { toast } from "sonner";
 
 export type SyncPayload = {
   type: "SYNC_PDF" | "SYNC_XML" | "CHANGE_DOC" | "HEARTBEAT" | "DRAWING" | "TOGGLE_STUDENT_DRAW";
@@ -34,6 +36,8 @@ interface SyncContextValue extends SyncState {
   syncToHost: () => void;
   broadcastPayload: (payload: Partial<SyncPayload>) => void;
   broadcastDrawing: (action: string, points?: any, color?: string) => void;
+  visualSyncDelay: number;
+  setVisualSyncDelay: (val: number) => void;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -55,6 +59,9 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
   const [latestPdfCoordinates, setPdfCoordinates] = useState<any>(null);
   const [latestXmlCoordinates, setXmlCoordinates] = useState<any>(null);
   const [drawings, setDrawings] = useState<any[]>([]);
+  
+  // Trạng thái bù trừ trễ hình ảnh (Jitter Compensation) - Mặc định 350ms 
+  const [visualSyncDelay, setVisualSyncDelay] = useState(350);
 
   // Bắt gói tin gửi tới từ LiveKit DataChannel
   const onMessage = useCallback((msgMsg: any) => {
@@ -83,15 +90,24 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
         setCanStudentDraw(payload.canStudentDraw ?? false);
       }
 
-      // Xử lý gói Data Tọa độ (Chỉ nhận nếu đang AutoSync hoặc gặp Heartbeat force)
+        // Xử lý gói Data Tọa độ (Chỉ nhận nếu đang AutoSync hoặc gặp Heartbeat force)
       if (payload.type === "HEARTBEAT" || isAutoSyncEnabled) {
         if (payload.type === "SYNC_PDF" || (payload.type === "HEARTBEAT" && payload.pdfCoords)) {
           setPdfCoordinates(payload.pdfCoords || payload);
         }
         if (payload.type === "SYNC_XML" || (payload.type === "HEARTBEAT" && payload.xmlCoords)) {
-          setXmlCoordinates(payload.xmlCoords || payload);
+          // Bù trừ Jitter Buffer của LiveKit Audio (Tính theo biến cấu hình)
+          // Data Channel đi quá nhanh (UDP), trong khi Audio đi chậm hơn. Nếu không delay, UI sẽ nhảy trước khi có tiếng.
+          if (role === "student" && visualSyncDelay > 0) {
+             setTimeout(() => {
+                setXmlCoordinates(payload.xmlCoords || payload);
+             }, visualSyncDelay);
+          } else {
+             setXmlCoordinates(payload.xmlCoords || payload);
+          }
         }
       }
+
 
       // Xử lý Nét vẽ
       if (payload.type === "DRAWING") {
@@ -105,7 +121,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     } catch (err) {
       console.error("Failed to decode SyncPayload", err);
     }
-  }, [isAutoSyncEnabled]);
+  }, [isAutoSyncEnabled, role, visualSyncDelay]);
 
   const { send } = useDataChannel("music-sync", onMessage);
 
@@ -164,21 +180,60 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     return () => clearInterval(interval);
   }, [role, broadcastPayload, activeProjectId, activeProjectType, latestPdfCoordinates, latestXmlCoordinates]);
 
+  // Bộ thu bắt Web Audio Track bắn lên từ máy của Giáo viên để LiveStream nhạc sạch
+  const publishedSysAudioRef = useRef<any>(null);
+  const connectionState = useConnectionState();
+  
+  useEffect(() => {
+    if (role !== "teacher" || !room || connectionState !== ConnectionState.Connected) return;
+    
+    const handleSysAudio = async (msTrack: MediaStreamTrack) => {
+       if (msTrack && room.localParticipant) {
+          try {
+             // Nếu đã từng publish, gỡ nó ra trước
+             if (publishedSysAudioRef.current) {
+                await room.localParticipant.unpublishTrack(publishedSysAudioRef.current);
+             }
+             const pub = await room.localParticipant.publishTrack(msTrack, { name: "system-audio", source: Track.Source.ScreenShareAudio });
+             publishedSysAudioRef.current = pub;
+             console.log("X-SYS-AUDIO: Web Audio Stream successfully hooked into LiveKit!", msTrack);
+             toast.success("High-Fidelity Audio Sync Active!", { description: "Bài hát sẽ truyền qua đường âm thanh chất lượng cao." });
+          } catch (err) {
+             console.error("X-SYS-AUDIO Hook failed:", err);
+             toast.error("Audio Hook Failed", { description: "Không thể nhúng luồng âm thanh vào LiveKit." });
+          }
+       }
+    };
+
+    // Quét tìm xem Audio Track đã được sinh ra trước khi hook này kịp chạy hay không (Race Condition)
+    if ((window as any).__livekitSystemAudioTrack) {
+       handleSysAudio((window as any).__livekitSystemAudioTrack);
+    }
+
+    const onEventFired = (e: any) => handleSysAudio(e.detail);
+    window.addEventListener('livekit-system-audio-ready', onEventFired);
+    return () => {
+       window.removeEventListener('livekit-system-audio-ready', onEventFired);
+    };
+  }, [role, room, connectionState]);
+
   return (
     <SyncContext.Provider value={{
       role,
       isAutoSyncEnabled,
+      setAutoSync,
       canStudentDraw,
+      setCanStudentDraw,
       activeProjectId,
       activeProjectType,
       latestPdfCoordinates,
       latestXmlCoordinates,
       drawings,
-      setAutoSync,
-      setCanStudentDraw,
       syncToHost,
       broadcastPayload,
-      broadcastDrawing
+      broadcastDrawing,
+      visualSyncDelay,
+      setVisualSyncDelay
     }}>
       {children}
     </SyncContext.Provider>

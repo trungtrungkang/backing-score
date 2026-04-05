@@ -263,3 +263,26 @@ export async function endLiveSessionSystem(classroomId: string) {
        // only close active ones
     ));
 }
+
+export async function getActiveLiveSession(classroomId: string) {
+  const auth = getAuth();
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({ headers: requestHeaders });
+  if (!session || !session.user) return null;
+
+  const db = getDb();
+  const sessions = await db.select({
+    id: liveSessions.id,
+    startedAt: liveSessions.startedAt,
+    endedAt: liveSessions.endedAt,
+    activeProjectId: liveSessions.activeProjectId,
+    hostId: liveSessions.hostId,
+  })
+  .from(liveSessions)
+  .where(and(
+     eq(liveSessions.classroomId, classroomId),
+  ))
+  .orderBy(desc(liveSessions.startedAt));
+
+  return sessions.find(s => s.endedAt === null) || null;
+}

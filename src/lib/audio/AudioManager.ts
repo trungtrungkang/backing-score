@@ -28,6 +28,9 @@ interface TrackNode {
 export class AudioManager {
   private context: AudioContext | null = null;
   private tracks: Map<string, TrackNode> = new Map();
+  private masterGain: GainNode | null = null;
+  private speakerGain: GainNode | null = null;
+  private mediaDest: MediaStreamAudioDestinationNode | null = null;
 
   private isPlaying: boolean = false;
   private durationMs: number = 0;
@@ -59,6 +62,10 @@ export class AudioManager {
     if (!this.context) {
       if (typeof window !== "undefined") {
         this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+        this.masterGain = this.context.createGain();
+        this.speakerGain = this.context.createGain();
+        this.masterGain.connect(this.speakerGain);
+        this.speakerGain.connect(this.context.destination);
         this.metronome = new MetronomeEngine(this.context);
 
         // Listen for OS-level interrupts (e.g. iOS screen lock or backgrounding)
@@ -97,7 +104,7 @@ export class AudioManager {
       const buffer = this.context.createBuffer(1, 1, 22050);
       const source = this.context.createBufferSource();
       source.buffer = buffer;
-      source.connect(this.context.destination);
+      source.connect(this.masterGain!);
       source.start(0);
     } catch (e) {
       console.warn("[AudioManager] iOS audio unlock failed", e);
@@ -179,7 +186,7 @@ export class AudioManager {
         track.gainNode.gain.value = track.params.volume ?? 1;
 
         track.pannerNode.connect(track.gainNode);
-        track.gainNode.connect(this.context!.destination);
+        track.gainNode.connect(this.masterGain!);
         console.log(`[AudioManager] Nodes connected for ${track.params.name}, gain=${track.gainNode.gain.value}`);
       }
     });
@@ -265,7 +272,7 @@ export class AudioManager {
       if (trackNode.pannerNode) {
         finalSource.connect(trackNode.pannerNode);
       } else {
-        finalSource.connect(this.context!.destination);
+        finalSource.connect(this.masterGain!);
       }
 
       const trackOffsetSec = (trackNode.params.offsetMs || 0) / 1000;
@@ -612,6 +619,28 @@ export class AudioManager {
       this.metronome.start(this.getCurrentPositionMs(), this.context.currentTime + 0.05 + metronomeLatencyComp);
     } else {
       this.metronome.stop();
+    }
+  }
+
+  /** Lấy cọc kết nối MediaStream để làm nguồn bơm âm thanh vào LiveKit */
+  public getMediaStreamDestination(): MediaStreamAudioDestinationNode | null {
+    if (!this.context) this.initContext();
+    if (!this.mediaDest && this.context && this.masterGain) {
+        this.mediaDest = this.context.createMediaStreamDestination();
+        this.masterGain.connect(this.mediaDest);
+    }
+    return this.mediaDest;
+  }
+
+  /** Trả về cổng ra loa cục bộ để ứng dụng khác (Tone.js) cắm vào */
+  public getSpeakerGain(): GainNode | null {
+    return this.speakerGain;
+  }
+
+  /** Tắt/Bật tiếng loa ngoài cục bộ (không ảnh hưởng đến LiveKit MediaStream) */
+  public setLocalSpeakerMute(muted: boolean) {
+    if (this.speakerGain) {
+      this.speakerGain.gain.value = muted ? 0 : 1;
     }
   }
 }

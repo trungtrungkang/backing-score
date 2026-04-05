@@ -28,7 +28,9 @@ import {
   X,
   History,
   Eye,
-  Music
+  Music,
+  Video,
+  PlayCircle
 } from "lucide-react";
 import {
   getClassroom,
@@ -55,7 +57,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
-import { getLiveSessions, getLiveSessionAttendances } from "@/app/actions/v5/livekit";
+import { getLiveSessions, getLiveSessionAttendances, getActiveLiveSession } from "@/app/actions/v5/livekit";
+import { cn } from "@/lib/utils";
 
 type Tab = "assignments" | "members" | "materials" | "settings" | "progress" | "live_logs";
 
@@ -101,6 +104,7 @@ export default function ClassroomDetailPage() {
   const [selectedSessionInfo, setSelectedSessionInfo] = useState<{ id: string, startedAt: Date, attendances: any[] } | null>(null);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [logsLoaded, setLogsLoaded] = useState(false);
+  const [activeSession, setActiveSession] = useState<any>(null);
 
   const isTeacher = userRole === "teacher";
 
@@ -119,8 +123,9 @@ export default function ClassroomDetailPage() {
       isClassroomMember(classroomId),
       listClassroomMembers(classroomId),
       listAssignments(classroomId),
+      getActiveLiveSession(classroomId),
     ])
-      .then(([cr, membership, mems, assigns]) => {
+      .then(([cr, membership, mems, assigns, liveSess]) => {
         if (cancelled) return;
         if (!membership.isMember) {
           toast.error(t("notMember"));
@@ -136,6 +141,7 @@ export default function ClassroomDetailPage() {
         setSettingsDesc(cr.description || "");
         setSettingsInstrument(cr.instrumentFocus || "");
         setSettingsLevel(cr.level || "");
+        setActiveSession(liveSess);
       })
       .catch(() => {
         if (!cancelled) {
@@ -379,9 +385,33 @@ export default function ClassroomDetailPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background dark:bg-black text-foreground dark:text-white">
       <div className="max-w-4xl mx-auto py-8 px-6">
-        <Link href="/classroom" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> {t("allClassrooms")}
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+           <Link href="/classroom" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+             <ArrowLeft className="w-4 h-4" /> {t("allClassrooms")}
+           </Link>
+
+           {/* Live Session Action Header */}
+           {isTeacher ? (
+              <Button 
+                onClick={() => router.push(`/classroom/${classroomId}/live`)}
+                className={cn(
+                   "font-bold shadow-lg transition-all", 
+                   activeSession ? "bg-red-600 hover:bg-red-500 text-white animate-pulse" : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                )}
+              >
+                {activeSession ? <Video className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                {activeSession ? "Re-join Active Live Session" : "Start Live Session"}
+              </Button>
+           ) : activeSession ? (
+              <Button 
+                onClick={() => router.push(`/classroom/${classroomId}/live`)}
+                className="bg-red-600 hover:bg-red-500 text-white font-bold shadow-lg animate-pulse"
+              >
+                <Video className="w-4 h-4 mr-2" />
+                Live Class is Happening - Join Now
+              </Button>
+           ) : null}
+        </div>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 sm:p-6 mb-6 text-white">
