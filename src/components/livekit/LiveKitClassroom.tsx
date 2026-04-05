@@ -184,6 +184,9 @@ export function LiveKitClassroomContainer({ classroomId }: { classroomId: string
       token={token}
       serverUrl={serverUrl}
       data-lk-theme="default"
+      onDisconnected={() => {
+         window.location.href = window.location.pathname.replace('/live', '');
+      }}
       style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", flexDirection: "column", backgroundColor: "#020617" }}
     >
       <LiveKitAttendanceTracker classroomId={classroomId} role={role} />
