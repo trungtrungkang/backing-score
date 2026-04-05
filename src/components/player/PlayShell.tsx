@@ -566,7 +566,8 @@ export function PlayShell({
                   onPrevSong={onPrev}
                   hasNextSong={!!nextProjectId}
                   hasPrevSong={!!prevProjectId}
-                  hideNavUI={syncMode === "guest"}
+                  hideNavUI={syncMode === "guest" && isAutoSyncEnabled}
+                  forcePerformanceMode={syncMode === "guest" && isAutoSyncEnabled}
                 />
                 {/* Che khuất Header của PdfViewer để nhường sân cho PlayerControls */}
                 <div className="absolute top-0 left-0 w-full h-[56px] bg-black pointer-events-none z-[100] opacity-0" />

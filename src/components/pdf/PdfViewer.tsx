@@ -48,6 +48,7 @@ interface PdfViewerProps {
   hasNextSong?: boolean;
   hasPrevSong?: boolean;
   hideNavUI?: boolean;
+  forcePerformanceMode?: boolean;
   onSaveNavMap?: (bookmarks: Bookmark[], sequence: NavigationSequence) => Promise<void>;
 }
 
@@ -63,6 +64,7 @@ export default function PdfViewer({
   hasNextSong,
   hasPrevSong,
   hideNavUI = false,
+  forcePerformanceMode = false,
   onSaveNavMap
 }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
@@ -96,7 +98,8 @@ export default function PdfViewer({
     if (typeof window === "undefined") return false;
     return localStorage.getItem("pdf-pref-darkmode") === 'true';
   });
-  const [performanceMode, setPerformanceMode] = useState(false);
+  const [internalPerformanceMode, setPerformanceMode] = useState(false);
+  const performanceMode = forcePerformanceMode || internalPerformanceMode;
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfError, setPdfError] = useState("");
 
