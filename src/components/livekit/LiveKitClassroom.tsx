@@ -426,7 +426,7 @@ function TeacherTestingControls() {
         </button>
       </div>
 
-      {showDrive && (
+      <div className={showDrive ? "block" : "hidden"}>
         <MyDriveModal 
           onClose={() => setShowDrive(false)} 
           onSelect={(id, type) => {
@@ -434,7 +434,7 @@ function TeacherTestingControls() {
              setShowDrive(false);
           }} 
         />
-      )}
+      </div>
     </>
   );
 }
