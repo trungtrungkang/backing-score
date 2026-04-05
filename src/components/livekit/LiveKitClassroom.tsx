@@ -232,28 +232,45 @@ function ClassroomTopology() {
   // Khi có bài tập -> Kiến trúc "Cánh Bướm"
   return (
     <LayoutContextProvider>
-      <div className="flex w-full h-full bg-slate-950 transition-all duration-500 ease-in-out relative">
-        <TeacherTestingControls />
+      <div className="flex flex-col w-full h-full bg-slate-900 transition-all duration-500 ease-in-out">
         
-        {/* Cột trái (30%): Rải dải Camera từ từ xuống (Picture in picture xếp chồng) */}
-        <div className="w-[30%] lg:w-[25%] h-full p-2 pb-24 flex flex-col gap-2 overflow-y-auto border-r border-slate-800">
-          <GridLayout tracks={tracks} style={{ height: "100%" }}>
-            <ParticipantTile />
-          </GridLayout>
+        {/* HEADER DOCK */}
+        <div className="flex-none h-14 md:h-16 w-full border-b border-white/5 bg-slate-950 flex items-center justify-between px-3 md:px-6 z-[400] shadow-sm">
+           <div className="flex items-center gap-2">
+              <span className="font-bold text-white text-sm md:text-base flex items-center gap-2">
+                 <div className="w-2.5 h-2.5 z-10 rounded-full bg-red-500 animate-pulse border border-red-400"></div> LIVE CLASSROOM
+              </span>
+           </div>
+           
+           <div className="flex items-center gap-1.5 md:gap-2">
+              <TeacherTestingControls />
+           </div>
         </div>
 
-        {/* Vùng phình phải (70%): Bảng vẽ / Bản nhạc */}
-        <div className="flex-1 h-full relative bg-white dark:bg-slate-900 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
-          <LiveKitPlayShellBridge projectId={activeProjectId} />
+        {/* BODY (Split Layout) */}
+        <div className="flex-1 min-h-0 flex flex-row relative">
+          
+          {/* Cột trái (Video) */}
+          <div className="w-[30%] lg:w-[25%] h-full p-2 flex flex-col gap-2 overflow-y-auto border-r border-slate-800/50 bg-black/40">
+            <GridLayout tracks={tracks} style={{ height: "100%" }}>
+              <ParticipantTile />
+            </GridLayout>
+          </div>
+
+          {/* Vùng phải (Bảng vẽ / Bản nhạc) */}
+          <div className="flex-1 h-full relative bg-white dark:bg-slate-950 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+            <LiveKitPlayShellBridge projectId={activeProjectId} />
+          </div>
+
+          <ChatOverlay />
+          <StudentSyncSettings />
         </div>
 
-        {/* Khung Chat đính kèm đè lên lề phải nếu được kích hoạt qua ControlBar */}
-        <ChatOverlay />
-
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[300]">
+        {/* FOOTER DOCK (LiveKit Controls) */}
+        <div className="flex-none h-[72px] w-full border-t border-white/5 bg-slate-950 flex items-center justify-center z-[400] shadow-2xl relative">
            <ControlBar controls={{ chat: true, settings: false }} />
         </div>
-        <StudentSyncSettings />
+
       </div>
     </LayoutContextProvider>
   );
@@ -315,8 +332,7 @@ function TeacherTestingControls() {
 
   return (
     <>
-      {/* Floating Teacher Bar - Responsive & Độc lập với ControlBar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[300] flex gap-1.5 items-center bg-slate-900/80 p-1.5 rounded-full backdrop-blur-xl border border-white/10 shadow-2xl transition-all">
+      <div className="flex gap-1.5 items-center transition-all bg-slate-800/50 p-1.5 rounded-xl border border-white/5">
         <button 
           onClick={() => setShowDrive(true)}
           className="px-4 py-2 hover:bg-slate-800 rounded-full text-zinc-300 hover:text-white font-medium text-sm flex items-center gap-2 transition-colors"

@@ -47,6 +47,7 @@ interface PdfViewerProps {
   onPrevSong?: () => void;
   hasNextSong?: boolean;
   hasPrevSong?: boolean;
+  hideNavUI?: boolean;
   onSaveNavMap?: (bookmarks: Bookmark[], sequence: NavigationSequence) => Promise<void>;
 }
 
@@ -61,6 +62,7 @@ export default function PdfViewer({
   onPrevSong,
   hasNextSong,
   hasPrevSong,
+  hideNavUI = false,
   onSaveNavMap
 }: PdfViewerProps) {
   const t = useTranslations("Pdfs");
@@ -1404,7 +1406,7 @@ export default function PdfViewer({
         )}
       </div>
 
-      {navMap && bottomBarMode !== 'hidden' && !showNavMapPanel && !performanceMode && !isFullscreen && (
+      {!hideNavUI && navMap && bottomBarMode !== 'hidden' && !showNavMapPanel && !performanceMode && !isFullscreen && (
          <>
          {/* Sequence Mode */}
          {bottomBarMode === 'sequence' && navMap.sequence.length > 0 && (
