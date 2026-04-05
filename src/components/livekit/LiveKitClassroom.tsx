@@ -459,17 +459,7 @@ function TeacherTestingControls() {
               </button>
             </div>
 
-            <button
-              onClick={toggleStudentDraw}
-              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full font-medium transition-colors text-[10px] md:text-sm flex items-center gap-1.5 md:gap-2 ${
-                canStudentDraw ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 hover:bg-slate-800 text-zinc-300 border border-transparent"
-              }`}
-              title="Cho phép Học sinh vẽ/tương tác lên bảng"
-            >
-              <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${canStudentDraw ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`}></div>
-              <span className="hidden md:inline">Drawing: {canStudentDraw ? "ON" : "OFF"}</span>
-              <span className="md:hidden">Draw</span>
-            </button>
+
           </>
         )}
 
