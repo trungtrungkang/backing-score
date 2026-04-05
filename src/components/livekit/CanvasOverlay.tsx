@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 // A rudimentary canvas overlay for anchor-based drawing sync
 export function CanvasOverlay() {
-  const { role, drawings, broadcastDrawing, canStudentDraw } = useUniversalSync();
+  const { role, drawings, broadcastDrawing, canStudentDraw, activeProjectType } = useUniversalSync();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -17,7 +17,7 @@ export function CanvasOverlay() {
   const [color, setColor] = useState("#ef4444"); // Red by default
   const [currentPath, setCurrentPath] = useState<{x: number, y: number}[]>([]);
   
-  const hasPermission = role === "teacher" || canStudentDraw;
+  const hasPermission = (role === "teacher" || canStudentDraw) && activeProjectType !== "musicxml";
 
   // Render received drawings
   useEffect(() => {
