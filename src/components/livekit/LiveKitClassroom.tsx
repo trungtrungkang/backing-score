@@ -10,7 +10,10 @@ import {
   useTracks,
   useConnectionState,
   ControlBar,
-  LayoutContextProvider
+  LayoutContextProvider,
+  Chat,
+  useLayoutContext,
+  useRoomContext
 } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
 import { Loader2 } from "lucide-react";
@@ -60,12 +63,17 @@ function LiveKitAttendanceTracker({ classroomId, role }: { classroomId: string, 
      return () => {
         mounted = false;
         window.removeEventListener('beforeunload', handleUnload);
-        // On unmount (tab close), try to send leave event
-        if (connectionState === ConnectionState.Connected) {
-           if (role === "student") {
-              recordAttendance(classroomId, "leave").catch(() => {});
-           }
-        }
+         // On unmount (tab close or navigate away), try to send leave event
+         if (connectionState === ConnectionState.Connected) {
+            if (role === "student") {
+               fetch('/api/v5/livekit/beacon', {
+                 method: 'POST',
+                 keepalive: true,
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ classroomId, role: "student" })
+               }).catch(() => {});
+            }
+         }
      };
   }, [connectionState, classroomId, role]);
 
@@ -235,8 +243,11 @@ function ClassroomTopology() {
           <LiveKitPlayShellBridge projectId={activeProjectId} />
         </div>
 
+        {/* Khung Chat đính kèm đè lên lề phải nếu được kích hoạt qua ControlBar */}
+        <ChatOverlay />
+
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[300]">
-           <ControlBar controls={{ chat: false, settings: true }} />
+           <ControlBar controls={{ chat: true, settings: false }} />
         </div>
         <StudentSyncSettings />
       </div>
@@ -244,9 +255,20 @@ function ClassroomTopology() {
   );
 }
 
+// Bảng Chat Nổi (Ẩn/Hiện theo công tắc trên ControlBar)
+function ChatOverlay() {
+  const layoutContext = useLayoutContext();
+  if (!layoutContext?.widget?.state?.showChat) return null;
+  return (
+    <div className="absolute top-4 right-4 bottom-24 w-[350px] z-[400] shadow-2xl rounded-2xl overflow-hidden animate-in slide-in-from-right-8 duration-300">
+      <Chat />
+    </div>
+  );
+}
+
 // Bảng Menu Máy Chủ Host
 function TeacherTestingControls() {
-  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId } = useUniversalSync();
+  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId, activeProjectType } = useUniversalSync();
   const [showDrive, setShowDrive] = useState(false);
   const [localSpeakerMuted, setLocalSpeakerMuted] = useState(() => !!(window as any).__localSpeakerMuted);
   const params = useParams();
@@ -262,12 +284,17 @@ function TeacherTestingControls() {
     });
   };
 
+  const room = useRoomContext();
+
   const closeRoomAndStop = async () => {
     broadcastPayload({ type: "CHANGE_DOC", projectId: undefined, projectType: undefined });
     const roomId = params.id as string;
     if (roomId) {
        await endCurrentLiveSession(roomId);
-       alert("Session successfully marked as ended!");
+       if (room) {
+          room.disconnect();
+       }
+       window.location.href = window.location.pathname.replace('/live', '');
     }
   };
 
@@ -317,17 +344,21 @@ function TeacherTestingControls() {
           </>
         )}
 
-        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+        {activeProjectType !== "musicxml" && (
+          <>
+            <div className="w-[1px] h-6 bg-white/20 mx-1" />
 
-        <button
-          onClick={toggleStudentDraw}
-          className={`px-4 py-2 rounded-full font-medium transition-colors text-sm flex items-center gap-2 ${
-            canStudentDraw ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-slate-800 text-zinc-300 border border-transparent"
-          }`}
-        >
-          <div className={`w-2 h-2 rounded-full ${canStudentDraw ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`}></div>
-          <span className="hidden md:inline">Drawing: {canStudentDraw ? "ON" : "OFF"}</span>
-        </button>
+            <button
+              onClick={toggleStudentDraw}
+              className={`px-4 py-2 rounded-full font-medium transition-colors text-sm flex items-center gap-2 ${
+                canStudentDraw ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-slate-800 text-zinc-300 border border-transparent"
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${canStudentDraw ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`}></div>
+              <span className="hidden md:inline">Drawing: {canStudentDraw ? "ON" : "OFF"}</span>
+            </button>
+          </>
+        )}
 
         <div className="w-[1px] h-6 bg-white/20 mx-1" />
 

@@ -1319,13 +1319,14 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
         document.activeElement?.hasAttribute("contenteditable")
       ) return;
       if (e.code === "Space") {
+        if (syncMode === "guest") return;
         e.preventDefault();
         isPlaying ? handlePause() : handlePlay();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, handlePlay, handlePause]);
+  }, [isPlaying, handlePlay, handlePause, syncMode]);
 
   const handlePlaybackRateChange = useCallback(async (rate: number) => {
     const wasPlaying = isPlayingRef.current;

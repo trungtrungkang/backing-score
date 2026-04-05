@@ -191,16 +191,18 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
        if (msTrack && room.localParticipant) {
           try {
              // Nếu đã từng publish, gỡ nó ra trước
-             if (publishedSysAudioRef.current) {
-                await room.localParticipant.unpublishTrack(publishedSysAudioRef.current);
+             if (publishedSysAudioRef.current && room.state === ConnectionState.Connected) {
+                await room.localParticipant.unpublishTrack(publishedSysAudioRef.current).catch(() => {});
              }
+             if (room.state !== ConnectionState.Connected) return;
+
              const pub = await room.localParticipant.publishTrack(msTrack, { name: "system-audio", source: Track.Source.ScreenShareAudio });
              publishedSysAudioRef.current = pub;
              console.log("X-SYS-AUDIO: Web Audio Stream successfully hooked into LiveKit!", msTrack);
-             toast.success("High-Fidelity Audio Sync Active!", { description: "Bài hát sẽ truyền qua đường âm thanh chất lượng cao." });
+             toast.success("High-Fidelity Audio Sync Active!", { id: "sys-audio-hook", description: "Bài hát sẽ truyền qua đường âm thanh chất lượng cao." });
           } catch (err) {
              console.error("X-SYS-AUDIO Hook failed:", err);
-             toast.error("Audio Hook Failed", { description: "Không thể nhúng luồng âm thanh vào LiveKit." });
+             toast.error("Audio Hook Failed", { id: "sys-audio-hook-err", description: "Không thể nhúng luồng âm thanh vào LiveKit." });
           }
        }
     };

@@ -591,7 +591,7 @@ export function PlayShell({
                   timemapSource={payload.notationData?.timemapSource}
               payloadTempo={payload.metadata?.tempo || 120}
               measureMap={payload.notationData?.measureMap}
-              onSeek={actions.handleSeek}
+              onSeek={syncMode === "guest" ? undefined : actions.handleSeek}
               onMidiExtracted={actions.handleMidiExtracted}
               isDarkMode={isDarkMode}
               isWaitMode={state.isWaitMode}

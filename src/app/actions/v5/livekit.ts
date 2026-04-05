@@ -35,13 +35,11 @@ export async function generateLiveKitToken(classroomId: string) {
 
   // 2. Phân loại vai trò
   let role = "student";
-  let canPublish = false;
-  let canPublishData = false;
+  let canPublish = true; // Bật cho phép Học sinh chia sẻ Mic/Camera
+  let canPublishData = true; // Bật cho phép Học sinh gửi tin nhắn Chat qua DataChannel
 
   if (classroom.teacherId === userId) {
     role = "teacher";
-    canPublish = true;
-    canPublishData = true; // Giáo viên được gửi tọa độ bản nhạc
   } else {
     // Kiểm tra xem User này có phải là thành viên lớp không
     // ... logic skip cho gọn ...
