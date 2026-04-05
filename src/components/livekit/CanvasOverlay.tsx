@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils";
 
 // A rudimentary canvas overlay for anchor-based drawing sync
 export function CanvasOverlay() {
-  const { role, drawings, broadcastDrawing, canStudentDraw, activeProjectType } = useUniversalSync();
+  const { role, drawings, broadcastDrawing, canStudentDraw, activeProjectType, isDrawingMode, drawingColor } = useUniversalSync();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Local state for drawing
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  // Local state for drawing paths (in-progress)
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#ef4444"); // Red by default
   const [currentPath, setCurrentPath] = useState<{x: number, y: number}[]>([]);
   
   const hasPermission = (role === "teacher" || canStudentDraw) && activeProjectType !== "musicxml";
@@ -57,7 +55,7 @@ export function CanvasOverlay() {
 
     // Render currently active local stroke
     if (currentPath.length > 0) {
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = drawingColor;
       ctx.beginPath();
       for (let i = 0; i < currentPath.length; i++) {
         const pt = currentPath[i];
@@ -69,7 +67,7 @@ export function CanvasOverlay() {
       ctx.stroke();
     }
 
-  }, [drawings, currentPath, color]);
+  }, [drawings, currentPath, drawingColor]);
 
   // Pointer Handlers
   const getRelativePosition = (e: React.PointerEvent) => {
@@ -99,7 +97,7 @@ export function CanvasOverlay() {
       const nextPath = [...prev, pos];
       // Optimize: Broadcast intermediate stroke segments every N points
       if (nextPath.length % 5 === 0) {
-         broadcastDrawing("DRAW", nextPath, color);
+         broadcastDrawing("DRAW", nextPath, drawingColor);
       }
       return nextPath;
     });
@@ -109,7 +107,7 @@ export function CanvasOverlay() {
     if (!isDrawing || !isDrawingMode || !hasPermission) return;
     setIsDrawing(false);
     if (currentPath.length > 0) {
-      broadcastDrawing("DRAW", currentPath, color);
+      broadcastDrawing("DRAW", currentPath, drawingColor);
     }
     setCurrentPath([]);
   };
@@ -138,54 +136,6 @@ export function CanvasOverlay() {
         onPointerLeave={handlePointerUp}
         onPointerCancel={handlePointerUp}
       />
-
-      {/* Floating Drawing Tool Palette */}
-      {hasPermission && (
-        <div className="absolute top-4 right-4 bg-white/90 dark:bg-zinc-900/90 shadow-xl backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl p-2 flex gap-2 pointer-events-auto">
-          
-          <button 
-            onClick={() => setIsDrawingMode(false)}
-            className={cn("p-2 rounded-lg transition-colors", !isDrawingMode ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-            title="Pointer (Native Scroll)"
-          >
-            <MousePointer2 className="w-5 h-5" />
-          </button>
-          
-          <div className="w-[1px] h-9 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-
-          <button 
-            onClick={() => setIsDrawingMode(true)}
-            className={cn("p-2 rounded-lg transition-colors", isDrawingMode ? "bg-rose-100 text-rose-600 dark:bg-rose-900/50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-            title="Pen Tool"
-          >
-            <Pencil className="w-5 h-5" />
-          </button>
-          
-          {isDrawingMode && (
-            <div className="flex items-center gap-2 mx-2">
-              {["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#a855f7"].map(c => (
-                <button 
-                  key={c}
-                  onClick={() => setColor(c)}
-                  className={cn("w-6 h-6 rounded-full border-2 transition-transform", color === c ? "scale-125 border-zinc-900 dark:border-white" : "border-transparent block hover:scale-110")}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="w-[1px] h-9 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-
-          <button 
-            onClick={clearCanvas}
-            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            title="Clear Board"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-
-        </div>
-      )}
     </div>
   );
 }

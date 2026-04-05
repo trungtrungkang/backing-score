@@ -30,6 +30,8 @@ interface SyncState {
   latestPdfCoordinates: { pageIndex: number; scrollY: number } | null;
   latestXmlCoordinates: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number; anchorMeasureId?: string } | null;
   drawings: any[];
+  isDrawingMode: boolean;
+  drawingColor: string;
 }
 
 interface SyncContextValue extends SyncState {
@@ -40,6 +42,9 @@ interface SyncContextValue extends SyncState {
   broadcastDrawing: (action: string, points?: any, color?: string) => void;
   visualSyncDelay: number;
   setVisualSyncDelay: (val: number) => void;
+  setIsDrawingMode: (val: boolean) => void;
+  setDrawingColor: (color: string) => void;
+  clearDrawings: () => void;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
@@ -61,6 +66,18 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
   const [latestPdfCoordinates, setPdfCoordinates] = useState<any>(null);
   const [latestXmlCoordinates, setXmlCoordinates] = useState<any>(null);
   const [drawings, setDrawings] = useState<any[]>([]);
+  
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [drawingColor, setDrawingColor] = useState("#ef4444");
+
+  const clearDrawings = useCallback(() => {
+    const p = { type: "DRAWING", action: "CLEAR", senderId: room?.localParticipant?.identity || "unknown", timestamp: Date.now() } as const;
+    if (room?.localParticipant) {
+      const dataStr = JSON.stringify(p);
+      room.localParticipant.publishData(new TextEncoder().encode(dataStr), { reliable: true });
+    }
+    setDrawings([]);
+  }, [room]);
   
   // Trạng thái bù trừ trễ hình ảnh (Jitter Compensation) - Mặc định 350ms 
   const [visualSyncDelay, setVisualSyncDelay] = useState(350);
@@ -257,7 +274,12 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       broadcastPayload,
       broadcastDrawing,
       visualSyncDelay,
-      setVisualSyncDelay
+      setVisualSyncDelay,
+      isDrawingMode,
+      setIsDrawingMode,
+      drawingColor,
+      setDrawingColor,
+      clearDrawings
     }}>
       {children}
     </SyncContext.Provider>

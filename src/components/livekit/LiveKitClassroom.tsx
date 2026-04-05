@@ -24,7 +24,7 @@ import { UniversalSyncProvider, useUniversalSync } from "./UniversalSyncProvider
 import { generateLiveKitToken, createLiveSession, stopLiveSession, recordAttendance, endCurrentLiveSession } from "@/app/actions/v5/livekit";
 import { useParams } from "next/navigation";
 import { listMyProjects, type ProjectDocument } from "@/lib/appwrite";
-import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal, Users, MicOff, VideoOff, Mic, Video } from "lucide-react";
+import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal, Users, MicOff, VideoOff, Mic, Video, MousePointer2, Pencil, Trash2 } from "lucide-react";
 
 function LiveKitAttendanceTracker({ classroomId, role }: { classroomId: string, role: "teacher" | "student" }) {
   const connectionState = useConnectionState();
@@ -288,7 +288,7 @@ function ChatOverlay() {
 
 // Bảng Menu Máy Chủ Host
 function TeacherTestingControls() {
-  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId, activeProjectType } = useUniversalSync();
+  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId, activeProjectType, isDrawingMode, setIsDrawingMode, drawingColor, setDrawingColor, clearDrawings } = useUniversalSync();
   const [showDrive, setShowDrive] = useState(false);
   const [localSpeakerMuted, setLocalSpeakerMuted] = useState(() => !!(window as any).__localSpeakerMuted);
   const params = useParams();
@@ -416,16 +416,59 @@ function TeacherTestingControls() {
 
         {activeProjectType !== "musicxml" && (
           <>
-            <div className="w-[1px] h-6 bg-white/20 mx-1" />
+            <div className="w-[1px] h-6 bg-white/20 mx-1 md:mx-2" />
+
+            <div className="hidden lg:flex items-center gap-1 bg-white/10 rounded-full p-1 mr-1">
+              <button 
+                onClick={() => setIsDrawingMode(false)}
+                className={`p-1.5 rounded-full transition-colors ${!isDrawingMode ? "bg-blue-500 text-white" : "text-zinc-400 hover:text-white hover:bg-slate-800"}`}
+                title="Con trỏ Chuột bản địa"
+              >
+                <MousePointer2 className="w-4 h-4" />
+              </button>
+              
+              <button 
+                onClick={() => setIsDrawingMode(true)}
+                className={`p-1.5 rounded-full transition-colors ${isDrawingMode ? "bg-rose-500 text-white" : "text-zinc-400 hover:text-white hover:bg-slate-800"}`}
+                title="Bút vẽ"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+
+              {isDrawingMode && (
+                <div className="flex items-center gap-1 px-1">
+                  {["#ef4444", "#3b82f6", "#22c55e", "#f59e0b", "#a855f7"].map(c => (
+                    <button 
+                      key={c}
+                      onClick={() => setDrawingColor(c)}
+                      className={`w-4 h-4 rounded-full border-2 transition-transform ${drawingColor === c ? "scale-125 border-white" : "border-transparent hover:scale-110"}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="w-[1px] h-4 bg-white/20 mx-1" />
+
+              <button 
+                onClick={clearDrawings}
+                className="p-1.5 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                title="Xoá toàn bộ bảng vẽ"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
 
             <button
               onClick={toggleStudentDraw}
-              className={`px-4 py-2 rounded-full font-medium transition-colors text-sm flex items-center gap-2 ${
-                canStudentDraw ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-slate-800 text-zinc-300 border border-transparent"
+              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full font-medium transition-colors text-[10px] md:text-sm flex items-center gap-1.5 md:gap-2 ${
+                canStudentDraw ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 hover:bg-slate-800 text-zinc-300 border border-transparent"
               }`}
+              title="Cho phép Học sinh vẽ/tương tác lên bảng"
             >
-              <div className={`w-2 h-2 rounded-full ${canStudentDraw ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`}></div>
+              <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${canStudentDraw ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`}></div>
               <span className="hidden md:inline">Drawing: {canStudentDraw ? "ON" : "OFF"}</span>
+              <span className="md:hidden">Draw</span>
             </button>
           </>
         )}
