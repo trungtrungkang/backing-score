@@ -13,7 +13,8 @@ import {
   LayoutContextProvider,
   Chat,
   useLayoutContext,
-  useRoomContext
+  useRoomContext,
+  useParticipants
 } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
 import { Loader2 } from "lucide-react";
@@ -23,7 +24,7 @@ import { UniversalSyncProvider, useUniversalSync } from "./UniversalSyncProvider
 import { generateLiveKitToken, createLiveSession, stopLiveSession, recordAttendance, endCurrentLiveSession } from "@/app/actions/v5/livekit";
 import { useParams } from "next/navigation";
 import { listMyProjects, type ProjectDocument } from "@/lib/appwrite";
-import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal } from "lucide-react";
+import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal, Users, MicOff, VideoOff, Mic, Video } from "lucide-react";
 
 function LiveKitAttendanceTracker({ classroomId, role }: { classroomId: string, role: "teacher" | "student" }) {
   const connectionState = useConnectionState();
@@ -285,11 +286,22 @@ function TeacherTestingControls() {
   };
 
   const room = useRoomContext();
+  const participants = useParticipants();
+  const [showStudents, setShowStudents] = useState(false);
+
+  const students = participants.filter(p => p.identity !== room?.localParticipant?.identity);
+
+  const handleMuteStudent = (identity: string, type: "MUTE_MIC" | "MUTE_CAM") => {
+     broadcastPayload({ type: "MODERATE", moderateAction: type, targetIdentity: identity });
+  };
 
   const closeRoomAndStop = async () => {
-    broadcastPayload({ type: "CHANGE_DOC", projectId: undefined, projectType: undefined });
+    broadcastPayload({ type: "END_CLASS" });
     const roomId = params.id as string;
+    
+    // Đợi một khoảng để gói tin END_CLASS kịp bay sang các máy học sinh trước khi rút dây mạng
     if (roomId) {
+       await new Promise(r => setTimeout(r, 600));
        await endCurrentLiveSession(roomId);
        if (room) {
           room.disconnect();
@@ -309,6 +321,46 @@ function TeacherTestingControls() {
           <FolderHeart className="w-4 h-4 text-indigo-400" />
           <span className="hidden md:inline">Sheet Music</span>
         </button>
+
+        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+        <button 
+          onClick={() => setShowStudents(!showStudents)}
+          className="px-4 py-2 hover:bg-slate-800 rounded-full text-zinc-300 hover:text-white font-medium text-sm flex items-center gap-2 transition-colors relative"
+        >
+          <Users className="w-4 h-4 text-emerald-400" />
+          <span className="hidden md:inline">Thành viên ({students.length})</span>
+        </button>
+
+        {showStudents && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-[400]">
+             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 mb-2">
+                <h3 className="font-bold text-sm text-white">Quản lý lớp học</h3>
+                <button onClick={() => setShowStudents(false)} className="text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
+             </div>
+             <div className="max-h-64 overflow-auto space-y-1">
+                {students.length === 0 ? (
+                   <p className="text-zinc-500 text-xs text-center py-4">Chưa có học sinh nào.</p>
+                ) : students.map(student => (
+                   <div key={student.identity} className="flex items-center justify-between p-2 hover:bg-slate-800 rounded-xl transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                         <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-[10px] font-bold">
+                            {student.name?.slice(0,2).toUpperCase() || "?"}
+                         </div>
+                         <span className="text-xs text-zinc-300 font-medium truncate max-w-[100px]">{student.name}</span>
+                      </div>
+                      <div className="flex gap-1">
+                         <button onClick={() => handleMuteStudent(student.identity, "MUTE_MIC")} className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors" title="Tắt Mic học sinh này">
+                           <MicOff className="w-3.5 h-3.5" />
+                         </button>
+                         <button onClick={() => handleMuteStudent(student.identity, "MUTE_CAM")} className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg transition-colors" title="Tắt Camera học sinh này">
+                           <VideoOff className="w-3.5 h-3.5" />
+                         </button>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+        )}
 
         {activeProjectId && (
           <>

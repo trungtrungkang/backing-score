@@ -6,7 +6,7 @@ import { LocalAudioTrack, Track, ConnectionState } from "livekit-client";
 import { toast } from "sonner";
 
 export type SyncPayload = {
-  type: "SYNC_PDF" | "SYNC_XML" | "CHANGE_DOC" | "HEARTBEAT" | "DRAWING" | "TOGGLE_STUDENT_DRAW";
+  type: "SYNC_PDF" | "SYNC_XML" | "CHANGE_DOC" | "HEARTBEAT" | "DRAWING" | "TOGGLE_STUDENT_DRAW" | "MODERATE" | "END_CLASS";
   timestamp: number;
   senderId: string;
   projectId?: string;
@@ -17,6 +17,8 @@ export type SyncPayload = {
   points?: any;
   color?: string;
   canStudentDraw?: boolean;
+  moderateAction?: "MUTE_MIC" | "MUTE_CAM";
+  targetIdentity?: string;
 };
 
 interface SyncState {
@@ -88,6 +90,26 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       // Lắng nghe Phân quyền Vẽ cho Học sinh
       if (payload.type === "TOGGLE_STUDENT_DRAW") {
         setCanStudentDraw(payload.canStudentDraw ?? false);
+      }
+
+      // Xử lý Kiểm duyệt (Mute Mic/Cam từ Teacher)
+      if (payload.type === "MODERATE" && payload.targetIdentity === room?.localParticipant?.identity) {
+         if (payload.moderateAction === "MUTE_MIC") {
+            room.localParticipant.setMicrophoneEnabled(false);
+            toast("Giáo viên đã tắt Microphone của bạn.", { id: "teacher-mute-mic" });
+         } else if (payload.moderateAction === "MUTE_CAM") {
+            room.localParticipant.setCameraEnabled(false);
+            toast("Giáo viên đã tắt Camera của bạn.", { id: "teacher-mute-cam" });
+         }
+      }
+
+      // Xử lý Lớp học kết thúc
+      if (payload.type === "END_CLASS") {
+         toast.info("Giáo viên đã kết thúc buổi học.", { id: "end-class-student" });
+         if (room) room.disconnect();
+         setTimeout(() => {
+            window.location.href = window.location.pathname.replace('/live', '');
+         }, 1500);
       }
 
         // Xử lý gói Data Tọa độ (Chỉ nhận nếu đang AutoSync hoặc gặp Heartbeat force)
