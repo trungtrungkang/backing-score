@@ -93,14 +93,13 @@ export function CanvasOverlay() {
     const pos = getRelativePosition(e);
     if (!pos) return;
 
-    setCurrentPath(prev => {
-      const nextPath = [...prev, pos];
-      // Optimize: Broadcast intermediate stroke segments every N points
-      if (nextPath.length % 5 === 0) {
-         broadcastDrawing("DRAW", nextPath, drawingColor);
-      }
-      return nextPath;
-    });
+    const nextPath = [...currentPath, pos];
+    setCurrentPath(nextPath);
+    
+    // Optimize: Broadcast intermediate stroke segments every N points
+    if (nextPath.length % 5 === 0) {
+       broadcastDrawing("DRAW", nextPath, drawingColor);
+    }
   };
 
   const handlePointerUp = () => {
