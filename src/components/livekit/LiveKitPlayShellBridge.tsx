@@ -41,7 +41,7 @@ export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
   if (error) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-red-100 rounded-xl">
-        <p className="text-red-500 font-medium">Lỗi tải bản nhạc: {error}</p>
+        <p className="text-red-500 font-medium">Failed to load score: {error}</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export function LiveKitPlayShellBridge({ projectId }: { projectId: string }) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-900 rounded-xl">
         <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-        <p className="text-sm text-zinc-500">Đang tải bản nhạc từ máy chủ Hệ sinh thái...</p>
+        <p className="text-sm text-zinc-500">Loading interactive score from Ecosystem...</p>
       </div>
     );
   }

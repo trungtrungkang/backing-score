@@ -26,11 +26,13 @@ export interface ScoreEngineParams {
   onPayloadChange?: (payload: DAWPayload) => void;
   /** Explicit override for play mode. If undefined, falls back to payload's activePlayMode. */
   playModeOverride?: "audio" | "midi";
+  playMode?: 'manual' | 'auto';
+  syncMode?: 'host' | 'guest' | 'offline';
   /** Callback for broadcasting LiveKit synchronization events */
   onHostEvent?: (ev: {type: string; positionMs?: number; isPlaying?: boolean; tempo?: number}) => void;
 }
 
-export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange, playModeOverride, onHostEvent }: ScoreEngineParams) {
+export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComplete, onPayloadChange, playModeOverride, playMode = 'manual', syncMode = 'offline', onHostEvent }: ScoreEngineParams) {
   const engineId = useId();
   const audioManagerRef = useRef<AudioManager | null>(null);
   const endOfTrackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -82,6 +84,12 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
   const releasedPitchesRef = useRef<Set<number>>(new Set());
   const waitModeMonitorRef = useRef<HTMLDivElement>(null);
   const parsedMidiRef = useRef<any>(null);
+  const playModeRef = useRef<'manual' | 'auto'>(playMode);
+  const syncModeRef = useRef<'host' | 'guest' | 'offline'>(syncMode);
+  const lastHostSysTimeRef = useRef(0);
+
+  useEffect(() => { playModeRef.current = playMode; }, [playMode]);
+  useEffect(() => { syncModeRef.current = syncMode; }, [syncMode]);
 
   useEffect(() => { activeNotesRef.current = activeNotes; }, [activeNotes]);
   useEffect(() => { 
@@ -668,32 +676,28 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     let playPromises: Promise<void>[] = [];
     if (midiTimeoutRef.current) clearTimeout(midiTimeoutRef.current);
 
-    if (midiPlayerRef.current && stretchedMidiBase64 && !isScoreSynthMutedRef.current) {
-      const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
-      // positionMs is in song-time (original tempo). The stretched MIDI has tempo * playbackRate,
-      // so midiPlayer.currentTime expects stretched-time. Divide by playbackRate to convert.
-      const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000 / playbackRate;
-      
-      if (targetTimeSecs >= 0) {
-        midiPlayerRef.current.currentTime = targetTimeSecs;
-        playPromises.push(Promise.resolve(midiPlayerRef.current.start()).catch((e:any) => console.log(e)));
-      } else {
-        midiPlayerRef.current.currentTime = 0; 
-        const delayMs = -targetTimeSecs * 1000;
-        midiTimeoutRef.current = setTimeout(() => {
-          if (isPlayingRef.current && !isScoreSynthMutedRef.current) {
-             Promise.resolve(midiPlayerRef.current.start()).catch(e => console.log(e));
-          }
-        }, delayMs);
+    if (syncModeRef.current !== 'guest') {
+      if (midiPlayerRef.current && stretchedMidiBase64 && !isScoreSynthMutedRef.current) {
+        const offsetMs = payload.metadata?.scoreSynthOffsetMs || 0;
+        const targetTimeSecs = (positionMsRef.current - offsetMs + midiStartOffsetMs) / 1000 / playbackRate;
+        
+        if (targetTimeSecs >= 0) {
+          midiPlayerRef.current.currentTime = targetTimeSecs;
+          playPromises.push(Promise.resolve(midiPlayerRef.current.start()).catch((e:any) => console.log(e)));
+        } else {
+          midiPlayerRef.current.currentTime = 0; 
+          const delayMs = -targetTimeSecs * 1000;
+          midiTimeoutRef.current = setTimeout(() => {
+            if (isPlayingRef.current && !isScoreSynthMutedRef.current) {
+               Promise.resolve(midiPlayerRef.current.start()).catch(e => console.log(e));
+            }
+          }, delayMs);
+        }
       }
-    }
-    if (audioManagerRef.current) {
-      // Sync AudioManager's internal offset with the actual positionMs before playing.
-      // For MIDI-only projects, position is tracked via performance.now(), which diverges
-      // from AudioManager's AudioContext-based clock. Without this seek, the metronome
-      // starts at the wrong position after pause/resume.
-      await audioManagerRef.current.seek(positionMsRef.current);
-      playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.log(e)));
+      if (audioManagerRef.current) {
+        await audioManagerRef.current.seek(positionMsRef.current);
+        playPromises.push(Promise.resolve(audioManagerRef.current.play()).catch((e:any) => console.log(e)));
+      }
     }
     
     if (payload.audioTracks.length === 0) {
@@ -701,6 +705,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       midiPlayStartPosRef.current = positionMsRef.current;
     }
 
+    lastHostSysTimeRef.current = performance.now();
     await Promise.allSettled(playPromises);
     setIsPlaying(true);
     isPlayingRef.current = true;
@@ -827,8 +832,10 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     }
 
     try {
-        if (midiPlayerRef.current) midiPlayerRef.current.stop();
-        if (audioManagerRef.current) audioManagerRef.current.pause();
+        if (syncModeRef.current !== 'guest') {
+          if (midiPlayerRef.current) midiPlayerRef.current.stop();
+          if (audioManagerRef.current) audioManagerRef.current.pause();
+        }
     } catch (e) { console.error(e); }
 
     if (audioManagerRef.current && payload.audioTracks.length > 0) {
@@ -887,6 +894,11 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
     if (audioManagerRef.current) {
       audioManagerRef.current.seek(ms);
     }
+    
+    // Reset trajectory clock for Mock RAF / MIDI Engine to prevent rubberbanding back to original position
+    midiPlayStartTimeRef.current = performance.now();
+    midiPlayStartPosRef.current = ms;
+
     positionMsRef.current = ms;
     setPositionMs(ms);
     if (onHostEvent) onHostEvent({ type: "seek", positionMs: ms, isPlaying: isPlayingRef.current });
@@ -1008,6 +1020,7 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       }
     } else {
       const now = performance.now();
+      // Host Native Playback Logic
       if (payload.audioTracks.length === 0 && midiPlayerRef.current) {
           const elapsedMs = now - midiPlayStartTimeRef.current;
           const theoreticalPos = midiPlayStartPosRef.current + (elapsedMs * playbackRate);
@@ -1171,13 +1184,12 @@ export function useScoreEngine({ payload, autoplayOnLoad, onNext, onPracticeComp
       setActiveMeasure(prev => prev !== physMeasure ? physMeasure : prev);
     }
 
+    const roundedPos = Math.round(currentPos);
+    // Always update the ref synchronously for zero-lag RAF consumers (MusicXMLVisualizer, TrackList)
+    positionMsRef.current = roundedPos;
+
     setPositionMs(prev => {
-      const roundedPos = Math.round(currentPos);
-      // Always update the ref for zero-lag RAF consumers (MusicXMLVisualizer, TrackList)
-      positionMsRef.current = roundedPos;
-      
       // Throttle React state updates to ~20FPS (50ms) to prevent massive DOM layout thrashing in EditorShell.
-      // RAF consumers like Visualizer read from positionMsRef directly at 60FPS, so they remain smooth.
       if (Math.abs(prev - roundedPos) < 50) return prev;
 
       // Detect loop iteration: position wrapped back to near startBar

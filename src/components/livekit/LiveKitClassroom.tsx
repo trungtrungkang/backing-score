@@ -44,8 +44,19 @@ function LiveKitAttendanceTracker({ classroomId, role }: { classroomId: string, 
 
      handleConnection();
 
+     const handleUnload = () => {
+        if (connectionState === ConnectionState.Connected) {
+           navigator.sendBeacon('/api/v5/livekit/beacon', JSON.stringify({
+              classroomId,
+              role
+           }));
+        }
+     };
+     window.addEventListener('beforeunload', handleUnload);
+
      return () => {
         mounted = false;
+        window.removeEventListener('beforeunload', handleUnload);
         // On unmount (tab close), try to send leave event
         if (connectionState === ConnectionState.Connected) {
            if (role === "student") {
@@ -186,7 +197,7 @@ function TeacherTestingControls() {
     const roomId = params.id as string;
     if (roomId) {
        await endCurrentLiveSession(roomId);
-       alert("Đã đánh dấu Kết thúc Lớp học thành công!");
+       alert("Session successfully marked as ended!");
     }
   };
 
@@ -195,26 +206,26 @@ function TeacherTestingControls() {
       <input 
         value={testProjectId} 
         onChange={e => setTestProjectId(e.target.value)} 
-        placeholder="Nhập ID Bài hát từ DB..." 
+        placeholder="Enter Document ID from DB..." 
         className="px-3 py-2 rounded-lg bg-zinc-900/80 text-white placeholder:text-zinc-500 border border-zinc-700 outline-none focus:border-blue-500 w-48 text-sm"
       />
       <button 
         onClick={() => {
           if (!testProjectId) {
-             alert("Vui lòng dán Project ID thực tế vào ô bên cạnh (có thể lụm từ URL lúc bâm vào bài ở Dashboard)!");
+             alert("Please paste an actual Project ID (can be grabbed from the dashboard URL)");
              return;
           }
           broadcastPayload({ type: "CHANGE_DOC", projectId: testProjectId, projectType: "musicxml" })
         }}
         className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-medium shadow-lg text-sm"
       >
-        Mở nhạc XML
+        Open XML Score
       </button>
       <button 
         onClick={closeRoomAndStop}
         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium shadow-lg text-sm"
       >
-        Đóng Bài Tập
+        Close Score
       </button>
 
       <div className="w-[1px] h-10 bg-slate-700 mx-2" />
@@ -223,7 +234,7 @@ function TeacherTestingControls() {
         onClick={toggleStudentDraw}
         className={`px-4 py-2 rounded-lg text-white font-medium shadow-lg transition-colors ${canStudentDraw ? "bg-green-600 hover:bg-green-500" : "bg-zinc-800 hover:bg-zinc-700"}`}
       >
-        {canStudentDraw ? "Học sinh được Vẽ: ON" : "Học sinh được Vẽ: OFF"}
+        {canStudentDraw ? "Student Drawing: ON" : "Student Drawing: OFF"}
       </button>
     </div>
   );

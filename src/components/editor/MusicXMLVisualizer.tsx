@@ -19,6 +19,12 @@ export interface MusicXMLVisualizerProps {
   isDarkMode?: boolean;
   isWaitMode?: boolean;
   isWaiting?: boolean;
+  isHost?: boolean;
+  
+  // NEW: Direct Active Measure Sync
+  remoteActiveMeasureId?: string;
+  onActiveMeasureChange?: (measureId: string) => void;
+  
   practiceTrackIds?: number[];
   onPartNamesExtracted?: (names: string[]) => void;
   timemapSource?: "auto" | "manual";
@@ -45,7 +51,7 @@ export interface VerovioTimemapEntry {
 
 export function MusicXMLVisualizer({
   scoreFileId, positionMs = 0, externalPositionMsRef, isPlaying = false, timemap = [], measureMap, onSeek, onMidiExtracted, onPartNamesExtracted, isDarkMode = false,
-  isWaitMode = false, isWaiting = false, practiceTrackIds, timemapSource, className, defaultScale, payloadTempo, playbackRate = 1,
+  isWaitMode = false, isWaiting = false, isHost = true, remoteActiveMeasureId, onActiveMeasureChange, practiceTrackIds, timemapSource, className, defaultScale, payloadTempo, playbackRate = 1,
   layoutMode = 'paged', assessmentResults
 }: MusicXMLVisualizerProps) {
   // Store positionMs in a ref to avoid re-renders — playhead uses its own RAF loop
@@ -758,6 +764,11 @@ export function MusicXMLVisualizer({
                 activeMeasureRef.current = measureEl.id;
                 prevIsWaitModeRef.current = isWaitMode;
                 highlightMeasure(measureEl, isPlaying);
+                if (onActiveMeasureChange && measureEl.id) {
+                   const mArray = Array.from(document.querySelectorAll('.definition-scale .measure'));
+                   const idx = mArray.findIndex(m => m.id === measureEl.id);
+                   if (idx !== -1) onActiveMeasureChange(idx.toString());
+                }
              }
           }
 
@@ -865,6 +876,11 @@ export function MusicXMLVisualizer({
             activeMeasureRef.current = currentEvent.measure;
             prevIsWaitModeRef.current = isWaitMode;
             highlightMeasure(measureEl, isPlaying);
+            if (onActiveMeasureChange && measureEl.id) {
+               const mArray = Array.from(document.querySelectorAll('.definition-scale .measure'));
+               const idx = mArray.findIndex(m => m.id === measureEl.id);
+               if (idx !== -1) onActiveMeasureChange(idx.toString());
+            }
           }
 
           // CACHE LAYOUT QUERIES FOR ALGEBRAIC MODE
@@ -1010,6 +1026,11 @@ export function MusicXMLVisualizer({
       if (onSeek) onSeek(finalMapEntry.timeMs);
       highlightMeasure(measureEl, false);
       activeMeasureRef.current = bestLatent;
+      if (onActiveMeasureChange && measureEl.id) {
+         const mArray = Array.from(document.querySelectorAll('.definition-scale .measure'));
+         const idx = mArray.findIndex(m => m.id === measureEl.id);
+         if (idx !== -1) onActiveMeasureChange(idx.toString());
+      }
     }
   };
 
@@ -1261,6 +1282,12 @@ export function MusicXMLVisualizer({
           width: 100%;
           height: auto !important;
         }
+        /* --- Direct Active Measure Sync --- */
+        .remote-active-measure *, .remote-active-measure use, .remote-active-measure path {
+           fill: #3b82f6 !important;
+           stroke: #3b82f6 !important;
+           transition: fill 0.1s, stroke 0.1s;
+        }
         /* Active Measure is now only used as a scrolling marker, no color */
         /* Click-to-seek hover */
         #musicxml-svghost .measure { cursor: pointer; }
@@ -1369,9 +1396,31 @@ export function MusicXMLVisualizer({
           color: #f97316 !important;
         }
       ` }} />
+      {/* --- DIRECT SYNC: Scroll into exactly targeted measure --- */}
+      {remoteActiveMeasureId && !isHost && (
+        <PassiveMeasureSyncScroller remoteActiveMeasureId={remoteActiveMeasureId} />
+      )}
     </div>
   );
 }
+
+// --- Sync Helpers ---
+
+function PassiveMeasureSyncScroller({ remoteActiveMeasureId }: { remoteActiveMeasureId: string }) {
+  useEffect(() => {
+    if (!remoteActiveMeasureId) return;
+    const measures = Array.from(document.querySelectorAll('.definition-scale .measure'));
+    const index = parseInt(remoteActiveMeasureId, 10);
+    const el = measures[index];
+    if (el) {
+       document.querySelectorAll('.remote-active-measure').forEach(m => m.classList.remove('remote-active-measure'));
+       el.classList.add('remote-active-measure');
+       el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }
+  }, [remoteActiveMeasureId]);
+  return null;
+}
+
 
 // Sub-component to render the floating hit/miss feedback over measures
 function GamificationOverlays({

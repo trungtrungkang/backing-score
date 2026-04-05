@@ -149,7 +149,7 @@ export interface PlayShellProps {
   onSaveNavMap?: (bookmarks: NavMapBookmark[], sequence: NavigationSequence) => Promise<void>;
   onPayloadChange?: (payload: DAWPayload) => void;
   syncMode?: "host" | "guest";
-  incomingXmlCoords?: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number };
+  incomingXmlCoords?: { measure?: number; beat?: number; tempo?: number; isPlaying: boolean; positionMs: number; anchorMeasureId?: string };
   onBroadcastXmlCoords?: (coords: any) => void;
 }
 
@@ -203,6 +203,7 @@ export function PlayShell({
   useEffect(() => { maxSpeedRef.current = sessionMaxSpeed; }, [sessionMaxSpeed]);
 
   const [isNavigatingBack, setIsNavigatingBack] = useState(false);
+  const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
 
   // --- Layout Toggles (Synced to LocalStorage) ---
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(true);
@@ -324,6 +325,7 @@ export function PlayShell({
   const { state, refs, actions } = useScoreEngine({
     payload,
     autoplayOnLoad,
+    syncMode,
     onNext,
     onPracticeComplete: useCallback((score?: number) => { submitPracticeSession(score ?? 0); }, [submitPracticeSession]),
     onPayloadChange,
@@ -346,28 +348,9 @@ export function PlayShell({
   // Sync incoming remote state
   useEffect(() => {
     if (syncMode === "guest" && incomingXmlCoords && scoreStateRef.current) {
-      const isPosDiff = Math.abs(incomingXmlCoords.positionMs - scoreStateRef.current.positionMs) > 500;
-      
       const applySync = () => {
-         if (isPosDiff) {
-            actionsRef.current.handleSeek(incomingXmlCoords.positionMs);
-            // Manually pre-apply positionMs to reference to prevent re-seeking on subsequent rapid packets
-            scoreStateRef.current.positionMs = incomingXmlCoords.positionMs;
-         }
-         
-         const isCurrentlyPlaying = scoreStateRef.current.isPlaying;
-         
-         if (incomingXmlCoords.isPlaying !== isCurrentlyPlaying && incomingXmlCoords.isPlaying !== isPlayingIntentRef.current) {
-            isPlayingIntentRef.current = incomingXmlCoords.isPlaying;
-            if (incomingXmlCoords.isPlaying) {
-               // wait for handleSeek to settle positionMs
-               setTimeout(() => actionsRef.current.handlePlay(), 50);
-            } else {
-               actionsRef.current.handlePause();
-            }
-         } else if (incomingXmlCoords.isPlaying === isCurrentlyPlaying) {
-             isPlayingIntentRef.current = isCurrentlyPlaying;
-         }
+         // Guest Passive Sync: Only process explicit measure anchor updates for Jump Syncs.
+         // Playhead auto-playing is discontinued.
       }
       applySync();
     }
@@ -560,6 +543,17 @@ export function PlayShell({
         {scoreFileId ? (
           payload.notationData?.type === "pdf" ? (
              <div className="w-full h-full p-2 relative overflow-hidden bg-zinc-100 dark:bg-[#1A1A1E]">
+                {syncMode === "guest" && (
+                   <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[150] transition-opacity hover:opacity-100 opacity-60">
+                      <button 
+                         onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
+                         className={cn("px-4 py-1.5 rounded-full text-xs font-semibold shadow border transition-colors", 
+                           isAutoSyncEnabled ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-[#1A1A1E] text-zinc-300 border-zinc-700")}
+                      >
+                         {isAutoSyncEnabled ? "🟢 Sync to Teacher" : "⚪️ Free View Mode"}
+                      </button>
+                   </div>
+                )}
                 <PdfViewer
                   sheetMusicId={projectId}
                   pdfUrl={`/api/r2/download/${scoreFileId}?context=project_${projectId}`}
@@ -576,13 +570,25 @@ export function PlayShell({
                 {/* Che khuất Header của PdfViewer để nhường sân cho PlayerControls */}
                 <div className="absolute top-0 left-0 w-full h-[56px] bg-black pointer-events-none z-[100] opacity-0" />
              </div>
-          ) : (
-            <MusicXMLVisualizer
-              scoreFileId={scoreFileId}
-              positionMs={state.positionMs}
-              isPlaying={state.isPlaying}
-              timemap={state.correctedTimemap || state.activeTimemap || []}
-              timemapSource={payload.notationData?.timemapSource}
+              ) : (
+             <div className="w-full h-full relative">
+                {syncMode === "guest" && (
+                   <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[150] transition-opacity hover:opacity-100 opacity-60 pointer-events-auto">
+                      <button 
+                         onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
+                         className={cn("px-4 py-1.5 rounded-full text-xs font-semibold shadow border transition-colors", 
+                           isAutoSyncEnabled ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-[#1A1A1E] text-zinc-300 border-zinc-700")}
+                      >
+                         {isAutoSyncEnabled ? "🟢 Sync to Teacher" : "⚪️ Free View Mode"}
+                      </button>
+                   </div>
+                )}
+                <MusicXMLVisualizer
+                  scoreFileId={scoreFileId}
+                  positionMs={state.positionMs}
+                  isPlaying={state.isPlaying}
+                  timemap={state.correctedTimemap || state.activeTimemap || []}
+                  timemapSource={payload.notationData?.timemapSource}
               payloadTempo={payload.metadata?.tempo || 120}
               measureMap={payload.notationData?.measureMap}
               onSeek={actions.handleSeek}
@@ -593,7 +599,18 @@ export function PlayShell({
               practiceTrackIds={state.practiceTrackIds}
               layoutMode={layoutMode}
               assessmentResults={state.assessmentMeasureResults}
+              isHost={syncMode === "host"}
+              remoteActiveMeasureId={isAutoSyncEnabled ? incomingXmlCoords?.anchorMeasureId : undefined}
+              onActiveMeasureChange={(measureId) => {
+                 if (syncMode === "host" && onBroadcastXmlCoords) {
+                     onBroadcastXmlCoords({
+                        type: "sync_measure", // Pure string-based sync!
+                        anchorMeasureId: measureId
+                     });
+                 }
+              }}
             />
+            </div>
           )
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">

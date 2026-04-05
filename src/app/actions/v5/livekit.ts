@@ -3,7 +3,9 @@
 import { AccessToken } from 'livekit-server-sdk';
 import { getDb } from "@/db";
 import { classrooms, classroomMembers, liveSessions } from "@/db/schema/classroom";
-import { eq, and } from "drizzle-orm";
+import { projects } from "@/db/schema/drive";
+import { users } from "@/db/schema/auth";
+import { eq, and, desc } from "drizzle-orm";
 import { getAuth } from "@/lib/auth/better-auth";
 import { headers } from "next/headers";
 import { createId } from "@paralleldrive/cuid2";
@@ -156,7 +158,6 @@ export async function endCurrentLiveSession(classroomId: string) {
 }
 
 import { liveAttendances } from "@/db/schema/classroom";
-import { desc } from "drizzle-orm";
 
 export async function recordAttendance(classroomId: string, action: "join" | "leave") {
   const auth = getAuth();
@@ -206,3 +207,59 @@ export async function recordAttendance(classroomId: string, action: "join" | "le
   }
 }
 
+export async function getLiveSessions(classroomId: string) {
+  const auth = getAuth();
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({ headers: requestHeaders });
+  if (!session || !session.user) return [];
+
+  const db = getDb();
+  const sessions = await db.select({
+    id: liveSessions.id,
+    startedAt: liveSessions.startedAt,
+    endedAt: liveSessions.endedAt,
+    activeProjectId: liveSessions.activeProjectId,
+    projectTitle: projects.title,
+    hostName: users.name
+  })
+  .from(liveSessions)
+  .leftJoin(projects, eq(liveSessions.activeProjectId, projects.id))
+  .leftJoin(users, eq(liveSessions.hostId, users.id))
+  .where(eq(liveSessions.classroomId, classroomId))
+  .orderBy(desc(liveSessions.startedAt));
+
+  return sessions;
+}
+
+export async function getLiveSessionAttendances(sessionId: string) {
+  const auth = getAuth();
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({ headers: requestHeaders });
+  if (!session || !session.user) return [];
+
+  const db = getDb();
+  const records = await db.select({
+    id: liveAttendances.id,
+    studentId: liveAttendances.studentId,
+    studentName: users.name,
+    joinedAt: liveAttendances.joinedAt,
+    leftAt: liveAttendances.leftAt
+  })
+  .from(liveAttendances)
+  .innerJoin(users, eq(liveAttendances.studentId, users.id))
+  .where(eq(liveAttendances.sessionId, sessionId))
+  .orderBy(desc(liveAttendances.joinedAt));
+
+  return records;
+}
+
+// System Action (No Auth required) - used by Webhook to cleanly close dropped sessions
+export async function endLiveSessionSystem(classroomId: string) {
+  const db = getDb();
+  await db.update(liveSessions)
+    .set({ endedAt: new Date() })
+    .where(and(
+       eq(liveSessions.classroomId, classroomId),
+       // only close active ones
+    ));
+}

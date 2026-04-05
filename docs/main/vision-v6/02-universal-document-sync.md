@@ -46,10 +46,12 @@ interface PdfSyncPayload extends SyncEnvelope {
 ```typescript
 interface XmlSyncPayload extends SyncEnvelope {
   type: "SYNC_XML";
-  measure: number;    // Ô nhịp hiện tại (vd: 12)
-  beat: number;       // Phách hiện tại trong ô nhịp (vd: 3)
-  tempo: number;      // Tần số Metronome hiện hành
-  isPlaying: boolean; // Trạng thái: Dừng hay Chạy
+  measure?: number;    // Ô nhịp Audio đang phát (vd: 12)
+  beat?: number;       // Phách hiện tại trong ô nhịp (vd: 3)
+  tempo?: number;      // Tần số Metronome hiện hành
+  isPlaying?: boolean; // Trạng thái: Dừng hay Chạy
+  positionMs?: number; // Cột mốc thời gian bài hát chính xác
+  anchorMeasureId?: string; // [NEW] ID của DOM khuôn nhạc làm neo cuộn trang (VD: "measure-45") khi Giáo viên scroll thủ công
 }
 ```
 

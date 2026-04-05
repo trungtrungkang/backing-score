@@ -26,6 +26,9 @@ import {
   FileText,
   ExternalLink,
   X,
+  History,
+  Eye,
+  Music
 } from "lucide-react";
 import {
   getClassroom,
@@ -52,8 +55,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/components/ui/dialog-provider";
 import { toast } from "sonner";
+import { getLiveSessions, getLiveSessionAttendances } from "@/app/actions/v5/livekit";
 
-type Tab = "assignments" | "members" | "materials" | "settings" | "progress";
+type Tab = "assignments" | "members" | "materials" | "settings" | "progress" | "live_logs";
 
 export default function ClassroomDetailPage() {
   const params = useParams();
@@ -92,6 +96,11 @@ export default function ClassroomDetailPage() {
   const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareSearch, setShareSearch] = useState("");
+  // Live logs
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [selectedSessionInfo, setSelectedSessionInfo] = useState<{ id: string, startedAt: Date, attendances: any[] } | null>(null);
+  const [isLoadingLog, setIsLoadingLog] = useState(false);
+  const [logsLoaded, setLogsLoaded] = useState(false);
 
   const isTeacher = userRole === "teacher";
 
@@ -217,6 +226,35 @@ export default function ClassroomDetailPage() {
       .finally(() => setMaterialsLoading(false));
   }, [activeTab, materialsLoaded, classroomId]);
 
+  // Load live sessions when live_logs tab is activated
+  useEffect(() => {
+    if (activeTab !== "live_logs" || logsLoaded) return;
+    setLoading(true);
+    getLiveSessions(classroomId)
+      .then(data => {
+        setSessions(data);
+        setLogsLoaded(true);
+      })
+      .catch(() => toast.error("Failed to load live sessions"))
+      .finally(() => setLoading(false));
+  }, [activeTab, logsLoaded, classroomId]);
+
+  const handleViewAttendances = async (session: any) => {
+    setIsLoadingLog(true);
+    try {
+      const atts = await getLiveSessionAttendances(session.id);
+      setSelectedSessionInfo({
+        id: session.id,
+        startedAt: session.startedAt,
+        attendances: atts
+      });
+    } catch {
+      toast.error("Failed to load attendance logs.");
+    } finally {
+      setIsLoadingLog(false);
+    }
+  };
+
   const handleSharePdf = async () => {
     if (!selectedSheetId || sharing) return;
     setSharing(true);
@@ -333,6 +371,7 @@ export default function ClassroomDetailPage() {
     { key: "materials", label: t("materials"), icon: <FileText className="w-4 h-4" /> },
     ...(isTeacher ? [
       { key: "progress" as Tab, label: t("progress"), icon: <BarChart3 className="w-4 h-4" /> },
+      { key: "live_logs" as Tab, label: "Live Logs", icon: <History className="w-4 h-4" /> },
       { key: "settings" as Tab, label: t("settings"), icon: <Settings className="w-4 h-4" /> },
     ] : []),
   ];
@@ -897,7 +936,144 @@ export default function ClassroomDetailPage() {
             })()}
           </div>
         )}
+
+        {/* Live Logs Tab */}
+        {activeTab === "live_logs" && isTeacher && (
+           <div className="flex flex-col bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+             <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-black/20">
+                <h2 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-white">
+                   <History className="w-5 h-5 text-emerald-500" /> 
+                   Live Session History
+                </h2>
+             </div>
+             
+             <div className="p-4 sm:p-6 overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap min-w-[600px]">
+                   <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 uppercase text-[10px] tracking-widest">
+                         <th className="pb-3 px-2 font-bold">Session Start</th>
+                         <th className="pb-3 px-2 font-bold">Duration</th>
+                         <th className="pb-3 px-2 font-bold">Host</th>
+                         <th className="pb-3 px-2 font-bold">Music Project</th>
+                         <th className="pb-3 px-2 text-right font-bold">Logs</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {sessions.length === 0 ? (
+                         <tr>
+                            <td colSpan={5} className="py-12 text-center text-zinc-500">
+                               {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto text-zinc-400" /> : "No live sessions have been recorded yet."}
+                            </td>
+                         </tr>
+                      ) : sessions.map(session => (
+                         <tr key={session.id} className="border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
+                            <td className="py-4 px-2 text-zinc-900 dark:text-white font-medium">
+                               {session.startedAt ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(session.startedAt)) : 'Unknown'}
+                            </td>
+                            <td className="py-4 px-2 text-zinc-500">
+                               {session.endedAt && session.startedAt 
+                                 ? `${Math.round((new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60000)} mins`
+                                 : <span className="text-emerald-500 font-medium flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Active</span>}
+                            </td>
+                            <td className="py-4 px-2">{session.hostName || "-"}</td>
+                            <td className="py-4 px-2">
+                               {session.projectTitle ? (
+                                 <div className="flex items-center gap-1.5 overflow-hidden">
+                                    <Music className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                                    <span className="truncate max-w-[200px] font-medium" title={session.projectTitle}>{session.projectTitle}</span>
+                                 </div>
+                               ) : <span className="text-zinc-500 italic">None</span>}
+                            </td>
+                            <td className="py-4 px-2 text-right">
+                               <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleViewAttendances(session)}
+                                  className="h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+                                  disabled={isLoadingLog}
+                               >
+                                  {isLoadingLog ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Eye className="w-4 h-4 mr-1.5" />}
+                                  View Logs
+                               </Button>
+                            </td>
+                         </tr>
+                      ))}
+                   </tbody>
+                </table>
+             </div>
+           </div>
+        )}
+
       </div>
+
+      {/* Selected Session Modal */}
+      {selectedSessionInfo && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+               <div className="p-5 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-start bg-zinc-50 dark:bg-zinc-900/40">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Attendance Log</h3>
+                    <p className="text-xs text-zinc-500 mt-1">Session started at: <span className="font-medium">{new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(selectedSessionInfo.startedAt))}</span></p>
+                  </div>
+                  <button onClick={() => setSelectedSessionInfo(null)} className="p-2 -mr-2 -mt-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                     <X className="w-5 h-5" />
+                  </button>
+               </div>
+               
+               <div className="p-4 sm:p-6 max-h-[60vh] overflow-y-auto">
+                 {selectedSessionInfo.attendances.length === 0 ? (
+                    <div className="text-center py-10 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
+                      <Users className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
+                      <p className="text-zinc-500">No students joined this session.</p>
+                    </div>
+                 ) : (
+                    <div className="flex flex-col gap-3">
+                       {selectedSessionInfo.attendances.map((att: any) => {
+                          const joinTime = att.joinedAt ? new Date(att.joinedAt) : null;
+                          const leaveTime = att.leftAt ? new Date(att.leftAt) : null;
+                          const durationStr = (joinTime && leaveTime) 
+                             ? `${Math.round((leaveTime.getTime() - joinTime.getTime()) / 60000)} mins`
+                             : (joinTime ? "Still active" : "-");
+
+                          return (
+                            <div key={att.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#121214] shadow-sm">
+                               <div className="flex items-center gap-3 mb-3 sm:mb-0">
+                                 <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500">
+                                    {(att.studentName || '?').slice(0, 2).toUpperCase()}
+                                 </div>
+                                 <div className="font-bold text-sm text-zinc-900 dark:text-white">
+                                   {att.studentName || 'Unknown Student'}
+                                 </div>
+                               </div>
+                               <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium bg-zinc-50 dark:bg-zinc-900/50 p-2 sm:p-0 sm:bg-transparent rounded-lg">
+                                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                                     <ArrowLeft className="w-3.5 h-3.5 rotate-180" /> 
+                                     Join: {joinTime ? new Intl.DateTimeFormat('en-US', { timeStyle: 'short' }).format(joinTime) : "?"}
+                                  </div>
+                                  {leaveTime ? (
+                                    <div className="flex items-center gap-1.5 text-zinc-500">
+                                       <ArrowLeft className="w-3.5 h-3.5" /> 
+                                       Leave: {new Intl.DateTimeFormat('en-US', { timeStyle: 'short' }).format(leaveTime)}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 text-amber-500">
+                                       <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                       Online
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded">
+                                     <Clock className="w-3.5 h-3.5" /> {durationStr}
+                                  </div>
+                               </div>
+                            </div>
+                          );
+                       })}
+                    </div>
+                 )}
+               </div>
+            </div>
+         </div>
+      )}
     </div>
   );
 }

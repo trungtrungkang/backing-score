@@ -146,7 +146,7 @@ export function CanvasOverlay() {
           <button 
             onClick={() => setIsDrawingMode(false)}
             className={cn("p-2 rounded-lg transition-colors", !isDrawingMode ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-            title="Con trỏ chuột (Vuốt bản nhạc)"
+            title="Pointer (Native Scroll)"
           >
             <MousePointer2 className="w-5 h-5" />
           </button>
@@ -156,7 +156,7 @@ export function CanvasOverlay() {
           <button 
             onClick={() => setIsDrawingMode(true)}
             className={cn("p-2 rounded-lg transition-colors", isDrawingMode ? "bg-rose-100 text-rose-600 dark:bg-rose-900/50" : "hover:bg-zinc-100 dark:hover:bg-zinc-800")}
-            title="Bút vẽ"
+            title="Pen Tool"
           >
             <Pencil className="w-5 h-5" />
           </button>
@@ -179,7 +179,7 @@ export function CanvasOverlay() {
           <button 
             onClick={clearCanvas}
             className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            title="Xóa nháp toàn bảng"
+            title="Clear Board"
           >
             <Trash2 className="w-5 h-5" />
           </button>

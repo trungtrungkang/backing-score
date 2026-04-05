@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Users, KeyRound, Loader2, ArrowLeft, Ticket, Settings, Trash2, Plus, X, UserX 
+  Users, KeyRound, Loader2, ArrowLeft, Ticket, Settings, Trash2, Plus, X, UserX
 } from "lucide-react";
 import { 
   getClassroom, 
