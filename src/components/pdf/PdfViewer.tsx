@@ -1018,7 +1018,7 @@ export default function PdfViewer({
 
       {/* Bottom toolbar */}
       {!performanceMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none">
+        <div className="absolute bottom-0 left-0 right-0 z-[100] flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           {/* Left group: Page nav */}
           <div className="flex items-center gap-1 shrink-0">
             {hasPrevSong !== undefined && (
@@ -1410,7 +1410,7 @@ export default function PdfViewer({
          <>
          {/* Sequence Mode */}
          {bottomBarMode === 'sequence' && navMap.sequence.length > 0 && (
-            <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-[340px] max-w-[340px] backdrop-blur-md bg-opacity-95">
+            <div className="absolute bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-[110] bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-[340px] max-w-[340px] backdrop-blur-md bg-opacity-95">
                <button
                   onClick={() => setBottomBarMode('hidden')}
                   className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all z-10 focus:outline-none"
@@ -1446,7 +1446,7 @@ export default function PdfViewer({
          )}
          {/* Bookmarks Mode */}
          {bottomBarMode === 'bookmarks' && navMap.bookmarks.length > 0 && (
-            <div className="fixed bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-50 bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-auto max-w-[calc(100%-32px)] sm:max-w-[700px] lg:max-w-[900px] backdrop-blur-md bg-opacity-95">
+            <div className="absolute bottom-[60px] sm:bottom-[64px] right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 z-[110] bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl p-1.5 sm:p-2 flex items-center w-[calc(100%-32px)] sm:w-auto max-w-[calc(100%-32px)] sm:max-w-[700px] lg:max-w-[900px] backdrop-blur-md bg-opacity-95">
                <button
                   onClick={() => setBottomBarMode('hidden')}
                   className="absolute -top-2.5 -right-2.5 sm:-top-3.5 sm:-right-3.5 p-1 bg-zinc-800 border border-zinc-700 rounded-full text-zinc-400 hover:text-white hover:bg-red-500 hover:border-red-500 shadow-xl transition-all z-10 focus:outline-none"
