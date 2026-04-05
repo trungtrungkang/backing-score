@@ -70,15 +70,6 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
   
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [drawingColor, setDrawingColor] = useState("#ef4444");
-
-  const clearDrawings = useCallback(() => {
-    const p = { type: "DRAWING", action: "CLEAR", senderId: room?.localParticipant?.identity || "unknown", timestamp: Date.now() } as const;
-    if (room?.localParticipant) {
-      const dataStr = JSON.stringify(p);
-      room.localParticipant.publishData(new TextEncoder().encode(dataStr), { reliable: true });
-    }
-    setDrawings([]);
-  }, [room]);
   
   // Trạng thái bù trừ trễ hình ảnh (Jitter Compensation) - Mặc định 350ms 
   const [visualSyncDelay, setVisualSyncDelay] = useState(350);
@@ -207,6 +198,10 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       pageIndex
     });
   }, [broadcastPayload]);
+
+  const clearDrawings = useCallback(() => {
+    broadcastDrawing("CLEAR");
+  }, [broadcastDrawing]);
 
   const syncToHost = useCallback(() => {
     setAutoSync(true);
