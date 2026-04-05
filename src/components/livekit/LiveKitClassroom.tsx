@@ -237,28 +237,33 @@ function ClassroomTopology() {
         </div>
 
         {/* BODY (Video & Canvas) */}
-        {!activeProjectId ? (
-          <div className="flex-1 min-h-0 relative bg-slate-900">
-            <VideoConference />
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 flex flex-row relative">
-            {/* Cột trái (Video) */}
-            <div className="w-[30%] lg:w-[25%] h-full p-2 flex flex-col gap-2 overflow-y-auto border-r border-slate-800/50 bg-black/40">
+        <div className="flex-1 min-h-0 flex flex-row relative">
+          {!activeProjectId ? (
+            <div className="flex-1 p-4 bg-slate-900">
               <GridLayout tracks={tracks} style={{ height: "100%" }}>
                 <ParticipantTile />
               </GridLayout>
             </div>
+          ) : (
+            <>
+              {/* Cột trái (Video) */}
+              <div className="w-[30%] lg:w-[25%] h-full p-2 flex flex-col gap-2 overflow-y-auto border-r border-slate-800/50 bg-black/40">
+                <GridLayout tracks={tracks} style={{ height: "100%" }}>
+                  <ParticipantTile />
+                </GridLayout>
+              </div>
 
-            {/* Vùng phải (Bảng vẽ / Bản nhạc) */}
-            <div className="flex-1 h-full relative bg-white dark:bg-slate-950 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
-              <LiveKitPlayShellBridge projectId={activeProjectId} />
-            </div>
+              {/* Vùng phải (Bảng vẽ / Bản nhạc) */}
+              <div className="flex-1 h-full relative bg-white dark:bg-slate-950 overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+                <LiveKitPlayShellBridge projectId={activeProjectId} />
+              </div>
 
-            <ChatOverlay />
-            <StudentSyncSettings />
-          </div>
-        )}
+              <StudentSyncSettings />
+            </>
+          )}
+          
+          <ChatOverlay />
+        </div>
 
         {/* FOOTER DOCK (LiveKit Controls) */}
         <div className="flex-none h-[72px] w-full border-t border-white/5 bg-slate-950 flex items-center justify-center z-[400] shadow-2xl relative">
