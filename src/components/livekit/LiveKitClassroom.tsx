@@ -24,7 +24,7 @@ import { UniversalSyncProvider, useUniversalSync } from "./UniversalSyncProvider
 import { generateLiveKitToken, createLiveSession, stopLiveSession, recordAttendance, endCurrentLiveSession } from "@/app/actions/v5/livekit";
 import { useParams } from "next/navigation";
 import { listMyProjects, type ProjectDocument } from "@/lib/appwrite";
-import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal, Users, MicOff, VideoOff, Mic, Video, MousePointer2, Pencil, Trash2 } from "lucide-react";
+import { FolderHeart, Search, X, LogOut, Settings2, SlidersHorizontal, Users, MicOff, VideoOff, Mic, Video, MousePointer2, Pencil, Trash2, Undo2, Redo2 } from "lucide-react";
 
 function LiveKitAttendanceTracker({ classroomId, role }: { classroomId: string, role: "teacher" | "student" }) {
   const connectionState = useConnectionState();
@@ -288,7 +288,7 @@ function ChatOverlay() {
 
 // Bảng Menu Máy Chủ Host
 function TeacherTestingControls() {
-  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId, activeProjectType, isDrawingMode, setIsDrawingMode, drawingColor, setDrawingColor, clearDrawings } = useUniversalSync();
+  const { broadcastPayload, role, canStudentDraw, setCanStudentDraw, activeProjectId, activeProjectType, isDrawingMode, setIsDrawingMode, drawingColor, setDrawingColor, clearDrawings, undoDrawing, redoDrawing, canUndo, canRedo } = useUniversalSync();
   const [showDrive, setShowDrive] = useState(false);
   const [localSpeakerMuted, setLocalSpeakerMuted] = useState(() => !!(window as any).__localSpeakerMuted);
   const params = useParams();
@@ -449,6 +449,28 @@ function TeacherTestingControls() {
               )}
 
               <div className="w-[1px] h-4 bg-white/20 mx-1" />
+
+              {isDrawingMode && (
+                <>
+                  <button 
+                    onClick={undoDrawing}
+                    disabled={!canUndo}
+                    className={`p-1.5 rounded-full transition-colors ${canUndo ? "text-zinc-400 hover:text-white hover:bg-slate-800" : "text-zinc-600 opacity-50 cursor-not-allowed"}`}
+                    title="Hoàn tác"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={redoDrawing}
+                    disabled={!canRedo}
+                    className={`p-1.5 rounded-full transition-colors ${canRedo ? "text-zinc-400 hover:text-white hover:bg-slate-800" : "text-zinc-600 opacity-50 cursor-not-allowed"}`}
+                    title="Làm lại"
+                  >
+                    <Redo2 className="w-4 h-4" />
+                  </button>
+                  <div className="w-[1px] h-4 bg-white/20 mx-1" />
+                </>
+              )}
 
               <button 
                 onClick={clearDrawings}

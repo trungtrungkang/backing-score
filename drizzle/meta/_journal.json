@@ -78,6 +78,13 @@
       "when": 1775328386253,
       "tag": "0010_open_naoko",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1775419641339,
+      "tag": "0011_heavy_blindfold",
+      "breakpoints": true
     }
   ]
 }

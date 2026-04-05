@@ -34,8 +34,9 @@ import Draggable from 'react-draggable';
 import { loadPdfJs, type PdfDocument } from "@/lib/pdf-utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import PdfNavMapPanel from "./PdfNavMapPanel";
-import { saveNavMap, type ParsedSheetNavMap, type Bookmark, type NavigationSequence } from "@/lib/appwrite/nav-maps";
+import { saveNavMap, type ParsedSheetNavMap, type Bookmark as LegacyBookmark, type NavigationSequence as LegacyNavSeq, SheetOverlay } from "@/lib/appwrite/nav-maps";
 import { PdfDrawingLayer } from "./PdfDrawingLayer";
+import { PdfOverlayProvider, usePdfOverlay } from "./PdfOverlayContext";
 
 interface PdfViewerProps {
   sheetMusicId: string;
@@ -50,10 +51,11 @@ interface PdfViewerProps {
   hasPrevSong?: boolean;
   hideNavUI?: boolean;
   forcePerformanceMode?: boolean;
-  onSaveNavMap?: (bookmarks: Bookmark[], sequence: NavigationSequence) => Promise<void>;
+  onSaveNavMap?: (bookmarks: LegacyBookmark[], sequence: LegacyNavSeq) => Promise<void>;
+  initialOverlays?: SheetOverlay[];
 }
 
-export default function PdfViewer({ 
+function InnerPdfViewer({ 
   sheetMusicId, 
   pdfUrl, 
   pageCount, 
@@ -66,8 +68,10 @@ export default function PdfViewer({
   hasPrevSong,
   hideNavUI = false,
   forcePerformanceMode = false,
-  onSaveNavMap
+  onSaveNavMap,
+  initialOverlays = []
 }: PdfViewerProps) {
+  const { isDrawingMode, setIsDrawingMode, drawingColor, setDrawingColor, clearDrawings, undo, redo, canUndo, canRedo, saveChanges, isSaving, hasUnsavedChanges } = usePdfOverlay();
   const t = useTranslations("Pdfs");
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -538,12 +542,13 @@ export default function PdfViewer({
   );
 
   // ─── Nav Map Actions ───
-  const handleSaveNavMap = async (bookmarks: Bookmark[], sequence: NavigationSequence) => {
+  const handleSaveNavMap = async (bookmarks: LegacyBookmark[], sequence: LegacyNavSeq) => {
     setSavingNavMap(true);
     try {
       if (onSaveNavMap) {
         await onSaveNavMap(bookmarks, sequence);
-        setNavMap({ $id: sheetMusicId, sheetMusicId, bookmarks, sequence });
+        // Deprecated compatibility patch for legacy navMap state
+        setNavMap({ $id: sheetMusicId, sheetMusicId, bookmarks, sequence, userId: "local", name: "Legacy", isPublished: false, annotations: [] } as any);
       } else {
         const updated = await saveNavMap(sheetMusicId, bookmarks, sequence);
         setNavMap(updated);
@@ -556,7 +561,7 @@ export default function PdfViewer({
     }
   };
 
-  const jumpToBookmark = useCallback((bm: Bookmark) => {
+  const jumpToBookmark = useCallback((bm: LegacyBookmark) => {
     goToPage(bm.pageIndex + 1, bm.yPercent);
   }, [goToPage]);
 
@@ -1024,7 +1029,7 @@ export default function PdfViewer({
 
       {/* Bottom toolbar */}
       {!performanceMode && (
-        <div className="absolute bottom-0 left-0 right-0 z-[100] flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div className="absolute bottom-0 left-0 right-0 z-[300] flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 bg-zinc-900 border-t border-zinc-800 select-none shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           {/* Left group: Page nav */}
           <div className="flex items-center gap-1 shrink-0">
             {hasPrevSong !== undefined && (
@@ -1112,6 +1117,47 @@ export default function PdfViewer({
 
           {/* Right group: Feature toggles */}
           <div className="flex items-center gap-1 shrink-0">
+            {/* Drawing Tools Inline */}
+            {!performanceMode && !isFullscreen && (
+               <>
+                  <div className="hidden sm:block w-[1px] h-4 bg-zinc-700 mx-1" />
+                  <button
+                     onClick={() => setIsDrawingMode(!isDrawingMode)}
+                     className={`flex items-center gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-xs transition-colors ${isDrawingMode ? 'bg-rose-500 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                     title={isDrawingMode ? "Tắt bút (Chế độ Xem)" : "Bật chế độ vẽ"}
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 5-3-3H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2"/><path d="M8 18h1"/><path d="M18.4 8.7a2 2 0 0 1-.2 2.9l-6.8 6.8c-.4.4-1 .6-1.5.6H8v-1.9c0-.5.2-1 .6-1.5l6.8-6.8a2 2 0 0 1 2.8-.2Z"/></svg>
+                  </button>
+                  {isDrawingMode && (
+                     <div className="hidden sm:flex items-center gap-1 bg-zinc-900/50 rounded-md px-1 mr-1">
+                        {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#000000'].map(c => (
+                           <button
+                              key={c}
+                              onClick={() => setDrawingColor(c)}
+                              className={`w-4 h-4 rounded-full border-2 transition-all ${drawingColor === c ? 'border-white scale-110 shadow-sm' : 'border-transparent hover:scale-110'}`}
+                              style={{ backgroundColor: c }}
+                              title="Chọn màu bút"
+                           />
+                        ))}
+                        <div className="w-[1px] h-3 bg-zinc-700 mx-1" />
+                        <button onClick={undo} disabled={!canUndo} className={`p-1 rounded transition-colors ${canUndo ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-700 cursor-not-allowed'}`} title="Hoàn tác"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
+                        <button onClick={redo} disabled={!canRedo} className={`p-1 rounded transition-colors ${canRedo ? 'text-zinc-400 hover:text-white hover:bg-zinc-800' : 'text-zinc-700 cursor-not-allowed'}`} title="Làm lại"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg></button>
+                        <button onClick={clearDrawings} className="p-1 rounded text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors" title="Xoá bản vẽ"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+                        <div className="w-[1px] h-3 bg-zinc-700 mx-1" />
+                        <button 
+                           onClick={() => saveChanges()} disabled={isSaving || !hasUnsavedChanges}
+                           className={`p-1 rounded transition-colors relative ${hasUnsavedChanges ? 'text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800' : 'text-zinc-700 cursor-not-allowed'}`}
+                           title={hasUnsavedChanges ? "Lưu thay đổi" : "Đã lưu bản nháp"}
+                        >
+                           {isSaving ? <div className="w-3.5 h-3.5 rounded-full border border-emerald-400 border-t-transparent animate-spin" /> : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>}
+                           {hasUnsavedChanges && !isSaving && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />}
+                        </button>
+                     </div>
+                  )}
+                  <div className="hidden sm:block w-[1px] h-4 bg-zinc-700 mx-1" />
+               </>
+            )}
+
             {/* Half-page turn (desktop only) */}
             <button
               onClick={() => setHalfPageTurn((v) => !v)}
@@ -1487,6 +1533,15 @@ export default function PdfViewer({
          )}
          </>
       )}
+      
     </div>
+  );
+}
+
+export default function PdfViewer(props: PdfViewerProps) {
+  return (
+    <PdfOverlayProvider sheetMusicId={props.sheetMusicId} initialOverlays={props.initialOverlays}>
+      <InnerPdfViewer {...props} />
+    </PdfOverlayProvider>
   );
 }

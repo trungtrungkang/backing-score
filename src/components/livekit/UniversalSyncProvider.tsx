@@ -17,6 +17,7 @@ export type SyncPayload = {
   points?: any;
   color?: string;
   pageIndex?: number;
+  strokeId?: string;
   canStudentDraw?: boolean;
   moderateAction?: "MUTE_MIC" | "MUTE_CAM";
   targetIdentity?: string;
@@ -40,21 +41,32 @@ interface SyncContextValue extends SyncState {
   setCanStudentDraw: (val: boolean) => void;
   syncToHost: () => void;
   broadcastPayload: (payload: Partial<SyncPayload>) => void;
-  broadcastDrawing: (action: string, points?: any, color?: string, pageIndex?: number) => void;
+  broadcastDrawing: (action: string, points?: any, color?: string, pageIndex?: number, strokeId?: string) => void;
   visualSyncDelay: number;
   setVisualSyncDelay: (val: number) => void;
   setIsDrawingMode: (val: boolean) => void;
   setDrawingColor: (color: string) => void;
   clearDrawings: () => void;
+  undoDrawing: () => void;
+  redoDrawing: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const SyncContext = createContext<SyncContextValue | null>(null);
 
-export function useUniversalSync() {
-  const ctx = useContext(SyncContext);
-  if (!ctx) throw new Error("useUniversalSync must be inside UniversalSyncProvider");
-  return ctx;
-}
+export const useUniversalSync = () => {
+  const context = useContext(SyncContext);
+  if (context === undefined || context === null) {
+    throw new Error("useUniversalSync must be used within a UniversalSyncProvider");
+  }
+  return context;
+};
+
+// Hook cho các component có thể render ngoài môi trường giáo dục LiveKit (ví dụ: View PDF cá nhân tĩnh)
+export const useOptionalUniversalSync = () => {
+  return useContext(SyncContext);
+};
 
 export function UniversalSyncProvider({ children, role }: { children: React.ReactNode, role: "teacher" | "student" }) {
   const room = useRoomContext();
@@ -67,6 +79,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
   const [latestPdfCoordinates, setPdfCoordinates] = useState<any>(null);
   const [latestXmlCoordinates, setXmlCoordinates] = useState<any>(null);
   const [drawings, setDrawings] = useState<any[]>([]);
+  const [redoStack, setRedoStack] = useState<any[]>([]);
   
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [drawingColor, setDrawingColor] = useState("#ef4444");
@@ -94,6 +107,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
         setActiveProjectType(payload.projectType ?? null);
         // Reset tranh vẽ
         setDrawings([]);
+        setRedoStack([]);
       }
 
       // Lắng nghe Phân quyền Vẽ cho Học sinh
@@ -144,8 +158,20 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       if (payload.type === "DRAWING") {
         if (payload.action === "CLEAR") {
           setDrawings([]);
+        } else if (payload.action === "UNDO") {
+          setDrawings(prev => prev.slice(0, -1));
         } else {
-          setDrawings(prev => [...prev, payload]);
+          setDrawings(prev => {
+             if (payload.strokeId) {
+                const idx = prev.findIndex(d => d.strokeId === payload.strokeId);
+                if (idx !== -1) {
+                   const next = [...prev];
+                   next[idx] = payload;
+                   return next;
+                }
+             }
+             return [...prev, payload];
+          });
         }
       }
 
@@ -165,6 +191,7 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
         setActiveProjectId(data.projectId ?? null);
         setActiveProjectType(data.projectType ?? null);
         setDrawings([]);
+        setRedoStack([]);
     }
     if (data.type === "TOGGLE_STUDENT_DRAW") {
         setCanStudentDraw(data.canStudentDraw ?? false);
@@ -174,9 +201,27 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     }
     if (data.type === "DRAWING") {
         if (data.action === "CLEAR") {
-           setDrawings([]);
+           setDrawings(prev => { setRedoStack(prev); return []; });
+        } else if (data.action === "UNDO") {
+           setDrawings(prev => {
+              if (prev.length === 0) return prev;
+              const last = prev[prev.length - 1];
+              setRedoStack(r => [...r, last]);
+              return prev.slice(0, -1);
+           });
         } else {
-           setDrawings(prev => [...prev, data as SyncPayload]);
+           if (data.action === "DRAW") setRedoStack([]);
+           setDrawings(prev => {
+              if (data.strokeId) {
+                 const idx = prev.findIndex(d => d.strokeId === data.strokeId);
+                 if (idx !== -1) {
+                    const next = [...prev];
+                    next[idx] = data as SyncPayload;
+                    return next;
+                 }
+              }
+              return [...prev, data as SyncPayload];
+           });
         }
     }
 
@@ -189,19 +234,46 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
     send(new TextEncoder().encode(JSON.stringify(finalPayload)), { reliable: data.type === "CHANGE_DOC" || data.type === "DRAWING" || data.type === "TOGGLE_STUDENT_DRAW" });
   }, [send, role, room]);
 
-  const broadcastDrawing = useCallback((action: string, points?: any, color?: string, pageIndex?: number) => {
+  const broadcastDrawing = useCallback((action: string, points?: any, color?: string, pageIndex?: number, strokeId?: string) => {
     broadcastPayload({
       type: "DRAWING",
       action,
       points,
       color,
-      pageIndex
+      pageIndex,
+      strokeId
     });
   }, [broadcastPayload]);
 
   const clearDrawings = useCallback(() => {
     broadcastDrawing("CLEAR");
   }, [broadcastDrawing]);
+
+  const undoDrawing = useCallback(() => {
+    broadcastPayload({
+      type: "DRAWING",
+      action: "UNDO"
+    });
+  }, [broadcastPayload]);
+
+  const redoDrawing = useCallback(() => {
+    setRedoStack(prev => {
+       if (prev.length === 0) return prev;
+       const stroke = prev[prev.length - 1];
+       const next = prev.slice(0, -1);
+       if (stroke && stroke.action !== "CLEAR") {
+          // Re-broadcast
+          broadcastDrawing("DRAW", stroke.points, stroke.color, stroke.pageIndex, stroke.strokeId);
+       } else if (stroke && stroke.action === "CLEAR") {
+          // It's too complex to redo a CLEAR if it means restoring everything efficiently without writing extra logic. 
+          // For now, if evaluating redo of CLEAR is needed, we'll just skip.
+       }
+       return next;
+    });
+  }, [broadcastDrawing]);
+
+  const canUndo = drawings.length > 0;
+  const canRedo = redoStack.length > 0;
 
   const syncToHost = useCallback(() => {
     setAutoSync(true);
@@ -283,7 +355,11 @@ export function UniversalSyncProvider({ children, role }: { children: React.Reac
       setIsDrawingMode,
       drawingColor,
       setDrawingColor,
-      clearDrawings
+      clearDrawings,
+      undoDrawing,
+      redoDrawing,
+      canUndo,
+      canRedo
     }}>
       {children}
     </SyncContext.Provider>

@@ -41,13 +41,16 @@ export const setlistItemsRelations = relations(setlistItems, ({ one }) => ({
   }),
 }));
 
-// NavMaps: Mục lục/TOC cho Sheet Music
-export const sheetNavMaps = sqliteTable('sheet_nav_maps', {
+// Overlays: Hệ sinh thái đa tầng (Bookmarks + Sequence + Tranh vẽ) cho Sheet Music
+export const sheetOverlays = sqliteTable('sheet_overlays', {
   id: text('id').primaryKey(),
   sheetMusicId: text('sheet_music_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull().default('My Notes'),
+  isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
   bookmarks: text('bookmarks', { mode: 'json' }).notNull(), // JSON Array of Bookmarks
   sequence: text('sequence', { mode: 'json' }).notNull(), // JSON Array of UUIDs
+  annotations: text('annotations', { mode: 'json' }).notNull().default('[]'), // JSON Array of Drawings
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });
